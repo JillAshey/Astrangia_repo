@@ -29,17 +29,17 @@ library(furrr)
 
 ## Import data
 ```{r}
-path.p <- "../data/1_pi_curves/" #the location of all your respirometry files 
+path.p <- "data/1_pi_curves/" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "../data/1_pi_curves/pi_curves_sample_metadata.csv")
+sample.info <- read_csv(file = "data/1_pi_curves/pi_curves_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "../data/1_pi_curves/pi_curves_run_metadata.csv")
+run.info <- read_csv(file = "data/1_pi_curves/pi_curves_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -47,7 +47,7 @@ metadata <- full_join(sample.info, run.info) %>%
 
 # Select only certain columnns
 metadata <- metadata %>%
-  select(colony_id, Run, Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value)
+  select(colony_id, Run, Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
 
 # Read in all data files
 df <- tibble(file.name = file.names) %>%
@@ -151,7 +151,7 @@ df.out <- df %>%
 ### Merge rates with sample info
 pr <- left_join(
   select(df.out, colony_id, Light_Value, micromol.L.s),
-  distinct(metadata, colony_id, Run, Chamber.Vol.L)
+  distinct(metadata, colony_id, Run, Chamber.Vol.L, Surface.Area.cm2)
 )
 
 ### Correct for chamber volume and blanks
@@ -171,20 +171,14 @@ pr <- left_join(pr, blanks) %>%
   filter(!grepl("BK", colony_id))
 
 
-# Import surface area data
-sa <- read.csv("output/1_surface_area.csv")
-
-# Join surface area with rest of data
-pr <- left_join(pr, select(sa, colony_id, surface.area.cm2))
-
 # Normalize rates by surface area
-pr <- pr %>%
-  mutate(micromol.cm2.s = micromol.s.adj / surface.area.cm2,
+pr.out <- pr %>%
+  mutate(micromol.cm2.s = micromol.s.adj / Surface.Area.cm2,
          micromol.cm2.h = micromol.cm2.s * 3600)
 ```
 
 # Plot rates vs. irradiance for each sample
-```{r, fig.height=15, fig.width = 10}
+```{r, fig.height=2, fig.width = 8}
 ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point() +
   facet_wrap(~colony_id, scale = "free_y", ncol = 9)
