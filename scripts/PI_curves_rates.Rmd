@@ -63,7 +63,7 @@ df <- df %>%
 ## Use the time breaks in the sample info to link O2 data with light levels
 ```{r, warning = FALSE}
 df <- df %>%
-  mutate(intervals = map2(data0, info, function(.x, .y) {
+  mutate(intervals = map2(data0, run.info, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
                       labels = as.character(.y$Light_Value)))})) %>%
   mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
