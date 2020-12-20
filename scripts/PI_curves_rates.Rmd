@@ -63,7 +63,7 @@ df <- df %>%
 ## Use the time breaks in the sample info to link O2 data with light levels
 ```{r, warning = FALSE}
 df <- df %>%
-  mutate(intervals = map2(data0, run.info, function(.x, .y) {
+  mutate(intervals = map2(data0, info, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
                       labels = as.character(.y$Light_Value)))})) %>%
   mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
@@ -172,14 +172,14 @@ pr <- left_join(pr, blanks) %>%
 
 
 # Normalize rates by surface area
-pr.out <- pr %>%
+pr <- pr %>%
   mutate(micromol.cm2.s = micromol.s.adj / Surface.Area.cm2,
          micromol.cm2.h = micromol.cm2.s * 3600)
 ```
 
 # Plot rates vs. irradiance for each sample
 ```{r, fig.height=2, fig.width = 8}
-ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point() +
   facet_wrap(~colony_id, scale = "free_y", ncol = 9)
 ```
