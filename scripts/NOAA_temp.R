@@ -15,7 +15,7 @@ newport2004$WTMP[newport2004$WTMP==999] <- NA
 # Read in Newport, RI buoy data from 2005
 newport2005 <- read.delim("~/Desktop/PutnamLab/Astrangia/Temp/nwpr1h2005.txt", na.strings='999')
 newport2005 <- cbind("datetime"=paste(paste(newport2005$YYYY, newport2005$MM, newport2005$DD, sep="-")," ",paste(newport2005$hh,newport2005$mm, sep=":"),sep=""),newport2005)
-newport2005$datetime <- strptime(newport2005$datetime, format="%Y-%m-%d %H")
+newport2005$dateb time <- strptime(newport2005$datetime, format="%Y-%m-%d %H")
 newport2005$WTMP[newport2005$WTMP==999] <- NA
 
 # Read in Newport, RI buoy data from 2006
