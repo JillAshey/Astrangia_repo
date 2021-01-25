@@ -48,6 +48,6 @@ light$Tank <- as.character(light$Tank)
 
 pdf("Light_DailyMeasurement.pdf")
 ggplot(light, aes(x=Date, y=Light)) +
-  geom_point(aes(color = Tank))+ # change to lines once more data is collected
+  geom_line(aes(color = Tank))+ 
   ylab("Light")
 dev.off()
