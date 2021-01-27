@@ -15,39 +15,18 @@ setwd("~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/data")
 daily <- read.csv("DailyMeasurements.csv", header = TRUE)
 daily <- daily[-c(1:17),] # remove tank 14 because it cracked 
 daily$Date <- as.Date(daily$Date, "%m/%d/%Y")
-daily$Tank <- as.character(daily$Tank)
+daily$Tank <- as.factor(daily$Tank)
 
-
-## Plots ##
-
-# Temperature 
-pdf("Temperature_DailyMeasurement.pdf")
-ggplot(daily, aes(x=Date, y=Temperature)) +
-  geom_line(aes(color = Tank))+
-  ylab("Temperature °C")
+pdf("~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/Output/Daily_Measurements.pdf")
+par(mfrow=c(2,2))
+plot(daily$Tank, daily$Temperature, xlab="Tank", ylab="Temperature°C", ylim = c(7.5,9), las = 2)
+plot(daily$Tank, daily$Salinity, xlab="Tank", ylab="Salinity psu", ylim = c(30,33.5), las = 2)
+plot(daily$Tank, daily$pH, xlab="Tank", ylab="pH (mV)", ylim = c(-45,-55), las = 2)
+plot(daily$Tank, daily$Light, xlab="Tank", ylab="Light", ylim=c(80,150),las=2)
 dev.off()
 
-# pH
-pdf("pH_DailyMeasurement.pdf")
-ggplot(daily, aes(x=Date, y=pH)) +
-  geom_line(aes(color = Tank))+
-  ylab("pH mV")
-dev.off()
 
-# Salinity
-pdf("Salinity_DailyMeasurement.pdf")
-ggplot(daily, aes(x=Date, y=Salinity)) +
-  geom_line(aes(color = Tank))+
-  ylab("Salinity psu")
-dev.off()
 
-# Light
-light <- select(daily, c("Date", "Tank", "Light")) # subset light data, as it is not measured daily
-light <- na.omit(light)
-light$Tank <- as.character(light$Tank)
 
-pdf("Light_DailyMeasurement.pdf")
-ggplot(light, aes(x=Date, y=Light)) +
-  geom_line(aes(color = Tank))+ 
-  ylab("Light")
-dev.off()
+
+
