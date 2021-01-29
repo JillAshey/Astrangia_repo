@@ -18,48 +18,13 @@ plot(PAR ~ Tank, data = light, col = Position)
 
 tank.model <- lm(PAR ~ Tank,data=light)
 summary(tank.model)
-# Call:
-#   lm(formula = PAR ~ Tank, data = light)
-# 
-# Residuals:
-#   Min      1Q  Median      3Q     Max 
-# -49.272 -10.992   1.042  11.393  49.796 
-# 
-# Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept) 107.1362     4.4166  24.258   <2e-16 ***
-#   Tank         -0.4915     0.4230  -1.162    0.249    
-# ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 20.02 on 78 degrees of freedom
-# Multiple R-squared:  0.01701,	Adjusted R-squared:  0.004411 
-# F-statistic:  1.35 on 1 and 78 DF,  p-value: 0.2488
 
 position.model <- lm(PAR ~ Position, data=light)
 summary(position.model)
-# Call:
-#   lm(formula = PAR ~ Position, data = light)
-# 
-# Residuals:
-#   Min      1Q  Median      3Q     Max 
-# -52.712 -10.156  -0.019   9.925  50.288 
-# 
-# Coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)   85.631      4.844  17.678  < 2e-16 ***
-#   Position       5.694      1.461   3.898 0.000204 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Residual standard error: 18.47 on 78 degrees of freedom
-# Multiple R-squared:  0.1631,	Adjusted R-squared:  0.1523 
-# F-statistic:  15.2 on 1 and 78 DF,  p-value: 0.0002036
-
 
 # Plot light by position for each tank
 pdf("../Output/Light.by.Position.pdf")
-par(mfrow=c(3,4))
+par(mfrow=c(4,4))
 Tank1 <- subset(light, Tank==1)
 plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
 

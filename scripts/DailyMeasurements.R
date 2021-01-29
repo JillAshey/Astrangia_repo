@@ -21,8 +21,9 @@ pdf("~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/Output/Daily
 par(mfrow=c(2,2))
 plot(daily$Tank, daily$Temperature, xlab="Tank", ylab="Temperature°C", ylim = c(7.5,9), las = 2)
 plot(daily$Tank, daily$Salinity, xlab="Tank", ylab="Salinity psu", ylim = c(30,33.5), las = 2)
-plot(daily$Tank, daily$pH, xlab="Tank", ylab="pH (mV)", ylim = c(-45,-55), las = 2)
+plot(daily$Tank, daily$pH, xlab="Tank", ylab="pH mV", ylim = c(-45,-55), las = 2)
 plot(daily$Tank, daily$Light, xlab="Tank", ylab="Light", ylim=c(80,150),las=2)
+#plot(daily$Tank, daily$Flow, xlab="Tank", ylab="Flow mL/sec", ylim=c(2,20),las=2)
 dev.off()
 
 
