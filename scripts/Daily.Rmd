@@ -16,9 +16,13 @@ library(tidyverse)
 ```
 
 ```{r}
-# Load data 
-daily <- read.csv("data/DailyMeasurements.csv", header = TRUE)
-daily <- daily[-c(1:17),] # remove tank 14 because it cracked 
+getwd()
+```
+
+```{r}
+# Load data
+daily <- read.csv("../data/DailyMeasurements.csv", header = T)
+daily <- daily[-13,] # remove tank 14 because it cracked 
 daily$Timepoint <- as.Date(daily$Timepoint, "%m/%d/%Y")
 daily$Tank <- as.factor(daily$Tank)
 
@@ -26,7 +30,7 @@ daily$Tank <- as.factor(daily$Tank)
 
 Discrete pH calculations from Tris calibrations.
 ```{r}
-path <-("data/pH_Tris") #set path to calibration files
+path <-("../data/pH_Tris") #set path to calibration files
 file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
 pH.cals <- data.frame(matrix(NA, nrow=length(file.names), ncol=3, dimnames=list(file.names,c("Date", "Intercept", "Slope")))) #generate a 3 column dataframe with specific column names
 
@@ -60,12 +64,12 @@ SW.chem$pH.Total<-phTris+(mvTris/1000-SW.chem$pH.MV/1000)/(R*(SW.chem$Temperatur
 ```
 
 ```{r}
-pdf("Output/Daily_Measurements.pdf")
+pdf("../Output/Daily_Measurements.pdf")
 par(mfrow=c(2,3))
-plot(SW.chem$Tank, SW.chem$Temperature, xlab="Tank", ylab="Temperature°C", ylim = c(7.5,9), las = 2)
-plot(SW.chem$Tank, SW.chem$Salinity, xlab="Tank", ylab="Salinity psu", ylim = c(30,33.5), las = 2)
-plot(SW.chem$Tank, SW.chem$pH.Total, xlab="Tank", ylab="pH Total Scale", ylim = c(7.5,8.5), las = 2)
-plot(SW.chem$Tank, SW.chem$Light, xlab="Tank", ylab="Light µmol photons m^2 s^-1", ylim=c(80,150),las=2)
+plot(SW.chem$Tank, SW.chem$Temperature, xlab="Tank", ylab="Temperature°C", ylim = c(5,10.5), las = 2)
+plot(SW.chem$Tank, SW.chem$Salinity, xlab="Tank", ylab="Salinity psu", ylim = c(30,32.5), las = 2)
+plot(SW.chem$Tank, SW.chem$pH.Total, xlab="Tank", ylab="pH Total Scale", ylim = c(8,8.5), las = 2)
+plot(SW.chem$Tank, SW.chem$Light, xlab="Tank", ylab="Light µmol photons m^2 s^-1", ylim=c(80,120),las=2)
 plot(SW.chem$Tank, SW.chem$Flow, xlab="Tank", ylab="Flow mL/sec", ylim=c(2,20),las=2)
 dev.off()
 
@@ -73,10 +77,28 @@ dev.off()
 
 # test for differences between tanks and treatments
 ```{r}
-mod1 <- aov(pH.Total ~ Tank, data = SW.chem)
-mod1
-summary(mod1)
-#hist(mod1$residuals)
+mod.temp <- aov(Temperature ~ Tank, data = SW.chem)
+mod.temp
+summary(mod.temp)
+hist(mod.temp$residuals)
 
+mod.sal <- aov(Salinity ~ Tank, data = SW.chem)
+mod.sal
+summary(mod.sal)
+hist(mod.sal$residuals)
 
+mod.pH <- aov(pH.Total ~ Tank, data = SW.chem)
+mod.pH
+summary(mod.pH)
+hist(mod.pH$residuals)
+
+mod.light <- aov(Light ~ Tank, data = SW.chem)
+mod.light
+summary(mod.light)
+hist(mod.light$residuals)
+
+#mod.flow <- aov(Flow ~ Tank, data = SW.chem)
+#mod.flow
+#summary(mod.flow)
+#hist(mod.flow$residuals)
 ```
