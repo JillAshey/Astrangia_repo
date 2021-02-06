@@ -9,16 +9,17 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+Load packages
 ```{r}
-# load packages
 library(tidyverse)
 ```
 
+Check working directory
 ```{r}
 getwd()
 ```
 
+# Load data
 ```{r}
 # Load data
 daily <- read.csv("../data/DailyMeasurements.csv", header = T)
@@ -63,6 +64,7 @@ phTris<- (11911.08-18.2499*STris-0.039336*STris^2)*(1/(SW.chem$Temperature+273.1
 SW.chem$pH.Total<-phTris+(mvTris/1000-SW.chem$pH.MV/1000)/(R*(SW.chem$Temperature+273.15)*log(10)/F) #calculate the pH on the total scale (Dickson A. G., Sabine C. L. and Christian J. R., SOP 6a)
 ```
 
+# Plot daily measurements 
 ```{r}
 pdf("../Output/Daily_Measurements.pdf")
 par(mfrow=c(2,3))

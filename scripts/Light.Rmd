@@ -1,0 +1,113 @@
+---
+title: "LightMeasure"
+author: "jillashey"
+date: "2/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages
+```{r}
+library(tidyverse)
+```
+
+Check working directory
+```{r}
+getwd()
+```
+
+
+Load data 
+```{r}
+light <- read.csv("data/Light_Data.csv", header = TRUE)
+```
+
+Plot PAR
+```{r}
+plot(PAR ~ Tank, data = light, col = Position)
+plot(PAR ~ Position, data = light, col = Tank)
+```
+
+Test for differences between tanks and treatments
+```{r}
+tank.model <- aov(PAR ~ Tank,data=light)
+tank.model
+summary(tank.model)
+hist(tank.model$residuals)
+
+position.model <- lm(PAR ~ Position, data=light)
+position.model
+summary(position.model)
+hist(position.model$residuals)
+```
+
+Plot light by position for each tank
+```{r}
+pdf("Output/Light.by.Position.pdf")
+par(mfrow=c(4,4))
+Tank1 <- subset(light, Tank==1)
+plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
+
+Tank2 <- subset(light, Tank==2)
+plot(PAR ~ Position, data=Tank2, col=Position, ylim=c(0,160), main = "Tank2")
+
+Tank3 <- subset(light, Tank==3)
+plot(PAR ~ Position, data=Tank3, col=Position, ylim=c(0,160), main = "Tank3")
+
+Tank4 <- subset(light, Tank==4)
+plot(PAR ~ Position, data=Tank4, col=Position, ylim=c(0,160), main = "Tank4")
+
+Tank5 <- subset(light, Tank==5)
+plot(PAR ~ Position, data=Tank5, col=Position, ylim=c(0,160), main = "Tank5")
+
+Tank6 <- subset(light, Tank==6)
+plot(PAR ~ Position, data=Tank6, col=Position, ylim=c(0,160), main = "Tank6")
+
+Tank7 <- subset(light, Tank==7)
+plot(PAR ~ Position, data=Tank7, col=Position, ylim=c(0,160), main = "Tank7")
+
+Tank8 <- subset(light, Tank==8)
+plot(PAR ~ Position, data=Tank8, col=Position, ylim=c(0,160), main = "Tank8")
+
+Tank9 <- subset(light, Tank==9)
+plot(PAR ~ Position, data=Tank9, col=Position, ylim=c(0,160), main = "Tank9")
+
+Tank10 <- subset(light, Tank==10)
+plot(PAR ~ Position, data=Tank10, col=Position, ylim=c(0,160), main = "Tank10")
+
+Tank11 <- subset(light, Tank==11)
+plot(PAR ~ Position, data=Tank11, col=Position, ylim=c(0,160), main = "Tank11")
+
+Tank12 <- subset(light, Tank==12)
+plot(PAR ~ Position, data=Tank12, col=Position, ylim=c(0,160), main = "Tank12")
+
+Tank15 <- subset(light, Tank==15)
+plot(PAR ~ Position, data=Tank15, col=Position, ylim=c(0,160), main = "Tank15")
+
+Tank16 <- subset(light, Tank==16)
+plot(PAR ~ Position, data=Tank16, col=Position, ylim=c(0,160), main = "Tank16")
+
+Tank17 <- subset(light, Tank==17)
+plot(PAR ~ Position, data=Tank17, col=Position, ylim=c(0,160), main = "Tank17")
+
+Tank18 <- subset(light, Tank==18)
+plot(PAR ~ Position, data=Tank18, col=Position, ylim=c(0,160), main = "Tank18")
+
+dev.off()
+```
+
+Plot light by tank
+```{r}
+pdf("Output/Light.by.Tank.pdf")
+plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
+boxplot(PAR ~ Tank, data = light, outpch = NA) 
+stripchart(PAR ~ Tank, data = light, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21, col = "blue", bg = "blue", 
+           add = TRUE) 
+dev.off()
+```
+
