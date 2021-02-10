@@ -153,6 +153,8 @@ newport2016 <- na.omit(newport2016)
 monthly2016 <- aggregate(x = newport2016$WTMP,                # Specify data column
                          by = list(newport2016$MM),          # Specify group indicator
                          FUN = mean)
+monthly2016$year <- "2016"
+colnames(monthly2016) <- c("month", "temp", "year")
 
 # Read in Newport, RI buoy data from 2017
 newport2017 <- read.delim("data/NOAA_temp/nwpr1h2017.txt", na.strings='999')
@@ -178,6 +180,8 @@ newport2017 <- na.omit(newport2017)
 monthly2017 <- aggregate(x = newport2017$WTMP,                # Specify data column
                          by = list(newport2017$MM),          # Specify group indicator
                          FUN = mean) 
+monthly2017$year <- "2017"
+colnames(monthly2017) <- c("month", "temp", "year")
 
 # Read in Newport, RI buoy data from 2018
 newport2018 <- read.delim("data/NOAA_temp/nwpr1h2018.txt", na.strings='999')
@@ -204,6 +208,9 @@ newport2018 <- na.omit(newport2018)
 monthly2018 <- aggregate(x = newport2018$WTMP,                # Specify data column
                          by = list(newport2018$MM),          # Specify group indicator
                          FUN = mean) 
+monthly2018$year <- "2018"
+colnames(monthly2018) <- c("month", "temp", "year")
+
 
 # Read in Newport, RI buoy data from 2019
 newport2019 <- read.delim("data/NOAA_temp/nwpr1h2019.txt", na.strings='999')
@@ -230,20 +237,45 @@ newport2019 <- na.omit(newport2019)
 monthly2019 <- aggregate(x = newport2019$WTMP,                # Specify data column
           by = list(newport2019$MM),          # Specify group indicator
           FUN = mean) 
+monthly2019$year <- "2019"
+colnames(monthly2019) <- c("month", "temp", "year")
+
+## Plot buoy data for 2019
+#p = ggplot(data = newport1819, aes(x = datetime, y = WTMP)) + geom_line()
+#p + scale_x_datetime(labels = date_format("%Y-%m"), breaks = date_breaks("months")) +
+#  theme(axis.text.x = element_text(angle = 45))
+pdf("output/2019_WTMP_RI_NOAA.pdf")
+plot(newport2019$datetime, newport2019$WTMP, type="l", ylab="Temperature (°C)", main="2016-2019 Water Temp in Newport, RI", ylim=c(-2,32), xaxt = "n", xlab='')
+#lines(newport2018$datetime, newport2018$WTMP, col = "red")
+#abline(h=8, col="blue")
+#points(newport1819$datetime, newport1819$WTMP, type="l", col="grey")
+ticks<-seq(from=newport2019$datetime[1], to=as.POSIXct("2019-12-31 23:54:00 EST"), by='1 month')
+lbl<-strftime(ticks, format="%b-%y")
+axis(side=1, at=ticks, labels=F)
+text(ticks, par("usr")[3] - 1, srt=60, adj=1 , labels=lbl, xpd = T, cex=1)
+#legend("topleft", c("2018", "2019"), lty=1, lwd=3, col=c("black", "grey"), )
+dev.off()
+
 
 
 # Bind data together from 2016 - 2019
 recent <- rbind(newport2016, newport2017, newport2018, newport2019)
+recent_means <- aggregate(x = recent$WTMP,                # Specify data column
+                          by = list(recent$MM),          # Specify group indicator
+                          FUN = mean) 
+
+means <- rbind(monthly2016,monthly2017, monthly2018, monthly2019)
 
 ## Plot buoy data for 2016 - 2019
 #p = ggplot(data = newport1819, aes(x = datetime, y = WTMP)) + geom_line()
 #p + scale_x_datetime(labels = date_format("%Y-%m"), breaks = date_breaks("months")) +
 #  theme(axis.text.x = element_text(angle = 45))
 pdf("output/2016-2019_WTMP_RI_NOAA.pdf")
-plot(newport_all$datetime, newport_all$WTMP, type="l", ylab="Temperature (°C)", main="2016-2019 Water Temp in Newport, RI", ylim=c(-2,32), xaxt = "n", xlab='')
+plot(recent$datetime, recent$WTMP, type="l", ylab="Temperature (°C)", main="2016-2019 Water Temp in Newport, RI", ylim=c(-2,32), xaxt = "n", xlab='')
+#lines(newport2018$datetime, newport2018$WTMP, col = "red")
 #abline(h=8, col="blue")
 #points(newport1819$datetime, newport1819$WTMP, type="l", col="grey")
-ticks<-seq(from=newport_all$datetime[1], to=as.POSIXct("2019-12-31 23:54:00 EST"), by='1 month')
+ticks<-seq(from=recent$datetime[1], to=as.POSIXct("2019-12-31 23:54:00 EST"), by='1 month')
 lbl<-strftime(ticks, format="%b-%y")
 axis(side=1, at=ticks, labels=F)
 text(ticks, par("usr")[3] - 1, srt=60, adj=1 , labels=lbl, xpd = T, cex=1)
