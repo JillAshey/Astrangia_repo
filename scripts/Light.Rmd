@@ -22,7 +22,7 @@ getwd()
 
 Load data 
 ```{r}
-light <- read.csv("data/Light_Data.csv", header = TRUE)
+light <- read.csv("../data/Light_Data.csv", header = TRUE)
 ```
 
 Plot PAR
@@ -46,7 +46,7 @@ hist(position.model$residuals)
 
 Plot light by position for each tank
 ```{r}
-pdf("Output/Light.by.Position.pdf")
+pdf("../Output/Light.by.Position.pdf")
 par(mfrow=c(4,4))
 Tank1 <- subset(light, Tank==1)
 plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
@@ -101,7 +101,7 @@ dev.off()
 
 Plot light by tank
 ```{r}
-pdf("Output/Light.by.Tank.pdf")
+pdf("../Output/Light.by.Tank.pdf")
 plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
 boxplot(PAR ~ Tank, data = light, outpch = NA) 
 stripchart(PAR ~ Tank, data = light, 
