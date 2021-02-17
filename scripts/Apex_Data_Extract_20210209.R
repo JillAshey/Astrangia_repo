@@ -84,7 +84,7 @@ colnames(Probe.Data) <- c("Date.Time", # rename columns
 Probe.Data$Date.Time <- as.POSIXct(Probe.Data$Date.Time, format = "%m/%d/%Y %H:%M:%S", tz="EST") #convert date to HI time
 
 # CHANGE DATE FOR NEW CSV (risk overwritting previous)
-write.csv(Probe.Data, "~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/data/Apex/20210209_Apex_Data_Output.data.csv") #write file to save data
+write.csv(Probe.Data, "20210209_Apex_Data_Output.data.csv") #write file to save data
 
 # Plot Temp and save to output
 # CHANGE DATE FOR NEW PDF (risk overwritting previous)

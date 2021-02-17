@@ -11,8 +11,14 @@ library(lubridate)
 
 # Read in Newport, RI buoy data from 2005
 newport2005 <- read.delim("data/NOAA_temp/nwpr1h2005.txt", na.strings='999')
-newport2005 <- cbind("datetime"=paste(paste(newport2005$YYYY, newport2005$MM, newport2005$DD, sep="-")," ",paste(newport2005$hh,newport2005$mm, sep=":"),sep=""),newport2005)
-newport2005$datetime <- strptime(newport2005$datetime, format="%Y-%m-%d %H")
+#newport2005 <- cbind("datetime"=paste(paste(newport2005$YYYY, newport2005$MM, newport2005$DD, sep="-")," ",paste(newport2005$hh,newport2005$mm, sep=":"),sep=""),newport2005)
+#newport2005$datetime <- strptime(newport2005$datetime, format="%Y-%m-%d %H")
+
+
+
+newport2005 <- cbind("datetime"=paste(paste(newport2005$MM, newport2005$DD, sep="-")), newport2005)
+newport2005$datetime <- strptime(newport2005$datetime, format="%m-%d")
+
 newport2005$WTMP[newport2005$WTMP==999] <- NA
 newport2005 <- select(newport2005, c(datetime, YYYY, MM, DD, hh, mm, WTMP))
 # Replace month numbers with month abbreviations
@@ -50,6 +56,8 @@ newport2006 <- cbind("datetime"=paste(paste(newport2006$YYYY, newport2006$MM, ne
 newport2006$datetime <- strptime(newport2006$datetime, format="%Y-%m-%d %H")
 newport2006$WTMP[newport2006$WTMP==999] <- NA
 newport2006 <- select(newport2006, c(datetime, YYYY, MM, DD, hh, mm, WTMP))
+names(newport2006)[names(newport2006) == 'YYYY'] <- 'X.YY'
+
 # Replace month numbers with month abbreviations
 newport2006$MM[which(newport2006$MM=="1")] <- "Jan"
 newport2006$MM[which(newport2006$MM=="2")] <- "Feb"
@@ -574,8 +582,13 @@ dev.off()
 
 #Plot NOAA and Hobo temp data over time considered at both VA and RI sites
 #USE THIS ONE (includes CORRECTED VA loggers, updated x-axis labels and plot of Topt lines)
-pdf("2005-2019_RI_NOAA.pdf")
+pdf("2005-2006_test_RI_NOAA.pdf")
 plot(newport2005$datetime, newport2005$WTMP, type = "l", ylab="Temperature (°C)", main = "2005-2019_RI_NOAA", ylim=c(-5,30), xaxt='n', xlab='')
+
+
+
+
+
 points(newport2006$datetime, newport2006$WTMP, type = "l", col = "grey")
 points(newport2007$datetime, newport2007$WTMP, type = "l", col = "blue")
 points(newport2008$datetime, newport2008$WTMP, type = "l", col = "green")
