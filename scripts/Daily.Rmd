@@ -16,7 +16,8 @@ library(tidyverse)
 
 Check working directory
 ```{r}
-getwd()
+getwd() 
+# don't know why its in the scripts folder, need to move
 ```
 
 # Load data
@@ -68,11 +69,11 @@ SW.chem$pH.Total<-phTris+(mvTris/1000-SW.chem$pH.MV/1000)/(R*(SW.chem$Temperatur
 ```{r}
 pdf("../Output/Daily_Measurements.pdf")
 par(mfrow=c(2,3))
-plot(SW.chem$Tank, SW.chem$Temperature.C, xlab="Tank", ylab="Temperature°C", ylim = c(3.5,15), las = 2)
-plot(SW.chem$Tank, SW.chem$Salinity.psu, xlab="Tank", ylab="Salinity psu", ylim = c(30,34), las = 2)
-plot(SW.chem$Tank, SW.chem$pH.Total, xlab="Tank", ylab="pH Total Scale", ylim = c(8,8.3), las = 2)
-plot(SW.chem$Tank, SW.chem$Light, xlab="Tank", ylab="Light µmol photons m^2 s^-1", ylim=c(65,150),las=2)
-plot(SW.chem$Tank, SW.chem$Flow.mL.sec, xlab="Tank", ylab="Flow mL/sec", ylim=c(2,20),las=2)
+plot(SW.chem$Tank, SW.chem$Temperature.C, xlab="Tank", ylab="Temperature°C", ylim = c(3.5,12), las = 2)
+plot(SW.chem$Tank, SW.chem$Salinity.psu, xlab="Tank", ylab="Salinity psu", ylim = c(29,34), las = 2)
+plot(SW.chem$Tank, SW.chem$pH.Total, xlab="Tank", ylab="pH Total Scale", ylim = c(8.05,8.4), las = 2)
+plot(SW.chem$Tank, SW.chem$Light, xlab="Tank", ylab="Light µmol photons m^2 s^-1", ylim=c(50,150),las=2)
+plot(SW.chem$Tank, SW.chem$Flow.mL.sec, xlab="Tank", ylab="Flow mL/sec", ylim=c(2,175),las=2)
 dev.off()
 
 ```

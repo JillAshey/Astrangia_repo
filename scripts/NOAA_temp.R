@@ -86,6 +86,7 @@ weekly2006 <- aggregate(x = newport2006$WTMP,                # Specify data colu
                          FUN = mean) 
 weekly2006$year <- "2006"
 colnames(weekly2006) <- c("week", "temp", "year")
+weekly2006[nrow(weekly2006)+2,] <- NA
 
 # pdf("output/2006_WTMP_RI_NOAA.pdf", height = 10, width = 30)
 # plot(newport2006$datetime, newport2006$WTMP, type="l", ylab="Temperature (°C)", main="2006 Water Temp in Newport, RI", ylim=c(2,28), xaxt = "n", xlab='')
@@ -269,6 +270,8 @@ weekly2011 <- aggregate(x = newport2011$WTMP,                # Specify data colu
                         FUN = mean) 
 weekly2011$year <- "2011"
 colnames(weekly2011) <- c("week", "temp", "year")
+weekly2011[nrow(weekly2011)+1,] <- NA
+
 
 # Read in Newport, RI buoy data from 2012
 newport2012 <- read.delim("data/NOAA_temp/nwpr1h2012.txt", na.strings='999')
@@ -409,6 +412,8 @@ weekly2015 <- aggregate(x = newport2015$WTMP,                # Specify data colu
                         FUN = mean) 
 weekly2015$year <- "2015"
 colnames(weekly2015) <- c("week", "temp", "year")
+weekly2015[nrow(weekly2015)+3,] <- NA
+
 
 # Read in Newport, RI buoy data from 2016
 newport2016 <- read.delim("data/NOAA_temp/nwpr1h2016.txt", na.strings='999')
@@ -444,6 +449,7 @@ weekly2016 <- aggregate(x = newport2016$WTMP,                # Specify data colu
                         FUN = mean) 
 weekly2016$year <- "2016"
 colnames(weekly2016) <- c("week", "temp", "year")
+weekly2016[nrow(weekly2016)+1,] <- NA
 
 # Read in Newport, RI buoy data from 2017
 newport2017 <- read.delim("data/NOAA_temp/nwpr1h2017.txt", na.strings='999')
@@ -479,6 +485,8 @@ weekly2017 <- aggregate(x = newport2017$WTMP,                # Specify data colu
                         FUN = mean) 
 weekly2017$year <- "2017"
 colnames(weekly2017) <- c("week", "temp", "year")
+weekly2017[nrow(weekly2017)+1,] <- NA
+
 
 # Read in Newport, RI buoy data from 2018
 newport2018 <- read.delim("data/NOAA_temp/nwpr1h2018.txt", na.strings='999')
@@ -549,6 +557,19 @@ weekly2019 <- aggregate(x = newport2019$WTMP,                # Specify data colu
                         FUN = mean) 
 weekly2019$year <- "2019"
 colnames(weekly2019) <- c("week", "temp", "year")
+weekly2019[nrow(weekly2019)+1,] <- NA
+
+
+## need to look at 2006 and 2018 again, they are not included below.
+
+# bind all together 
+test <- left_join(x = weekly2007, y = weekly2008, by = "week")
+                    
+                    
+                    
+                    
+
+
 
 
 ## Plot buoy data for 2019
@@ -556,7 +577,7 @@ colnames(weekly2019) <- c("week", "temp", "year")
 #p + scale_x_datetime(labels = date_format("%Y-%m"), breaks = date_breaks("months")) +
 #  theme(axis.text.x = element_text(angle = 45))
 pdf("output/2019_WTMP_RI_NOAA.pdf")
-plot(newport2019$datetime, newport2019$WTMP, type="l", ylab="Temperature (°C)", main="2016-2019 Water Temp in Newport, RI", ylim=c(-2,32), xaxt = "n", xlab='')
+plot(newport2019$datetime, newport2019$WTMP, type="l", ylab="Temperature (°C)", main="2019 Water Temp in Newport, RI", ylim=c(-2,32), xaxt = "n", xlab='')
 #lines(newport2018$datetime, newport2018$WTMP, col = "red")
 #abline(h=8, col="blue")
 #points(newport1819$datetime, newport1819$WTMP, type="l", col="grey")
@@ -566,6 +587,25 @@ axis(side=1, at=ticks, labels=F)
 text(ticks, par("usr")[3] - 1, srt=60, adj=1 , labels=lbl, xpd = T, cex=1)
 #legend("topleft", c("2018", "2019"), lty=1, lwd=3, col=c("black", "grey"), )
 dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -29,30 +29,30 @@ library(furrr)
 
 ## Import data
 ```{r}
-path.p <- "data/1_pi_curves/" #the location of all your respirometry files 
+path.p <- "../data/1_pi_curves/" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/1_pi_curves/pi_curves_sample_metadata.csv")
+sample.info <- read_csv(file = "../data/1_pi_curves/1_pi_curves_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/1_pi_curves/pi_curves_run_metadata.csv")
+run.info <- read_csv(file = "../data/1_pi_curves/1_pi_curves_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
-  mutate(Date = as_date(as.character(Date), format = "%Y%m%d", tz = "Tahiti"))
+  mutate(Date = as_date(as.character(Date), format = "%Y%m%d", tz = "EST"))
 
 # Select only certain columnns
 metadata <- metadata %>%
-  select(colony_id, Run, Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
-
+  select(Date, plug_id, Run, Chamber.Vol.L, Surface.Area.cm2, Light_Value, Start.time, Stop.time) 
+    
 # Read in all data files
 df <- tibble(file.name = file.names) %>%
-  mutate(colony_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
-          info = map(colony_id, ~filter(metadata, colony_id == .)),           # Get associated sample info
+  mutate(plug_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
+          info = map(plug_id, ~filter(metadata, plug_id == .)),           # Get associated sample info
          data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 0)))   # Get associated O2 data
 
 # Select only Time, Value, and Temp columns from O2 data
@@ -63,7 +63,7 @@ df <- df %>%
 ## Use the time breaks in the sample info to link O2 data with light levels
 ```{r, warning = FALSE}
 df <- df %>%
-  mutate(intervals = map2(data0, info, function(.x, .y) {
+  mutate(intervals = map2(info, data0, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
                       labels = as.character(.y$Light_Value)))})) %>%
   mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))

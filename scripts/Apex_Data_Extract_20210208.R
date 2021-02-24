@@ -16,12 +16,14 @@ library("plyr")
 library("tidyverse")
 
 # Read in xml info
-xmlfile <- xmlParse("http://131.128.103.229:80/cgi-bin/datalog.xml?sdate=210124&days=16") #read in the date plus x days of Apex data
+xmlfile <- xmlParse("http://131.128.103.229:80/cgi-bin/datalog.xml?sdate=210217&days=7") #read in the date plus x days of Apex data
 
 
 
 
 Apex.Data <- ldply(xmlToList(xmlfile), data.frame) #convert xml to dataframe
+head(Apex.Data)
+tail(Apex.Data)
 
 # T_1 = probe.value
 # T_2 = probe.name.58
@@ -57,7 +59,7 @@ Apex.Data2 <- Apex.Data %>% select(c("date",
                                         "probe.name.68", "probe.value.68", # T_11
                                         "probe.name.66", "probe.value.66", #T_12
                                         ### T_13 missing
-                                        "probe.name.62", "probe.value.62", # T_14
+                                        #"probe.name.62", "probe.value.62", # T_14
                                         "probe.name.56", "probe.value.56", # T_15
                                         "probe.name.38", "probe.value.38", # T_16
                                         "probe.name.42", "probe.value.42",# T_17
@@ -76,7 +78,7 @@ colnames(Probe.Data) <- c("Date.Time", # rename columns
                           "Probe10", "Temp10",
                           "Probe11", "Temp11",
                           "Probe12", "Temp12",
-                          "Probe14", "Temp14",
+                          #"Probe14", "Temp14",
                           "Probe15", "Temp15",
                           "Probe16", "Temp16",
                           "Probe17", "Temp17",
@@ -86,11 +88,11 @@ colnames(Probe.Data) <- c("Date.Time", # rename columns
 Probe.Data$Date.Time <- as.POSIXct(Probe.Data$Date.Time, format = "%m/%d/%Y %H:%M:%S", tz="EST") #convert date to HI time
 
 # CHANGE DATE FOR NEW CSV (risk overwritting previous)
-write.csv(Probe.Data, "~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/data/Apex/20210208_Apex_Data_Output.data.csv") #write file to save data
+write.csv(Probe.Data, "~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/data/Apex/20210223_Apex_Data_Output.data.csv") #write file to save data
 
 # Plot Temp and save to output
 # CHANGE DATE FOR NEW PDF (risk overwritting previous)
-pdf("~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/output/Apex/20210208_Apex_Plot_Output.data.pdf")
+pdf("~/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/output/Apex/20210223_Apex_Plot_Output.data.pdf")
 #par(mfrow=c(2,1))
 plot(as.numeric(as.character(Temp1)) ~ Date.Time, Probe.Data, col = "grey", lwd = 2, type="l", ylim=c(5,12),  xlab="Time", ylab="Temperature °C")
 lines(as.numeric(as.character(Temp2)) ~ Date.Time, Probe.Data, col = "red", lwd = 2)
@@ -104,14 +106,14 @@ lines(as.numeric(as.character(Temp9)) ~ Date.Time, Probe.Data, col = "coral1", l
 lines(as.numeric(as.character(Temp10)) ~ Date.Time, Probe.Data, col = "darkblue", lwd = 2)
 lines(as.numeric(as.character(Temp11)) ~ Date.Time, Probe.Data, col = "firebrick", lwd = 2)
 lines(as.numeric(as.character(Temp12)) ~ Date.Time, Probe.Data, col = "lightcyan2", lwd = 2)
-lines(as.numeric(as.character(Temp14)) ~ Date.Time, Probe.Data, col = "purple", lwd = 2)
+#lines(as.numeric(as.character(Temp14)) ~ Date.Time, Probe.Data, col = "purple", lwd = 2)
 lines(as.numeric(as.character(Temp15)) ~ Date.Time, Probe.Data, col = "lightsalmon", lwd = 2)
 lines(as.numeric(as.character(Temp16)) ~ Date.Time, Probe.Data, col = "mediumpurple", lwd = 2)
 lines(as.numeric(as.character(Temp17)) ~ Date.Time, Probe.Data, col = "mistyrose", lwd = 2)
 lines(as.numeric(as.character(Temp18)) ~ Date.Time, Probe.Data, col = "orange3", lwd = 2)
 axis.POSIXct(side=1, Probe.Data$Date.Time)
-legend("topright", legend = c("T_1", "T_2", "T_3", "T_4", "T_5", "T_6", "T_7", "T_8", "T_9", "T_10", "T_11", "T_12", "T_14", "T_15", "T_16", "T_17", "T_18"),
-       col = c("grey", "red", "blue", "black", "green", "pink", "orange", "yellow", "coral1", "darkblue", "firebrick", "lightcyan2", "purple", "lightsalmon", "mediumpurple", "mistyrose", "orange3"),
+legend("topright", legend = c("T_1", "T_2", "T_3", "T_4", "T_5", "T_6", "T_7", "T_8", "T_9", "T_10", "T_11", "T_12", "T_15", "T_16", "T_17", "T_18"),
+       col = c("grey", "red", "blue", "black", "green", "pink", "orange", "yellow", "coral1", "darkblue", "firebrick", "lightcyan2", "lightsalmon", "mediumpurple", "mistyrose", "orange3"),
        lty = 1, cex = 0.8, lwd = 2, ncol = 3)
 dev.off()
 
