@@ -27,6 +27,9 @@ light <- read.csv("../data/Light_Data.csv", header = TRUE)
 
 Plot PAR
 ```{r}
+plot(PAR ~ Treatment, data = light, col = Position)
+plot(PAR ~ Position, data = light, col = Treatment)
+
 plot(PAR ~ Tank, data = light, col = Position)
 plot(PAR ~ Position, data = light, col = Tank)
 ```
