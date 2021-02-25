@@ -1,0 +1,252 @@
+---
+title: "Temperature"
+author: "HM Putnam"
+date: "1/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Install and Load necessary libraries
+if("lubridate" %in% rownames(installed.packages()) == 'FALSE') install.packages('lubridate') 
+if("tidyverse" %in% rownames(installed.packages()) == 'FALSE') install.packages('tidyverse') 
+if("emmeans" %in% rownames(installed.packages()) == 'FALSE') install.packages('emmeans') 
+if("gridExtra" %in% rownames(installed.packages()) == 'FALSE') install.packages('gridExtra') 
+
+library(lubridate)
+library(tidyverse)
+library(emmeans)
+library(gridExtra)
+```
+
+##  
+### Insert timeframe here
+
+```{r }
+##### CONTINUOUS TEMPERATURE & LIGHT DATA FROM HOBO LOGGERS #####
+getwd() # why is it set on scripts?? need to figure this out
+
+##### QC Treatment Hobo Files #####
+
+#Timeframe
+#data/Hobo/temp_light_logger/20210224
+
+# Read in data 
+Tank1 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank1_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank2 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank2_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank2 <- Tank2[1:nrow(Tank1),]
+Tank3 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank3_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank3 <- Tank3[1:nrow(Tank1),]
+Tank4 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank4_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank4 <- Tank4[1:nrow(Tank1),]
+Tank5 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank5_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank5 <- Tank5[1:nrow(Tank1),]
+Tank6 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank6_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank6 <- Tank6[1:nrow(Tank1),]
+Tank7 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank7_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank7 <- Tank7[1:nrow(Tank1),]
+Tank8 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank8_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank8 <- Tank8[1:nrow(Tank1),]
+Tank9 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank9_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank9 <- Tank9[1:nrow(Tank1),]
+Tank10 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank10_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank10 <- Tank10[1:nrow(Tank1),]
+Tank11 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank11_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank11 <- Tank11[1:nrow(Tank1),]
+Tank12 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank12_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank12 <- Tank12[1:nrow(Tank1),]
+Tank15 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank15_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank15 <- Tank15[1:nrow(Tank1),]
+Tank16 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank16_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank16 <- Tank16[1:nrow(Tank1),]
+Tank17 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank17_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank17 <- Tank17[1:nrow(Tank1),]
+Tank18 <- read.csv("../data/Hobo/temp_light_logger/20210224/Tank18_20210224.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank18 <- Tank18[1:nrow(Tank1),]
+
+data <- cbind(Tank1, 
+              Tank2$V3, Tank2$V4, 
+              Tank3$V3, Tank3$V4, 
+              Tank4$V3, Tank4$V4,
+              Tank5$V3, Tank5$V4,
+              Tank6$V3, Tank6$V4,
+              Tank7$V3, Tank7$V4,
+              Tank8$V3, Tank8$V4,
+              Tank9$V3, Tank9$V4,
+              Tank10$V3, Tank10$V4,
+              Tank11$V3, Tank11$V4,
+              Tank12$V3, Tank12$V4,
+              Tank15$V3, Tank15$V4,
+              Tank16$V3, Tank16$V4,
+              Tank17$V3, Tank17$V4,
+              Tank18$V3, Tank18$V4)
+data <- na.omit(data)
+colnames(data) <- c("Date.Time", 
+                    "Tank1_Temp", "Tank1_Light",
+                    "Tank2_Temp", "Tank2_Light",
+                    "Tank3_Temp", "Tank3_Light",
+                    "Tank4_Temp", "Tank4_Light",
+                    "Tank5_Temp", "Tank5_Light",
+                    "Tank6_Temp", "Tank6_Light",
+                    "Tank7_Temp", "Tank7_Light",
+                    "Tank8_Temp", "Tank8_Light",
+                    "Tank9_Temp", "Tank9_Light",
+                    "Tank10_Temp", "Tank10_Light",
+                    "Tank11_Temp", "Tank11_Light",
+                    "Tank12_Temp", "Tank12_Light",
+                    "Tank15_Temp", "Tank15_Light",
+                    "Tank16_Temp", "Tank16_Light",
+                    "Tank17_Temp", "Tank17_Light",
+                    "Tank18_Temp", "Tank18_Light")
+
+data$Date.Time <- parse_date_time(data$Date.Time, "mdy HMS", tz = "EST")
+data$Date.Time <- data$Date.Time + hours(5) # add x hours
+#data <- data[13:nrow(data)-6,]
+#Save data to file
+write.csv(data,file="../output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv")
+```
+
+
+```{r }
+# Select only temperature 
+temp.data <- data[,c("Date.Time", 
+                     "Tank1_Temp", 
+                     "Tank2_Temp", 
+                     "Tank3_Temp",
+                     "Tank4_Temp",
+                     "Tank5_Temp", 
+                     "Tank6_Temp", 
+                     "Tank7_Temp",
+                     "Tank8_Temp",
+                     "Tank9_Temp",
+                     "Tank10_Temp", 
+                     "Tank11_Temp", 
+                     "Tank12_Temp", 
+                     "Tank15_Temp",
+                     "Tank16_Temp", 
+                     "Tank17_Temp", 
+                     "Tank18_Temp")]
+
+# Rename columns
+colnames(temp.data) <- c("Date.Time", 
+                     "Tank1", 
+                     "Tank2", 
+                     "Tank3",
+                     "Tank4",
+                     "Tank5", 
+                     "Tank6", 
+                     "Tank7",
+                     "Tank8",
+                     "Tank9",
+                     "Tank10", 
+                     "Tank11", 
+                     "Tank12", 
+                     "Tank15",
+                     "Tank16", 
+                     "Tank17", 
+                     "Tank18")
+
+# Convert to Long
+temp.trt.data <- pivot_longer(temp.data, cols = Tank1:Tank18, names_to="Tank" )
+
+## Need to remove times when logger was out of water
+
+# Plot and save 
+ggplot(temp.trt.data, aes(x=Date.Time, y=value)) +
+  geom_line(aes(color = Tank), size = 1)+
+  #ylim(5,15)+
+  ylab("Temperature °C")
+ggsave("../output/Hobo/temp_light_logger/All_Tank_HoboTemp_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
+
+```
+
+
+```{r }
+# Select only light 
+light.data <- data[,c("Date.Time", 
+                     "Tank1_Light", 
+                     "Tank2_Light", 
+                     "Tank3_Light",
+                     "Tank4_Light",
+                     "Tank5_Light", 
+                     "Tank6_Light", 
+                     "Tank7_Light",
+                     "Tank8_Light",
+                     "Tank9_Light",
+                     "Tank10_Light", 
+                     "Tank11_Light", 
+                     "Tank12_Light", 
+                     "Tank15_Light",
+                     "Tank16_Light", 
+                     "Tank17_Light", 
+                     "Tank18_Light")]
+colnames(light.data) <- c("Date.Time", 
+                     "Tank1", 
+                     "Tank2", 
+                     "Tank3",
+                     "Tank4",
+                     "Tank5", 
+                     "Tank6", 
+                     "Tank7",
+                     "Tank8",
+                     "Tank9",
+                     "Tank10", 
+                     "Tank11", 
+                     "Tank12", 
+                     "Tank15",
+                     "Tank16", 
+                     "Tank17", 
+                     "Tank18")
+
+# Convert to Long
+light.trt.data <- pivot_longer(light.data, cols = Tank1:Tank18, names_to="Tank" )
+
+## Need to remove times when logger was out of water
+
+# Plot and save
+ggplot(light.trt.data, aes(x=Date.Time, y=value)) +
+  geom_line(aes(color = Tank), size = 1) +
+  scale_fill_brewer("Dark2") +
+  ylab("Light (lux)")
+ggsave("../output/Hobo/temp_light_logger/All_Tank_HoboLight_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
+
+```
+
+
+
+
+
+```{r }
+# # Read in tide data 
+# tides <- read.csv("data/tide.csv", sep=",", header=TRUE, na.strings = "NA")
+# tides$Date.Time <- paste(tides$Date, tides$Time.LST, sep = " ")
+# tides$Date.Time <- parse_date_time(tides$Date.Time, "%m/%d/%y %H:%M", tz = "EST")
+# tides$Prelim.m <- as.numeric(as.character(tides$Prelim.m))
+# tides <- tides[191:2531,]
+# 
+# tides.fig <- ggplot(tides, aes(x=Date.Time, y=Prelim.m)) +
+#   geom_line()+
+#   ylim(0,2)+
+#   ylab("Tidal Height m")
+# ggsave("output/Tidalcycle.pdf", plot = last_plot(), width = 8, height = 4)
+# 
+# 
+# temperatureColor <- "red"
+# priceColor <- "black"
+# 
+# ggplot() +
+# geom_line(data=data, aes(x=Date.Time, y=Tank1), color='red') + 
+# geom_line(data=tides, aes(x=Date.Time, y=Prelim.m), color='black')+
+#   scale_y_continuous(
+#     # Features of the first axis
+#     name = "Temperature (°C)",
+#     # Add a second axis and specify its features
+#     sec.axis = sec_axis(~., name="Tidal Height (m)")) + 
+#   theme(
+#     axis.title.y = element_text(color = temperatureColor, size=13),
+#     axis.title.y.right = element_text(color = priceColor, size=13)
+#   )
+# ggsave("output/Tank_Temps_Tides.pdf", plot = last_plot(), width = 8, height = 4)
+
+```
