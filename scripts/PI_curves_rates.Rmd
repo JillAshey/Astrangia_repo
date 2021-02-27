@@ -135,10 +135,10 @@ for(i in 1:length(file.names.full)) { # for every file in list calculate O2 upta
     dev.off()
     
     # fill in all the O2 consumption and rate data
-    #Photo.R[i,2:3] <- Regs$allRegs[1,c(4,5)] #inserts slope and intercept in the dataframe
-    #Photo.R[i,1] <- rename #stores the file name in the Date column
-    #Photo.R[i,4] <- mean(Photo.Data1$Temp, na.rm=T)  #stores the Temperature in the Temp.C column
-    #Photo.R[i,5] <- PR[j] #stores whether it is photosynthesis or respiration
+    Photo.R[i,2:3] <- Regs$allRegs[1,c(4,5)] #inserts slope and intercept in the dataframe
+    Photo.R[i,1] <- rename #stores the file name in the Date column
+    Photo.R[i,4] <- mean(Photo.Data1$Temp, na.rm=T)  #stores the Temperature in the Temp.C column
+    Photo.R[i,5] <- PR[j] #stores whether it is photosynthesis or respiration
  
     
     # rewrite the file everytime... I know this is slow, but it will save the data that is already run
@@ -147,7 +147,8 @@ for(i in 1:length(file.names.full)) { # for every file in list calculate O2 upta
 
 ```
 
-
+Running the for loop just goes forever until I manually stop the code. When I stop it, I get this error: Error in base::try(metadata, TRUE) : object 'metadata' not found
+Not sure what its referring too, continue looking
 
 
 
