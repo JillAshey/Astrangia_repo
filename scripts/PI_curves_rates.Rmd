@@ -70,7 +70,7 @@ View(SA)
 Sample.Info<-left_join(Sample.Info, SA)
 View(Sample.Info)
 
-PR<-c('Photo','Resp')
+#PR<-c('Photo','Resp')
 
 
  # for every file in list calculate O2 uptake or release rate and add the data to the Photo.R dataframe
@@ -162,7 +162,7 @@ Not sure what its referring too, continue looking
 
 
 
-
+Original code 
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
