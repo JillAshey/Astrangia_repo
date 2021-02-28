@@ -7,6 +7,7 @@
 
 library(lubridate)
 library(tidyr)
+library(ggplot2)
 library(plotrix)
 library(tidyverse)
 library(dplyr)
@@ -97,28 +98,141 @@ range(Temp_2010$WTMP, na.rm=TRUE)
 Temp_2010$Date.Time <- parse_date_time(Temp_2010$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2010 <-Temp_2010[14040:15561, ]
 
-pdf("Output/Newport_Buoy_Temps.pdf")
-plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
-points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
-points(Temp_2008$Date.Time, Temp_2008$WTMP, cex=0.1, col="green")
-points(Temp_2009$Date.Time, Temp_2009$WTMP, cex=0.1, col="lightblue")
-points(Temp_2010$Date.Time, Temp_2010$WTMP, cex=0.1, col="purple")
-legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010"),
-       col=c("red", "orange", "yellow", "green", "lightblue", "purple"), lty=1:2, cex=0.8)
-dev.off()
+Temp_2011 <- read.csv("data/NOAA_temp/nwpr1h2011.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2011$Date <- paste0(Temp_2011$MM, sep = "-", Temp_2011$DD)
+Temp_2011$Time <- paste0(Temp_2011$hh, sep = ":", Temp_2011$mm)
+Temp_2011$Date.Time <- paste0(Temp_2011$Date, sep=" ", Temp_2011$Time)
+unique(Temp_2011$WTMP)
+Temp_2011 <- Temp_2011 %>% naniar::replace_with_na(Temp_2011, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2011$WTMP)
+Temp_2011$WTMP <- as.numeric(Temp_2011$WTMP)
+range(Temp_2011$WTMP, na.rm=TRUE)
+Temp_2011$Date.Time <- parse_date_time(Temp_2011$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+March_Temp_2011 <-Temp_2011[14140:15819, ]
+
+Temp_2012 <- read.csv("data/NOAA_temp/nwpr1h2012.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2012$Date <- paste0(Temp_2012$MM, sep = "-", Temp_2012$DD)
+Temp_2012$Time <- paste0(Temp_2012$hh, sep = ":", Temp_2012$mm)
+Temp_2012$Date.Time <- paste0(Temp_2012$Date, sep=" ", Temp_2012$Time)
+unique(Temp_2012$WTMP)
+Temp_2012 <- Temp_2012 %>% naniar::replace_with_na(Temp_2012, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2012$WTMP)
+Temp_2012$WTMP <- as.numeric(Temp_2012$WTMP)
+range(Temp_2012$WTMP, na.rm=TRUE)
+Temp_2012$Date.Time <- parse_date_time(Temp_2012$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+March_Temp_2012 <-Temp_2012[14363:16045, ]
+
+Temp_2013 <- read.csv("data/NOAA_temp/nwpr1h2013.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2013$Date <- paste0(Temp_2013$MM, sep = "-", Temp_2013$DD)
+Temp_2013$Time <- paste0(Temp_2013$hh, sep = ":", Temp_2013$mm)
+Temp_2013$Date.Time <- paste0(Temp_2013$Date, sep=" ", Temp_2013$Time)
+unique(Temp_2013$WTMP)
+Temp_2013 <- Temp_2013 %>% naniar::replace_with_na(Temp_2013, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2013$WTMP)
+Temp_2013$WTMP <- as.numeric(Temp_2013$WTMP)
+range(Temp_2013$WTMP, na.rm=TRUE)
+Temp_2013$Date.Time <- parse_date_time(Temp_2013$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2013 <-Temp_2013[14040:15561, ]
+
+Temp_2014 <- read.csv("data/NOAA_temp/nwpr1h2014.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2014$Date <- paste0(Temp_2014$MM, sep = "-", Temp_2014$DD)
+Temp_2014$Time <- paste0(Temp_2014$hh, sep = ":", Temp_2014$mm)
+Temp_2014$Date.Time <- paste0(Temp_2014$Date, sep=" ", Temp_2014$Time)
+unique(Temp_2014$WTMP)
+Temp_2014 <- Temp_2014 %>% naniar::replace_with_na(Temp_2014, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2014$WTMP)
+Temp_2014$WTMP <- as.numeric(Temp_2014$WTMP)
+range(Temp_2014$WTMP, na.rm=TRUE)
+Temp_2014$Date.Time <- parse_date_time(Temp_2014$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2014 <-Temp_2014[14040:15561, ]
+
+Temp_2015 <- read.csv("data/NOAA_temp/nwpr1h2015.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2015$Date <- paste0(Temp_2015$MM, sep = "-", Temp_2015$DD)
+Temp_2015$Time <- paste0(Temp_2015$hh, sep = ":", Temp_2015$mm)
+Temp_2015$Date.Time <- paste0(Temp_2015$Date, sep=" ", Temp_2015$Time)
+unique(Temp_2015$WTMP)
+Temp_2015 <- Temp_2015 %>% naniar::replace_with_na(Temp_2015, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2015$WTMP)
+Temp_2015$WTMP <- as.numeric(Temp_2015$WTMP)
+range(Temp_2015$WTMP, na.rm=TRUE)
+Temp_2015$Date.Time <- parse_date_time(Temp_2015$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2015 <-Temp_2015[14040:15561, ]
+
+Temp_2016 <- read.csv("data/NOAA_temp/nwpr1h2016.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2016$Date <- paste0(Temp_2016$MM, sep = "-", Temp_2016$DD)
+Temp_2016$Time <- paste0(Temp_2016$hh, sep = ":", Temp_2016$mm)
+Temp_2016$Date.Time <- paste0(Temp_2016$Date, sep=" ", Temp_2016$Time)
+unique(Temp_2016$WTMP)
+Temp_2016 <- Temp_2016 %>% naniar::replace_with_na(Temp_2016, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2016$WTMP)
+Temp_2016$WTMP <- as.numeric(Temp_2016$WTMP)
+range(Temp_2016$WTMP, na.rm=TRUE)
+Temp_2016$Date.Time <- parse_date_time(Temp_2016$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2016 <-Temp_2016[14040:15561, ]
 
 
-pdf("Output/March_Week1_Newport_Buoy_Temps.pdf")
-plot(March_Temp_2005$Date.Time, March_Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,7))
-points(March_Temp_2006$Date.Time, March_Temp_2006$WTMP, cex=0.1, col="orange")
-points(March_Temp_2007$Date.Time, March_Temp_2007$WTMP, cex=0.1, col="yellow")
-points(March_Temp_2008$Date.Time, March_Temp_2008$WTMP, cex=0.1, col="green")
-points(March_Temp_2009$Date.Time, March_Temp_2009$WTMP, cex=0.1, col="lightblue")
-points(March_Temp_2010$Date.Time, March_Temp_2010$WTMP, cex=0.1, col="purple")
-legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010"),
-       col=c("red", "orange", "yellow", "green", "lightblue", "purple"), lty=1:2, cex=0.8)
-dev.off()
+Temp_2017 <- read.csv("data/NOAA_temp/nwpr1h2017.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2017$Date <- paste0(Temp_2017$MM, sep = "-", Temp_2017$DD)
+Temp_2017$Time <- paste0(Temp_2017$hh, sep = ":", Temp_2017$mm)
+Temp_2017$Date.Time <- paste0(Temp_2017$Date, sep=" ", Temp_2017$Time)
+unique(Temp_2017$WTMP)
+Temp_2017 <- Temp_2017 %>% naniar::replace_with_na(Temp_2017, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2017$WTMP)
+Temp_2017$WTMP <- as.numeric(Temp_2017$WTMP)
+range(Temp_2017$WTMP, na.rm=TRUE)
+Temp_2017$Date.Time <- parse_date_time(Temp_2017$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2017 <-Temp_2017[14040:15561, ]
+
+Temp_2018 <- read.csv("data/NOAA_temp/nwpr1h2018.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2018$Date <- paste0(Temp_2018$MM, sep = "-", Temp_2018$DD)
+Temp_2018$Time <- paste0(Temp_2018$hh, sep = ":", Temp_2018$mm)
+Temp_2018$Date.Time <- paste0(Temp_2018$Date, sep=" ", Temp_2018$Time)
+unique(Temp_2018$WTMP)
+Temp_2018 <- Temp_2018 %>% naniar::replace_with_na(Temp_2018, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2018$WTMP)
+Temp_2018$WTMP <- as.numeric(Temp_2018$WTMP)
+range(Temp_2018$WTMP, na.rm=TRUE)
+Temp_2018$Date.Time <- parse_date_time(Temp_2018$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2018 <-Temp_2018[14040:15561, ]
+
+Temp_2019 <- read.csv("data/NOAA_temp/nwpr1h2019.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2019$Date <- paste0(Temp_2019$MM, sep = "-", Temp_2019$DD)
+Temp_2019$Time <- paste0(Temp_2019$hh, sep = ":", Temp_2019$mm)
+Temp_2019$Date.Time <- paste0(Temp_2019$Date, sep=" ", Temp_2019$Time)
+unique(Temp_2019$WTMP)
+Temp_2019 <- Temp_2019 %>% naniar::replace_with_na(Temp_2019, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2019$WTMP)
+Temp_2019$WTMP <- as.numeric(Temp_2019$WTMP)
+range(Temp_2019$WTMP, na.rm=TRUE)
+Temp_2019$Date.Time <- parse_date_time(Temp_2019$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+#March_Temp_2019 <-Temp_2019[14040:15561, ]
+
+# pdf("Output/Newport_Buoy_Temps.pdf")
+# plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+# points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
+# points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
+# points(Temp_2008$Date.Time, Temp_2008$WTMP, cex=0.1, col="green")
+# points(Temp_2009$Date.Time, Temp_2009$WTMP, cex=0.1, col="lightblue")
+# points(Temp_2010$Date.Time, Temp_2010$WTMP, cex=0.1, col="purple")
+# points(Temp_2011$Date.Time, Temp_2011$WTMP, cex=0.1, col="pink")
+# points(Temp_2012$Date.Time, Temp_2012$WTMP, cex=0.1, col="gray")
+# legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012"),
+#        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray"), lty=1:2, cex=0.8)
+# dev.off()
+
+
+# pdf("Output/March_Week1_Newport_Buoy_Temps.pdf")
+# plot(March_Temp_2005$Date.Time, March_Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,7))
+# points(March_Temp_2006$Date.Time, March_Temp_2006$WTMP, cex=0.1, col="orange")
+# points(March_Temp_2007$Date.Time, March_Temp_2007$WTMP, cex=0.1, col="yellow")
+# points(March_Temp_2008$Date.Time, March_Temp_2008$WTMP, cex=0.1, col="green")
+# points(March_Temp_2009$Date.Time, March_Temp_2009$WTMP, cex=0.1, col="lightblue")
+# points(March_Temp_2010$Date.Time, March_Temp_2010$WTMP, cex=0.1, col="purple")
+# points(March_Temp_2011$Date.Time, March_Temp_2011$WTMP, cex=0.1, col="pink")
+# points(March_Temp_2012$Date.Time, March_Temp_2012$WTMP, cex=0.1, col="gray")
+# legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012"),
+#        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray"), lty=1:2, cex=0.8)
+# dev.off()
 
 # Running averages
 
@@ -128,10 +242,26 @@ colnames(Temp_2007)[1] <- "YYYY"
 colnames(Temp_2008)[1] <- "YYYY"
 colnames(Temp_2009)[1] <- "YYYY"
 colnames(Temp_2010)[1] <- "YYYY"
+colnames(Temp_2011)[1] <- "YYYY"
+colnames(Temp_2012)[1] <- "YYYY"
+colnames(Temp_2013)[1] <- "YYYY"
+colnames(Temp_2014)[1] <- "YYYY"
+colnames(Temp_2015)[1] <- "YYYY"
+colnames(Temp_2016)[1] <- "YYYY"
+colnames(Temp_2017)[1] <- "YYYY"
+colnames(Temp_2018)[1] <- "YYYY"
+colnames(Temp_2019)[1] <- "YYYY"
 
-
-data <- rbind(Temp_2005,Temp_2006,Temp_2007,Temp_2008,Temp_2009,Temp_2010)
+data <- rbind(Temp_2005,Temp_2006,Temp_2007,Temp_2008,Temp_2009,Temp_2010,
+              Temp_2011,Temp_2012,Temp_2013,Temp_2014,Temp_2015,Temp_2016,
+              Temp_2017,Temp_2018,Temp_2019)
 range(data$WTMP, na.rm=TRUE)
+
+data %>% group_by(YYYY) %>%
+  ggplot(., aes(x=Date, y=WTMP)) +
+  geom_line(aes(color=YYYY)) + 
+  xlab("Date")+
+  ylab("Temperature °C")
 
 data$Date <- as.Date(data$Date, "%m-%d")
 
@@ -139,7 +269,7 @@ daily.means <- data %>%
   group_by(Date) %>%
   summarise(avg = mean(as.numeric(WTMP))) 
 
-plot(daily.means$Date, as.numeric(daily.means$avg), cex=0.1, col="red", xlab="Date", ylab="Temperature °C")
+
 
 
 
