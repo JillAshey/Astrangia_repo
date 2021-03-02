@@ -34,8 +34,6 @@ library(furrr)
 
 ```{r}
 ##### PHOTOSYNTHESIS AND RESPIRATION #####
-getwd()
-
 # get file path
 path.p <- "../data/1_pi_curves/PI_curve_resp/" #the location of all your respirometry files 
 
