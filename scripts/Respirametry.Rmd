@@ -3,11 +3,13 @@ title: "PR"
 author: "jillashey"
 date created: "2/28/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-
+#knitr::opts_knit$set(root.dir = normalizePath(".."))
 
 ## install packages if you don't already have them in your library
 if (!require("devtools")) install.packages("devtools")
@@ -191,7 +193,7 @@ ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.save <- pr.out %>% select(colony_id, Light_Value, Run, micromol.cm2.s, micromol.cm2.h)
 
 # Write to output file
-write.csv(pr.save, "output/1_pi_curve_rates.csv")
+write.csv(pr.save, "output/PR_Time0_rates.csv")
 ```
 
 ```{r}

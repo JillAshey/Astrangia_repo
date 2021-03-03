@@ -3,6 +3,8 @@ title: "DailyMeasures"
 author: "JAshey"
 date: "2/2/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Load packages
 ```{r}
 library(tidyverse)
+library(gridExtra)
 ```
 
 Check working directory
@@ -23,7 +26,7 @@ getwd()
 # Load data
 ```{r}
 # Load data
-daily <- read.csv("../data/DailyMeasurements.csv", header = T)
+daily <- read.csv("data/DailyMeasurements.csv", header = T)
 daily <- daily[-13,] # remove tank 14 because it cracked 
 daily$Timepoint <- as.Date(daily$Timepoint, "%m/%d/%Y")
 daily$Tank <- as.factor(daily$Tank)
@@ -32,7 +35,7 @@ daily <- subset(daily, Treatment=="Heat" | Treatment=="Ambient")
 
 Discrete pH calculations from Tris calibrations.
 ```{r}
-path <-("../data/pH_Tris") #set path to calibration files
+path <-("data/pH_Tris") #set path to calibration files
 file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
 pH.cals <- data.frame(matrix(NA, nrow=length(file.names), ncol=3, dimnames=list(file.names,c("Date", "Intercept", "Slope")))) #generate a 3 column dataframe with specific column names
 
@@ -84,10 +87,10 @@ flow = ggplot(SW.chem, aes(x=Treatment, y=Flow.mL.sec)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("Flow mL/sec")
 plot <- grid.arrange(temp, sal, pH, light, flow, ncol=3, nrow = 2, clip="off")
-ggsave("../output/Daily_Measurements.By.Treatment.pdf", plot, width = 21, height = 21, units = c("in"))
+ggsave("output/Daily_Measurements.By.Treatment.pdf", plot, width = 21, height = 21, units = c("in"))
 
 # By Tank
-pdf("../Output/Daily_Measurements.By.Tank.pdf")
+pdf("Output/Daily_Measurements.By.Tank.pdf")
 par(mfrow=c(2,3))
 plot(SW.chem$Tank, SW.chem$Temperature.C, xlab="Tank", ylab="Temperature°C", ylim = c(3.5,12), las = 2)
 plot(SW.chem$Tank, SW.chem$Salinity.psu, xlab="Tank", ylab="Salinity psu", ylim = c(29,34), las = 2)
@@ -150,4 +153,5 @@ mod.flow <- aov(Flow.mL.sec ~ Tank, data = SW.chem)
 mod.flow
 summary(mod.flow)
 hist(mod.flow$residuals)
+
 ```

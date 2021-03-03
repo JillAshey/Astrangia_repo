@@ -22,7 +22,7 @@ getwd()
 
 Load data 
 ```{r}
-light <- read.csv("../data/Light_Data.csv", header = TRUE)
+light <- read.csv("data/Light_Data.csv", header = TRUE)
 ```
 
 Plot PAR
