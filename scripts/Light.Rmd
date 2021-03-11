@@ -23,6 +23,8 @@ getwd()
 Load data 
 ```{r}
 light <- read.csv("../data/Light_Data.csv", header = TRUE)
+light <- subset(light, Treatment=="Heat" | Treatment=="Ambient")
+
 ```
 
 Plot PAR
