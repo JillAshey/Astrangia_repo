@@ -37,7 +37,7 @@ Temp_2005$WTMP <- as.numeric(Temp_2005$WTMP)
 range(Temp_2005$WTMP, na.rm=TRUE)
 Temp_2005$Date.Time <- parse_date_time(Temp_2005$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2005 <-Temp_2005[10200:11395, ]
-weekly_2005 <- aggregate(x = Temp_2005$WTMP,                # Specify data column
+daily_2005 <- aggregate(x = Temp_2005$WTMP,                # Specify data column
                          by = list(Temp_2005$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -53,7 +53,7 @@ Temp_2006$WTMP <- as.numeric(Temp_2006$WTMP)
 range(Temp_2006$WTMP, na.rm=TRUE)
 Temp_2006$Date.Time <- parse_date_time(Temp_2006$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2006 <-Temp_2006[13711:15385, ]
-weekly_2006 <- aggregate(x = Temp_2006$WTMP,                # Specify data column
+daily_2006 <- aggregate(x = Temp_2006$WTMP,                # Specify data column
                          by = list(Temp_2006$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -69,7 +69,7 @@ Temp_2007$WTMP <- as.numeric(Temp_2007$WTMP)
 range(Temp_2007$WTMP, na.rm=TRUE)
 Temp_2007$Date.Time <- parse_date_time(Temp_2007$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2007 <-Temp_2007[13716:15181, ]
-weekly_2007 <- aggregate(x = Temp_2007$WTMP,                # Specify data column
+daily_2007 <- aggregate(x = Temp_2007$WTMP,                # Specify data column
                          by = list(Temp_2007$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -85,7 +85,7 @@ Temp_2008$WTMP <- as.numeric(Temp_2008$WTMP)
 range(Temp_2008$WTMP, na.rm=TRUE)
 Temp_2008$Date.Time <- parse_date_time(Temp_2008$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2008 <-Temp_2008[12154:13773, ]
-weekly_2008 <- aggregate(x = Temp_2008$WTMP,                # Specify data column
+daily_2008 <- aggregate(x = Temp_2008$WTMP,                # Specify data column
                          by = list(Temp_2008$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -101,7 +101,7 @@ Temp_2009$WTMP <- as.numeric(Temp_2009$WTMP)
 range(Temp_2009$WTMP, na.rm=TRUE)
 Temp_2009$Date.Time <- parse_date_time(Temp_2009$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2009 <-Temp_2009[14151:15829, ]
-weekly_2009 <- aggregate(x = Temp_2009$WTMP,                # Specify data column
+daily_2009 <- aggregate(x = Temp_2009$WTMP,                # Specify data column
                          by = list(Temp_2009$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -117,7 +117,7 @@ Temp_2010$WTMP <- as.numeric(Temp_2010$WTMP)
 range(Temp_2010$WTMP, na.rm=TRUE)
 Temp_2010$Date.Time <- parse_date_time(Temp_2010$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2010 <-Temp_2010[14040:15561, ]
-weekly_2010 <- aggregate(x = Temp_2010$WTMP,                # Specify data column
+daily_2010 <- aggregate(x = Temp_2010$WTMP,                # Specify data column
                          by = list(Temp_2010$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -133,7 +133,7 @@ Temp_2011$WTMP <- as.numeric(Temp_2011$WTMP)
 range(Temp_2011$WTMP, na.rm=TRUE)
 Temp_2011$Date.Time <- parse_date_time(Temp_2011$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2011 <-Temp_2011[14140:15819, ]
-weekly_2011 <- aggregate(x = Temp_2011$WTMP,                # Specify data column
+daily_2011 <- aggregate(x = Temp_2011$WTMP,                # Specify data column
                          by = list(Temp_2011$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -149,7 +149,7 @@ Temp_2012$WTMP <- as.numeric(Temp_2012$WTMP)
 range(Temp_2012$WTMP, na.rm=TRUE)
 Temp_2012$Date.Time <- parse_date_time(Temp_2012$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 March_Temp_2012 <-Temp_2012[14363:16045, ]
-weekly_2012 <- aggregate(x = Temp_2012$WTMP,                # Specify data column
+daily_2012 <- aggregate(x = Temp_2012$WTMP,                # Specify data column
                          by = list(Temp_2012$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -165,7 +165,7 @@ Temp_2013$WTMP <- as.numeric(Temp_2013$WTMP)
 range(Temp_2013$WTMP, na.rm=TRUE)
 Temp_2013$Date.Time <- parse_date_time(Temp_2013$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2013 <-Temp_2013[14040:15561, ]
-weekly_2013 <- aggregate(x = Temp_2013$WTMP,                # Specify data column
+daily_2013 <- aggregate(x = Temp_2013$WTMP,                # Specify data column
                          by = list(Temp_2013$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -181,7 +181,7 @@ Temp_2014$WTMP <- as.numeric(Temp_2014$WTMP)
 range(Temp_2014$WTMP, na.rm=TRUE)
 Temp_2014$Date.Time <- parse_date_time(Temp_2014$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2014 <-Temp_2014[14040:15561, ]
-weekly_2014 <- aggregate(x = Temp_2014$WTMP,                # Specify data column
+daily_2014 <- aggregate(x = Temp_2014$WTMP,                # Specify data column
                          by = list(Temp_2014$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -197,7 +197,7 @@ Temp_2015$WTMP <- as.numeric(Temp_2015$WTMP)
 range(Temp_2015$WTMP, na.rm=TRUE)
 Temp_2015$Date.Time <- parse_date_time(Temp_2015$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2015 <-Temp_2015[14040:15561, ]
-weekly_2015 <- aggregate(x = Temp_2015$WTMP,                # Specify data column
+daily_2015 <- aggregate(x = Temp_2015$WTMP,                # Specify data column
                          by = list(Temp_2015$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -213,7 +213,7 @@ Temp_2016$WTMP <- as.numeric(Temp_2016$WTMP)
 range(Temp_2016$WTMP, na.rm=TRUE)
 Temp_2016$Date.Time <- parse_date_time(Temp_2016$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2016 <-Temp_2016[14040:15561, ]
-weekly_2016 <- aggregate(x = Temp_2016$WTMP,                # Specify data column
+daily_2016 <- aggregate(x = Temp_2016$WTMP,                # Specify data column
                          by = list(Temp_2016$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -229,7 +229,7 @@ Temp_2017$WTMP <- as.numeric(Temp_2017$WTMP)
 range(Temp_2017$WTMP, na.rm=TRUE)
 Temp_2017$Date.Time <- parse_date_time(Temp_2017$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2017 <-Temp_2017[14040:15561, ]
-weekly_2017 <- aggregate(x = Temp_2017$WTMP,                # Specify data column
+daily_2017 <- aggregate(x = Temp_2017$WTMP,                # Specify data column
                          by = list(Temp_2017$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -245,7 +245,7 @@ Temp_2018$WTMP <- as.numeric(Temp_2018$WTMP)
 range(Temp_2018$WTMP, na.rm=TRUE)
 Temp_2018$Date.Time <- parse_date_time(Temp_2018$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2018 <-Temp_2018[14040:15561, ]
-weekly_2018 <- aggregate(x = Temp_2018$WTMP,                # Specify data column
+daily_2018 <- aggregate(x = Temp_2018$WTMP,                # Specify data column
                          by = list(Temp_2018$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
@@ -261,13 +261,38 @@ Temp_2019$WTMP <- as.numeric(Temp_2019$WTMP)
 range(Temp_2019$WTMP, na.rm=TRUE)
 Temp_2019$Date.Time <- parse_date_time(Temp_2019$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #March_Temp_2019 <-Temp_2019[14040:15561, ]
-weekly_2019 <- aggregate(x = Temp_2019$WTMP,                # Specify data column
+daily_2019 <- aggregate(x = Temp_2019$WTMP,                # Specify data column
                          by = list(Temp_2019$Date),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
 
+Temp_2020 <- read.csv("data/NOAA_temp/NOAA_2020.csv", header=TRUE, na.strings = "NA")[,c(1:3)]
+colnames(Temp_2020) <- c("Date", "Time", "WTMP.F")
+Temp_2020 <- separate(Temp_2020, col = Date, into = c("MM", "DD", "YYYY"), sep = "/")
+Temp_2020$YYYY<- "2020"
+Temp_2020 <- separate(Temp_2020, col = Time, into = c("hh", "mm"), sep = ":")
+Temp_2020$Date <- paste0(Temp_2020$MM, sep = "-", Temp_2020$DD)
+Temp_2020$Time <- paste0(Temp_2020$hh, sep = ":", Temp_2020$mm)
+Temp_2020$Date.Time <- paste0(Temp_2020$Date, sep=" ", Temp_2020$Time)
+Temp_2020$WTMP.F <- as.numeric(Temp_2020$WTMP.F)
+Temp_2020 <- Temp_2020 %>% 
+  mutate(WTMP.C = (WTMP.F - 32)*(5/9))
+unique(Temp_2020$WTMP.C)
+Temp_2020$WTMP.C <- as.numeric(Temp_2020$WTMP.C)
+range(Temp_2020$WTMP.C, na.rm=TRUE)
+Temp_2020$Date.Time <- parse_date_time(Temp_2020$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+Temp_2020 <- select(Temp_2020, -WTMP.F)
+col_order <-c("YYYY", "MM", "DD", "hh", "mm", "WTMP.C", "Date", "Time", "Date.Time")
+Temp_2020 <- Temp_2020[,col_order]
+colnames(Temp_2020)[6] <- "WTMP"
+daily_2020 <- aggregate(x = Temp_2020$WTMP,                # Specify data column
+                         by = list(Temp_2020$Date),          # Specify group indicator
+                         FUN = mean, 
+                         na.rm = T) 
 
-pdf("output/Newport_Buoy_Temps_20210309.pdf")
+
+
+pdf("output/Newport_Buoy_Temps.pdf")
 plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
 points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
@@ -283,8 +308,9 @@ points(Temp_2016$Date.Time, Temp_2016$WTMP, cex=0.1, col="palegreen")
 points(Temp_2017$Date.Time, Temp_2017$WTMP, cex=0.1, col="cyan1")
 points(Temp_2018$Date.Time, Temp_2018$WTMP, cex=0.1, col="darkorange3")
 points(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="darkolivegreen1")
-legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012"),
-       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1"), lty=1:2, cex=0.8)
+points(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="black")
+legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
+       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "black"), lty=1:2, cex=0.8)
 dev.off()
 
 # pdf("Output/March_Week1_Newport_Buoy_Temps.pdf")
@@ -320,7 +346,7 @@ colnames(Temp_2019)[1] <- "YYYY"
 
 data <- rbind(Temp_2005,Temp_2006,Temp_2007,Temp_2008,Temp_2009,Temp_2010,
               Temp_2011,Temp_2012,Temp_2013,Temp_2014,Temp_2015,Temp_2016,
-              Temp_2017,Temp_2018,Temp_2019)
+              Temp_2017,Temp_2018,Temp_2019, Temp_2020)
 range(data$WTMP, na.rm=TRUE)
 data.lm <- lm(WTMP~Date.Time, data)
 summary(data.lm)
@@ -331,32 +357,34 @@ data %>% group_by(YYYY) %>%
   xlab("Date")+
   ylab("Temperature °C")
 
-data$Date <- as.Date(data$Date, "%m-%d")
 
 daily.means <- data %>%
   group_by(Date) %>%
   summarise(avg = mean(as.numeric(WTMP))) 
 
 
-## weekly summary
+## daily summary
+data.daily <- rbind(daily_2005, daily_2006, daily_2007, daily_2008, daily_2009, daily_2010, 
+                   daily_2011, daily_2012, daily_2013, daily_2014, daily_2015, daily_2016,
+                   daily_2017, daily_2018, daily_2019, daily_2020)
+colnames(data.daily) <- c("Day", "WTMP")
+data.daily.lm <- lm(WTMP~Day, data.daily)
+summary(data.daily.lm)
+write.csv(data.daily, "data/NOAA_temp/NOAA_daily.csv")
 
-data.week <- rbind(weekly_2005, weekly_2006, weekly_2007, weekly_2008, weekly_2009, weekly_2010, 
-                   weekly_2011, weekly_2012, weekly_2013, weekly_2014, weekly_2015, weekly_2016,
-                   weekly_2017, weekly_2018, weekly_2019)
-colnames(data.week) <- c("Week", "WTMP")
-data.week.lm <- lm(WTMP~Week, data.week)
-summary(data.week.lm)
-write.csv(data.week, "data/NOAA_temp/NOAA_weekly.csv")
-
-data.week.mean <- aggregate(x = data.week$WTMP,                # Specify data column
-                         by = list(data.week$Week),          # Specify group indicator
+data.daily.mean <- aggregate(x = data.daily$WTMP,                # Specify data column
+                         by = list(data.daily$Day),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
-write.csv(data.week.mean, "data/NOAA_temp/NOAA_weekly.mean.csv")
+colnames(data.daily.mean) <- c("Day", "WTMP")
+write.csv(data.daily.mean, "data/NOAA_temp/NOAA_daily.mean.csv")
 
 
 
-
-
+## Weekly summary 
+n <- 7
+data.weekly <- aggregate(data.daily.mean, list(rep(1:(nrow(data.daily.mean) %/% n + 1), each = n, len = nrow(data.daily.mean))), mean)[-1]
+data.weekly$Week <- rep(1:53)
+write.csv(data.weekly, "data/NOAA_temp/NOAA_weekly.mean.csv")
 
 
