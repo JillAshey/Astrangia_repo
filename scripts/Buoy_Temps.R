@@ -292,7 +292,7 @@ daily_2020 <- aggregate(x = Temp_2020$WTMP,                # Specify data column
 
 
 
-pdf("output/Newport_Buoy_Temps.pdf")
+pdf("output/Newport_Buoy_Temps.test.pdf")
 plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
 points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
@@ -326,8 +326,50 @@ dev.off()
 #        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray"), lty=1:2, cex=0.8)
 # dev.off()
 
-# Running averages
+## examine data from March 1st to Aug 15th in all years
+Temp_2005_sub <- Temp_2005 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2006_sub <- Temp_2006 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2007_sub <- Temp_2007 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2008_sub <- Temp_2008 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2009_sub <- Temp_2009 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2010_sub <- Temp_2010 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2011_sub <- Temp_2011 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2012_sub <- Temp_2012 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2013_sub <- Temp_2013 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2014_sub <- Temp_2014 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2015_sub <- Temp_2015 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2016_sub <- Temp_2016 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2017_sub <- Temp_2017 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2018_sub <- Temp_2018 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2019_sub <- Temp_2019 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2020_sub <- Temp_2020 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
 
+
+
+
+
+
+
+
+
+
+# Running averages
 colnames(Temp_2005)[1] <- "YYYY"
 colnames(Temp_2006)[1] <- "YYYY"
 colnames(Temp_2007)[1] <- "YYYY"
@@ -356,8 +398,6 @@ data %>% group_by(YYYY) %>%
   geom_line(aes(color=YYYY)) + 
   xlab("Date")+
   ylab("Temperature °C")
-
-
 daily.means <- data %>%
   group_by(Date) %>%
   summarise(avg = mean(as.numeric(WTMP))) 
@@ -379,8 +419,6 @@ data.daily.mean <- aggregate(x = data.daily$WTMP,                # Specify data 
 colnames(data.daily.mean) <- c("Day", "WTMP")
 write.csv(data.daily.mean, "data/NOAA_temp/NOAA_daily.mean.csv")
 
-
-
 ## Weekly summary 
 n <- 7
 data.weekly <- aggregate(data.daily.mean, list(rep(1:(nrow(data.daily.mean) %/% n + 1), each = n, len = nrow(data.daily.mean))), mean)[-1]
@@ -388,3 +426,254 @@ data.weekly$Week <- rep(1:53)
 write.csv(data.weekly, "data/NOAA_temp/NOAA_weekly.mean.csv")
 
 
+
+
+
+
+
+
+
+##### Plotting my own data with NOAA buoy data 
+Tank1 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank1_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank2 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank2_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank2 <- Tank2[1:nrow(Tank1),]
+Tank3 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank3_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank3 <- Tank3[1:nrow(Tank1),]
+Tank4 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank4_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank4 <- Tank4[1:nrow(Tank1),]
+Tank5 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank5_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank5 <- Tank5[1:nrow(Tank1),]
+Tank6 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank6_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank6 <- Tank6[1:nrow(Tank1),]
+Tank7 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank7_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank7 <- Tank7[1:nrow(Tank1),]
+Tank8 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank8_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank8 <- Tank8[1:nrow(Tank1),]
+Tank9 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank9_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank9 <- Tank9[1:nrow(Tank1),]
+Tank10 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank10_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank10 <- Tank10[1:nrow(Tank1),]
+Tank11 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank11_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank11 <- Tank11[1:nrow(Tank1),]
+Tank12 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank12_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank12 <- Tank12[1:nrow(Tank1),]
+Tank15 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank15_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank15 <- Tank15[1:nrow(Tank1),]
+Tank16 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank16_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank16 <- Tank16[1:nrow(Tank1),]
+Tank17 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank17_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank17 <- Tank17[1:nrow(Tank1),]
+Tank18 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank18_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank18 <- Tank18[1:nrow(Tank1),]
+
+my.data <- cbind(Tank1, 
+              Tank2$V3, Tank2$V4, 
+              Tank3$V3, Tank3$V4, 
+              Tank4$V3, Tank4$V4,
+              Tank5$V3, Tank5$V4,
+              Tank6$V3, Tank6$V4,
+              Tank7$V3, Tank7$V4,
+              Tank8$V3, Tank8$V4,
+              Tank9$V3, Tank9$V4,
+              Tank10$V3, Tank10$V4,
+              Tank11$V3, Tank11$V4,
+              Tank12$V3, Tank12$V4,
+              Tank15$V3, Tank15$V4,
+              Tank16$V3, Tank16$V4,
+              Tank17$V3, Tank17$V4,
+              Tank18$V3, Tank18$V4)
+my.data <- na.omit(my.data)
+colnames(my.data) <- c("Date.Time", 
+                    "Tank1_Temp", "Tank1_Light",
+                    "Tank2_Temp", "Tank2_Light",
+                    "Tank3_Temp", "Tank3_Light",
+                    "Tank4_Temp", "Tank4_Light",
+                    "Tank5_Temp", "Tank5_Light",
+                    "Tank6_Temp", "Tank6_Light",
+                    "Tank7_Temp", "Tank7_Light",
+                    "Tank8_Temp", "Tank8_Light",
+                    "Tank9_Temp", "Tank9_Light",
+                    "Tank10_Temp", "Tank10_Light",
+                    "Tank11_Temp", "Tank11_Light",
+                    "Tank12_Temp", "Tank12_Light",
+                    "Tank15_Temp", "Tank15_Light",
+                    "Tank16_Temp", "Tank16_Light",
+                    "Tank17_Temp", "Tank17_Light",
+                    "Tank18_Temp", "Tank18_Light")
+
+my.data$Date.Time <- parse_date_time(my.data$Date.Time, "mdy HMS", tz = "EST")
+my.data$Date.Time <- my.data$Date.Time + hours(5)
+
+my.data <- separate(my.data, col = Date.Time, into = c("Date", "Time"), sep = " ")
+my.data <- separate(my.data, col = Date, into = c("YYYY", "MM", "DD"), sep = "-")
+my.data <- separate(my.data, col = Time, into = c("hh", "mm", "ss"), sep = ":")
+my.data$Date <- paste0(my.data$MM, sep = "-", my.data$DD)
+my.data$Time <- paste0(my.data$hh, sep = ":", my.data$mm)
+my.data$Date.Time <- paste0(my.data$Date, sep=" ", my.data$Time)
+
+
+
+
+
+range(my.data$Tank1_Temp, na.rm=TRUE)
+my.data$Date.Time <- parse_date_time(my.data$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+my.data <- my.data %>%
+  filter(Date.Time <= "0000-02-27 19:50:00" | Date.Time >= "0000-02-28 20:20:00")
+my.data$Temp_Amb <- rowMeans(my.data[,c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
+                                        "Tank8_Temp", "Tank10_Temp", "Tank12_Temp",
+                                        "Tank16_Temp", "Tank18_Temp")], na.rm=TRUE)
+my.data$Temp_Heat <- rowMeans(my.data[,c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp",
+                                        "Tank7_Temp", "Tank9_Temp", "Tank11_Temp",
+                                        "Tank15_Temp", "Tank17_Temp")], na.rm=TRUE)
+
+
+pdf("output/Newport_Buoy_Temps.MyData.pdf")
+plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
+points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
+points(Temp_2008$Date.Time, Temp_2008$WTMP, cex=0.1, col="green")
+points(Temp_2009$Date.Time, Temp_2009$WTMP, cex=0.1, col="lightblue")
+points(Temp_2010$Date.Time, Temp_2010$WTMP, cex=0.1, col="purple")
+points(Temp_2011$Date.Time, Temp_2011$WTMP, cex=0.1, col="pink")
+points(Temp_2012$Date.Time, Temp_2012$WTMP, cex=0.1, col="gray")
+points(Temp_2013$Date.Time, Temp_2013$WTMP, cex=0.1, col="brown")
+points(Temp_2014$Date.Time, Temp_2014$WTMP, cex=0.1, col="salmon")
+points(Temp_2015$Date.Time, Temp_2015$WTMP, cex=0.1, col="blueviolet")
+points(Temp_2016$Date.Time, Temp_2016$WTMP, cex=0.1, col="palegreen")
+points(Temp_2017$Date.Time, Temp_2017$WTMP, cex=0.1, col="cyan1")
+points(Temp_2018$Date.Time, Temp_2018$WTMP, cex=0.1, col="darkorange3")
+points(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="darkolivegreen1")
+points(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
+       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+dev.off()
+
+
+# Filtering NOAA by date from my data 
+Temp_2005_sub <- Temp_2005 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2006_sub <- Temp_2006 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2007_sub <- Temp_2007 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2008_sub <- Temp_2008 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2009_sub <- Temp_2009 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2010_sub <- Temp_2010 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2011_sub <- Temp_2011 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2012_sub <- Temp_2012 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2013_sub <- Temp_2013 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2014_sub <- Temp_2014 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2015_sub <- Temp_2015 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2016_sub <- Temp_2016 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2017_sub <- Temp_2017 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2018_sub <- Temp_2018 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2019_sub <- Temp_2019 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+Temp_2020_sub <- Temp_2020 %>%
+  filter(Date.Time %in% my.data$Date.Time)
+
+pdf("output/Newport_Buoy_Temps.MyData.Subset.pdf")
+plot(Temp_2005_sub$Date.Time, Temp_2005_sub$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(Temp_2006_sub$Date.Time, Temp_2006_sub$WTMP, cex=0.1, col="orange")
+points(Temp_2007_sub$Date.Time, Temp_2007_sub$WTMP, cex=0.1, col="yellow")
+points(Temp_2008_sub$Date.Time, Temp_2008_sub$WTMP, cex=0.1, col="green")
+points(Temp_2009_sub$Date.Time, Temp_2009_sub$WTMP, cex=0.1, col="lightblue")
+points(Temp_2010_sub$Date.Time, Temp_2010_sub$WTMP, cex=0.1, col="purple")
+points(Temp_2011_sub$Date.Time, Temp_2011_sub$WTMP, cex=0.1, col="pink")
+points(Temp_2012_sub$Date.Time, Temp_2012_sub$WTMP, cex=0.1, col="gray")
+points(Temp_2013_sub$Date.Time, Temp_2013_sub$WTMP, cex=0.1, col="brown")
+points(Temp_2014_sub$Date.Time, Temp_2014_sub$WTMP, cex=0.1, col="salmon")
+points(Temp_2015_sub$Date.Time, Temp_2015_sub$WTMP, cex=0.1, col="blueviolet")
+points(Temp_2016_sub$Date.Time, Temp_2016_sub$WTMP, cex=0.1, col="palegreen")
+points(Temp_2017_sub$Date.Time, Temp_2017_sub$WTMP, cex=0.1, col="cyan1")
+points(Temp_2018_sub$Date.Time, Temp_2018_sub$WTMP, cex=0.1, col="darkorange3")
+points(Temp_2019_sub$Date.Time, Temp_2019_sub$WTMP, cex=0.1, col="darkolivegreen1")
+points(Temp_2020_sub$Date.Time, Temp_2020_sub$WTMP, cex=0.1, col="bisque4")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
+       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+dev.off()
+
+
+## examine data from March 1st to Aug 15th in all years 
+Temp_2005.filt <- Temp_2005 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2006.filt <- Temp_2006 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2007.filt <- Temp_2007 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2008.filt <- Temp_2008 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2009.filt <- Temp_2009 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2010.filt <- Temp_2010 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2011.filt <- Temp_2011 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2012.filt <- Temp_2012 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2013.filt <- Temp_2013 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2014.filt <- Temp_2014 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2015.filt <- Temp_2015 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2016.filt <- Temp_2016 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2017.filt <- Temp_2017 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2018.filt <- Temp_2018 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2019.filt <- Temp_2019 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+Temp_2020.filt <- Temp_2020 %>%
+  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+
+pdf("output/Newport_Buoy_Temps.Mar_Aug.pdf")
+plot(Temp_2005.filt$Date.Time, Temp_2005.filt$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(Temp_2006.filt$Date.Time, Temp_2006.filt$WTMP, cex=0.1, col="orange")
+points(Temp_2007.filt$Date.Time, Temp_2007.filt$WTMP, cex=0.1, col="yellow")
+points(Temp_2008.filt$Date.Time, Temp_2008.filt$WTMP, cex=0.1, col="green")
+points(Temp_2009.filt$Date.Time, Temp_2009.filt$WTMP, cex=0.1, col="lightblue")
+points(Temp_2010.filt$Date.Time, Temp_2010.filt$WTMP, cex=0.1, col="purple")
+points(Temp_2011.filt$Date.Time, Temp_2011.filt$WTMP, cex=0.1, col="pink")
+points(Temp_2012.filt$Date.Time, Temp_2012.filt$WTMP, cex=0.1, col="gray")
+points(Temp_2013.filt$Date.Time, Temp_2013.filt$WTMP, cex=0.1, col="brown")
+points(Temp_2014.filt$Date.Time, Temp_2014.filt$WTMP, cex=0.1, col="salmon")
+points(Temp_2015.filt$Date.Time, Temp_2015.filt$WTMP, cex=0.1, col="blueviolet")
+points(Temp_2016.filt$Date.Time, Temp_2016.filt$WTMP, cex=0.1, col="palegreen")
+points(Temp_2017.filt$Date.Time, Temp_2017.filt$WTMP, cex=0.1, col="cyan1")
+points(Temp_2018.filt$Date.Time, Temp_2018.filt$WTMP, cex=0.1, col="darkorange3")
+points(Temp_2019.filt$Date.Time, Temp_2019.filt$WTMP, cex=0.1, col="darkolivegreen1")
+points(Temp_2020.filt$Date.Time, Temp_2020.filt$WTMP, cex=0.1, col="bisque4")
+legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
+       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
+dev.off()
+
+
+
+data.filt <- rbind(Temp_2005.filt,Temp_2006.filt,Temp_2007.filt,Temp_2008.filt,Temp_2009.filt,Temp_2010.filt,
+              Temp_2011.filt,Temp_2012.filt,Temp_2013.filt,Temp_2014.filt,Temp_2015.filt,Temp_2016.filt,
+              Temp_2017.filt,Temp_2018.filt,Temp_2019.filt, Temp_2020.filt)
+range(data.filt$WTMP, na.rm=TRUE)
+data.filt.lm <- lm(WTMP~Date.Time, data.filt)
+summary(data.filt.lm)
+plot(data.filt.lm$residuals)
