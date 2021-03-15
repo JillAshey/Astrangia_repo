@@ -670,10 +670,23 @@ dev.off()
 
 
 
+
 data.filt <- rbind(Temp_2005.filt,Temp_2006.filt,Temp_2007.filt,Temp_2008.filt,Temp_2009.filt,Temp_2010.filt,
               Temp_2011.filt,Temp_2012.filt,Temp_2013.filt,Temp_2014.filt,Temp_2015.filt,Temp_2016.filt,
               Temp_2017.filt,Temp_2018.filt,Temp_2019.filt, Temp_2020.filt)
 range(data.filt$WTMP, na.rm=TRUE)
+plot(data.filt$Date.Time, data.filt$WTMP)
 data.filt.lm <- lm(WTMP~Date.Time, data.filt)
 summary(data.filt.lm)
-plot(data.filt.lm$residuals)
+hist(residuals(data.filt.lm)) #look at normality of data
+
+
+data.mean <- aggregate(x = data.filt$WTMP,                # Specify data column
+                             by = list(data.filt$Date),          # Specify group indicator
+                             FUN = mean, 
+                             na.rm = T) 
+colnames(data.mean) <- c("Date", "WTMP")
+plot(data.mean$Date, data.mean$WTMP)
+data.mean.lm <- lm(WTMP~Date, data.mean)
+summary(data.mean.lm)
+

@@ -11,13 +11,13 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Load packages
+# Load packages
 ```{r}
 library(tidyverse)
 library(gridExtra)
 ```
 
-Check working directory
+# Check working directory
 ```{r}
 getwd() 
 ```
@@ -32,7 +32,7 @@ daily$Tank <- as.factor(daily$Tank)
 daily <- subset(daily, Treatment=="Heat" | Treatment=="Ambient")
 ```
 
-Discrete pH calculations from Tris calibrations.
+# Discrete pH calculations from Tris calibrations.
 ```{r}
 path <-("data/pH_Tris") #set path to calibration files
 file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
@@ -59,7 +59,7 @@ F <- 96485.339924 #Faraday constant in coulombs mol-1
 SW.chem <- merge(daily, pH.cals, by="Calib.Date")
 ```
 
-Calculate total pH. 
+# Calculate total pH. 
 ```{r}
 mvTris <- SW.chem$Temperature*SW.chem$Slope+SW.chem$Intercept #calculate the mV of the tris standard using the temperature mv relationships in the measured standard curves 
 STris<-35 #salinity of the Tris
