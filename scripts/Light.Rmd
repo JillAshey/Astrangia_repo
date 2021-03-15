@@ -19,7 +19,6 @@ Check working directory
 getwd()
 ```
 
-
 Load data 
 ```{r}
 light <- read.csv("../data/Light_Data.csv", header = TRUE)
@@ -27,31 +26,54 @@ light <- subset(light, Treatment=="Heat" | Treatment=="Ambient")
 
 ```
 
-Plot PAR
+Test for differences between treatment, tank, and position
 ```{r}
-plot(PAR ~ Treatment, data = light, col = Position)
-plot(PAR ~ Position, data = light, col = Treatment)
+# By Treatment
+trt.model <- aov(PAR ~ Treatment,data=light)
+trt.model
+summary(trt.model)
+hist(trt.model$residuals)
 
-plot(PAR ~ Tank, data = light, col = Position)
-plot(PAR ~ Position, data = light, col = Tank)
-```
-
-Test for differences between tanks and treatments
-```{r}
+# By Tank
 tank.model <- aov(PAR ~ Tank,data=light)
 tank.model
 summary(tank.model)
 hist(tank.model$residuals)
 
+# By Position
 position.model <- lm(PAR ~ Position, data=light)
 position.model
 summary(position.model)
 hist(position.model$residuals)
 ```
 
-Plot light by position for each tank
+Plot light by treatment 
 ```{r}
-pdf("../Output/Light.by.Position.pdf")
+pdf("../output/Light.by.Treatment.pdf")
+plot(as.factor(light$Treatment), light$PAR, xlab="Treamtment", ylab="PAR", ylim=c(0,160), las=2)
+boxplot(PAR ~ Treatment, data = light, outpch = NA) 
+stripchart(PAR ~ Treatment, data = light, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21, col = "blue", bg = "blue", 
+           add = TRUE) 
+dev.off()
+```
+
+Plot light by tank
+```{r}
+pdf("../output/Light.by.Tank.pdf")
+plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
+boxplot(PAR ~ Tank, data = light, outpch = NA) 
+stripchart(PAR ~ Tank, data = light, 
+           vertical = TRUE, method = "jitter", 
+           pch = 21, col = "blue", bg = "blue", 
+           add = TRUE) 
+dev.off()
+```
+
+Plot light by position
+```{r}
+pdf("../output/Light.by.Position.pdf")
 par(mfrow=c(4,4))
 Tank1 <- subset(light, Tank==1)
 plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
@@ -104,15 +126,4 @@ plot(PAR ~ Position, data=Tank18, col=Position, ylim=c(0,160), main = "Tank18")
 dev.off()
 ```
 
-Plot light by tank
-```{r}
-pdf("../Output/Light.by.Tank.pdf")
-plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
-boxplot(PAR ~ Tank, data = light, outpch = NA) 
-stripchart(PAR ~ Tank, data = light, 
-           vertical = TRUE, method = "jitter", 
-           pch = 21, col = "blue", bg = "blue", 
-           add = TRUE) 
-dev.off()
-```
 

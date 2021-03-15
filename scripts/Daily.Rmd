@@ -20,7 +20,6 @@ library(gridExtra)
 Check working directory
 ```{r}
 getwd() 
-# don't know why its in the scripts folder, need to move
 ```
 
 # Load data
@@ -153,5 +152,4 @@ mod.flow <- aov(Flow.mL.sec ~ Tank, data = SW.chem)
 mod.flow
 summary(mod.flow)
 hist(mod.flow$residuals)
-
 ```
