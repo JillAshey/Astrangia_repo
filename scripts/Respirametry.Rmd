@@ -105,6 +105,14 @@ df <- df %>%
 # Example of plots
 cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
+cowplot::plot_grid(df$data_plot[[2]], df$thin_data_plot[[2]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+cowplot::plot_grid(df$data_plot[[4]], df$thin_data_plot[[4]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
 ```
 
 # Fit regressions to each interval for each sample
@@ -203,6 +211,7 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 
 ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point(alpha = .4) +
+  ylim(-0.3,0.5)+
   #geom_point(data = gd, size = 4) +
   theme_bw() 
 ```
@@ -362,7 +371,7 @@ ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point() +
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=16,face="bold"),
-        strip.text = element_text(size=22))+
+        strip.text = element_text(size=16))+
   facet_wrap(~colony_id, ncol = 3)
 ```
 
@@ -383,6 +392,8 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 
 ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point(alpha = .4) +
+  ylim(-0.3,0.5)+
   #geom_point(data = gd, size = 4) +
-  theme_bw() 
+  theme_bw()+
+  facet_wrap(~colony_id, ncol = 3)
 ```
