@@ -35,7 +35,7 @@ library("Rmisc")
 Reading in quality controlled version of ImageJ data.
 Protocol for ImageJ Color Score Analysis found [here](https://emmastrand.github.io/EmmaStrand_Notebook/ImageJ-Analysis-Protocols/).  
 ```{r}
-Data <- read.csv("data/ColorScore/Color_Score.csv", header=T, sep=",", na.string="NA") #read in data file
+Data <- read.csv("../data/ColorScore/Color_Score.csv", header=T, sep=",", na.string="NA") #read in data file
 ```
 
 Normalizing to color standards. 
@@ -60,7 +60,7 @@ Color$Group <- paste(Color$Timepoint, Color$Treatment)
 
 Output: Color Score dataframe and checking for outliers in the dataset. 
 ```{r}
-write.table(Color, file = "output/Color_Score_Output.csv", append = FALSE, quote = TRUE, sep = ",",
+write.table(Color, file = "../output/Color_Score_Output.csv", append = FALSE, quote = TRUE, sep = ",",
             eol = "\n", na = "NA", dec = ".", row.names = TRUE,
             col.names = TRUE, qmethod = c("escape", "double"),
             fileEncoding = "")
@@ -72,7 +72,7 @@ boxplot(Color.Score ~ Group, data = x, lwd = 1, ylab = 'PC1Color', las=2, cex=0.
 ** Statistical Analysis and Plotting ** 
 ```{r}
 # for use in plotting to avoid having to run PCA again
-Color.Score <- read.csv("output/Color_Score_Output.csv", header=T, sep=",", na.string="NA") #read in data file
+Color.Score <- read.csv("../output/Color_Score_Output.csv", header=T, sep=",", na.string="NA") #read in data file
 mod1 <- aov(sqrt(Color.Score+200) ~ Treatment, data=Color.Score) #run an ANOVA ## add Timepoint as factor later 
 hist(residuals(mod1)) #look at normality of data
 boxplot(residuals(mod1)) #look at normality of data
@@ -88,7 +88,7 @@ phlett <- phlett[order(phlett$Treatment),]
 phlett
 ```
 
-Calculating means, sample size, and standard error for timepoint, species, and treatment groups. 
+Calculating means, sample size, and standard error for timepoint and treatment groups. 
 ```{r}
 All.Means <- summarySE(Color.Score, measurevar="Color.Score", groupvars=c("Treatment")) %>% 
   filter(N>2) %>% na.omit()

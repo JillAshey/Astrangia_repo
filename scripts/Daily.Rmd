@@ -70,33 +70,42 @@ SW.chem$pH.Total<-phTris+(mvTris/1000-SW.chem$pH.MV/1000)/(R*(SW.chem$Temperatur
 # Plot daily measurements 
 ```{r}
 # By Treatment
-temp = ggplot(SW.chem, aes(x=Treatment, y=Temperature.C)) +
+temp.trt = ggplot(SW.chem, aes(x=Treatment, y=Temperature.C)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("Temperature°C")
-sal = ggplot(SW.chem, aes(x=Treatment, y=Salinity.psu)) +
+sal.trt = ggplot(SW.chem, aes(x=Treatment, y=Salinity.psu)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("Salinity.psu")
-pH = ggplot(SW.chem, aes(x=Treatment, y=pH.Total)) +
+pH.trt = ggplot(SW.chem, aes(x=Treatment, y=pH.Total)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("pH Total Scale")
-light = ggplot(SW.chem, aes(x=Treatment, y=Light)) +
+light.trt = ggplot(SW.chem, aes(x=Treatment, y=Light)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("Light µmol photons m^2 s^-1")
-flow = ggplot(SW.chem, aes(x=Treatment, y=Flow.mL.sec)) +
+flow.trt = ggplot(SW.chem, aes(x=Treatment, y=Flow.mL.sec)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
   ylab("Flow mL/sec")
-plot <- grid.arrange(temp, sal, pH, light, flow, ncol=3, nrow = 2, clip="off")
-ggsave("output/Daily_Measurements.By.Treatment.pdf", plot, width = 21, height = 21, units = c("in"))
+plot.trt <- grid.arrange(temp.trt, sal.trt, pH.trt, light.trt, flow.trt, ncol=3, nrow = 2, clip="off")
+ggsave("output/Daily_Measurements.By.Treatment.pdf", plot.trt, width = 21, height = 21, units = c("in"))
 
 # By Tank
-pdf("output/Daily_Measurements.By.Tank.pdf")
-par(mfrow=c(2,3))
-plot(SW.chem$Tank, SW.chem$Temperature.C, xlab="Tank", ylab="Temperature°C", ylim = c(3.5,12), las = 2)
-plot(SW.chem$Tank, SW.chem$Salinity.psu, xlab="Tank", ylab="Salinity psu", ylim = c(29,34), las = 2)
-plot(SW.chem$Tank, SW.chem$pH.Total, xlab="Tank", ylab="pH Total Scale", ylim = c(8.05,8.4), las = 2)
-plot(SW.chem$Tank, SW.chem$Light, xlab="Tank", ylab="Light µmol photons m^2 s^-1", ylim=c(50,150),las=2)
-plot(SW.chem$Tank, SW.chem$Flow.mL.sec, xlab="Tank", ylab="Flow mL/sec", ylim=c(2,175),las=2)
-dev.off()
+temp.tank = ggplot(SW.chem, aes(x=Tank, y=Temperature.C)) +
+  geom_boxplot(aes(color = Treatment), size = 1) +
+  ylab("Temperature°C")
+sal.tank = ggplot(SW.chem, aes(x=Tank, y=Salinity.psu)) +
+  geom_boxplot(aes(color = Treatment), size = 1) +
+  ylab("Salinity.psu")
+pH.tank = ggplot(SW.chem, aes(x=Tank, y=pH.Total)) +
+  geom_boxplot(aes(color = Treatment), size = 1) +
+  ylab("pH Total Scale")
+light.tank = ggplot(SW.chem, aes(x=Tank, y=Light)) +
+  geom_boxplot(aes(color = Treatment), size = 1) +
+  ylab("Light µmol photons m^2 s^-1")
+flow.tank = ggplot(SW.chem, aes(x=Tank, y=Flow.mL.sec)) +
+  geom_boxplot(aes(color = Treatment), size = 1) +
+  ylab("Flow mL/sec")
+plot.tank <- grid.arrange(temp.tank, sal.tank, pH.tank, light.tank, flow.tank, ncol=3, nrow = 2, clip="off")
+ggsave("output/Daily_Measurements.By.Tank.pdf", plot.tank, width = 21, height = 21, units = c("in"))
 ```
 
 # test for differences between tanks and treatments
