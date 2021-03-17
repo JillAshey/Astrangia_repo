@@ -43,6 +43,23 @@ Normalizing to color standards.
 Data$Red.Norm.Coral <- Data$Red.Coral/Data$Red.Standard
 Data$Green.Norm.Coral <- Data$Green.Coral/Data$Green.Standard
 Data$Blue.Norm.Coral <- Data$Blue.Coral/Data$Blue.Standard
+
+par(mfrow=c(1,3))
+boxplot(Data$Red.Standard)
+boxplot(Data$Green.Standard)
+boxplot(Data$Blue.Standard)
+
+which((Data$Red.Standard)==min((Data$Red.Standard)))
+which((Data$Green.Standard)==min((Data$Green.Standard)))
+which((Data$Blue.Standard)==min((Data$Blue.Standard)))
+
+par(mfrow=c(1,3))
+boxplot(Data$Red.Norm.Coral)
+boxplot(Data$Green.Norm.Coral)
+boxplot(Data$Blue.Norm.Coral)
+
+
+
 ```
 
 ```{r}
