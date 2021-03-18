@@ -32,38 +32,38 @@ library(gridExtra)
 #data/Hobo/temp_logger/20210310
 
 # Read in temp data 
-Tank1 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank1_20444040.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
-Tank2 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank2_20719656.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank1 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank1_20444040.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank2 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank2_20719656.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank2 <- Tank2[1:nrow(Tank1),]
-Tank3 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank3_20946643.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank3 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank3_20946643.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank3 <- Tank3[1:nrow(Tank1),]
-Tank4 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank4_2044042.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank4 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank4_2044042.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank4 <- Tank4[1:nrow(Tank1),]
-Tank5 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank5_20719658.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank5 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank5_20719658.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank5 <- Tank5[1:nrow(Tank1),]
-Tank6 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank6_20444029.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank6 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank6_20444029.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank6 <- Tank6[1:nrow(Tank1),]
-Tank7 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank7_20444032.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank7 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank7_20444032.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank7 <- Tank7[1:nrow(Tank1),]
-Tank8 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank8_20946642.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank8 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank8_20946642.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank8 <- Tank8[1:nrow(Tank1),]
-Tank9 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank9_20719657.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank9 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank9_20719657.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank9 <- Tank9[1:nrow(Tank1),]
-Tank10 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank10_20946645.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank10 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank10_20946645.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank10 <- Tank10[1:nrow(Tank1),]
-Tank11 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank11_20444034.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank11 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank11_20444034.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank11 <- Tank11[1:nrow(Tank1),]
-Tank12 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank12_20946644.csv", sep=",", skip=c(3732), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank12 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank12_20946644.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank12 <- Tank12[1:nrow(Tank1),]
 # Tank14 <- read.csv("data/Hobo/temp_logger/20210206_Tank14_20937868.csv", sep=",", skip=c(3), header=FALSE, na.strings = "NA")[ ,1:2]
 # Tank14 <- Tank14[1:nrow(Tank1),]
-Tank15 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank15_20987156.csv", sep=",", skip=c(3), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank15 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank15_20987156.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank15 <- Tank15[1:nrow(Tank1),]
-Tank16 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank16_20987157.csv", sep=",", skip=c(3), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank16 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank16_20987157.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank16 <- Tank16[1:nrow(Tank1),]
-Tank17 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank17_20987159.csv", sep=",", skip=c(3), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank17 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank17_20987159.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank17 <- Tank17[1:nrow(Tank1),]
-Tank18 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank18_20987158.csv", sep=",", skip=c(4), header=FALSE, na.strings = "NA")[ ,2:3]
+Tank18 <- read.csv("../data/Hobo/temp_logger/20210310/20210310_Tank18_20987158.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:3]
 Tank18 <- Tank18[1:nrow(Tank1),]
 
 data <- cbind(Tank1, Tank2$V3, Tank3$V3, Tank4$V3, Tank5$V3, Tank6$V3,
@@ -86,6 +86,7 @@ Temps <- ggplot(temp.data, aes(x=Date.Time, y=value)) +
   geom_line(aes(color = Tank), size = 1)+
   #ylim(5,15)+
   ylab("Temperature °C")
+Temps
 ggsave("../output/All_Tank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
 
 ```
