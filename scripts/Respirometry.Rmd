@@ -49,17 +49,17 @@ getwd()
 ##### PHOTOSYNTHESIS AND RESPIRATION #####
   
 # get file path
-path.p <- "data/PR/raw" #the location of all your respirometry files 
+path.p <- "../data/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/PR/PR_sample_metadata.csv")
+sample.info <- read_csv(file = "../data/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/PR/PR_run_metadata.csv")
+run.info <- read_csv(file = "../data/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -120,6 +120,60 @@ cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
 cowplot::plot_grid(df$data_plot[[2]], df$thin_data_plot[[2]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
 cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[7]], df$thin_data_plot[[7]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[8]], df$thin_data_plot[[8]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[11]], df$thin_data_plot[[11]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[12]], df$thin_data_plot[[12]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+
+
+
+cowplot::plot_grid(df$data_plot[[17]], df$thin_data_plot[[17]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[18]], df$thin_data_plot[[18]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[19]], df$thin_data_plot[[18]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[21]], df$thin_data_plot[[21]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[25]], df$thin_data_plot[[25]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[26]], df$thin_data_plot[[26]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[29]], df$thin_data_plot[[29]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+cowplot::plot_grid(df$data_plot[[27]], df$thin_data_plot[[27]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
+
+
+
+
+
+
+
+
+
+?cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
 cowplot::plot_grid(df$data_plot[[4]], df$thin_data_plot[[4]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
