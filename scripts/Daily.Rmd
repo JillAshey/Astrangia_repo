@@ -25,7 +25,7 @@ getwd()
 # Load data
 ```{r}
 # Load data
-daily <- read.csv("../data/DailyMeasurements.csv", header = T)
+daily <- read.csv("data/DailyMeasurements.csv", header = T)
 daily <- daily[-13,] # remove tank 14 because it cracked 
 daily$Timepoint <- as.Date(daily$Timepoint, "%m/%d/%Y")
 daily$Tank <- as.factor(daily$Tank)
@@ -34,7 +34,7 @@ daily <- subset(daily, Treatment=="Heat" | Treatment=="Ambient")
 
 # Discrete pH calculations from Tris calibrations.
 ```{r}
-path <-("../data/pH_Tris") #set path to calibration files
+path <-("data/pH_Tris") #set path to calibration files
 file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
 pH.cals <- data.frame(matrix(NA, nrow=length(file.names), ncol=3, dimnames=list(file.names,c("Date", "Intercept", "Slope")))) #generate a 3 column dataframe with specific column names
 
@@ -72,40 +72,60 @@ SW.chem$pH.Total<-phTris+(mvTris/1000-SW.chem$pH.MV/1000)/(R*(SW.chem$Temperatur
 # By Treatment
 temp.trt = ggplot(SW.chem, aes(x=Treatment, y=Temperature.C)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Temperature°C")
+  ylab("Temperature°C") +
+  theme(axis.text.x = element_text(angle = 90))
+temp.trt
 sal.trt = ggplot(SW.chem, aes(x=Treatment, y=Salinity.psu)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Salinity.psu")
+  ylab("Salinity.psu") +
+    theme(axis.text.x = element_text(angle = 90))
+sal.trt
 pH.trt = ggplot(SW.chem, aes(x=Treatment, y=pH.Total)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("pH Total Scale")
+  ylab("pH Total Scale") +
+  theme(axis.text.x = element_text(angle = 90))
+pH.trt
 light.trt = ggplot(SW.chem, aes(x=Treatment, y=Light)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Light µmol photons m^2 s^-1")
+  ylab("Light µmol photons m^2 s^-1") +
+    theme(axis.text.x = element_text(angle = 90))
+light.trt
 flow.trt = ggplot(SW.chem, aes(x=Treatment, y=Flow.mL.sec)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Flow mL/sec")
+  ylab("Flow mL/sec") +
+    theme(axis.text.x = element_text(angle = 90))
+flow.trt
 plot.trt <- grid.arrange(temp.trt, sal.trt, pH.trt, light.trt, flow.trt, ncol=3, nrow = 2, clip="off")
-ggsave("../output/Daily_Measurements.By.Treatment.pdf", plot.trt, width = 21, height = 21, units = c("in"))
+ggsave("output/Daily_Measurements.By.Treatment.pdf", plot.trt, width = 21, height = 21, units = c("in"))
 
 # By Tank
 temp.tank = ggplot(SW.chem, aes(x=Tank, y=Temperature.C)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Temperature°C")
+  ylab("Temperature°C") +
+    theme(axis.text.x = element_text(angle = 90))
+temp.tank
 sal.tank = ggplot(SW.chem, aes(x=Tank, y=Salinity.psu)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Salinity.psu")
+  ylab("Salinity.psu") +
+    theme(axis.text.x = element_text(angle = 90))
+sal.tank
 pH.tank = ggplot(SW.chem, aes(x=Tank, y=pH.Total)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("pH Total Scale")
+  ylab("pH Total Scale") +
+    theme(axis.text.x = element_text(angle = 90))
+pH.tank
 light.tank = ggplot(SW.chem, aes(x=Tank, y=Light)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Light µmol photons m^2 s^-1")
+  ylab("Light µmol photons m^2 s^-1") +
+    theme(axis.text.x = element_text(angle = 90))
+light.tank
 flow.tank = ggplot(SW.chem, aes(x=Tank, y=Flow.mL.sec)) +
   geom_boxplot(aes(color = Treatment), size = 1) +
-  ylab("Flow mL/sec")
+  ylab("Flow mL/sec") +
+    theme(axis.text.x = element_text(angle = 90))
+flow.tank
 plot.tank <- grid.arrange(temp.tank, sal.tank, pH.tank, light.tank, flow.tank, ncol=3, nrow = 2, clip="off")
-ggsave("../output/Daily_Measurements.By.Tank.pdf", plot.tank, width = 21, height = 21, units = c("in"))
+ggsave("output/Daily_Measurements.By.Tank.pdf", plot.tank, width = 21, height = 21, units = c("in"))
 ```
 
 # test for differences between tanks and treatments
