@@ -115,50 +115,9 @@ df <- df %>%
                             labs(title = .y)))
 
 # Example of plots
-cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
 cowplot::plot_grid(df$data_plot[[2]], df$thin_data_plot[[2]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[7]], df$thin_data_plot[[7]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[8]], df$thin_data_plot[[8]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[11]], df$thin_data_plot[[11]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[12]], df$thin_data_plot[[12]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[17]], df$thin_data_plot[[17]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[18]], df$thin_data_plot[[18]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[19]], df$thin_data_plot[[18]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[21]], df$thin_data_plot[[21]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[25]], df$thin_data_plot[[25]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[26]], df$thin_data_plot[[26]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[29]], df$thin_data_plot[[29]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[27]], df$thin_data_plot[[27]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[4]], df$thin_data_plot[[4]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[15]], df$thin_data_plot[[15]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[40]], df$thin_data_plot[[40]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[25]], df$thin_data_plot[[25]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
+
 ```
 
 # Fit regressions to each interval for each sample
@@ -247,7 +206,7 @@ ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.save, "output/PR_Time0_rates.csv")
+write.csv(pr.save, "output/PR_rates.csv")
 ```
 
 # Plot mean rates by irradiance 
@@ -273,10 +232,10 @@ p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
    ylim(-0.3,0.5) +
    #geom_point(data = gd, size = 4) +
    theme_bw()
-p2 = p2 + scale_color_manual(values = c("black", "blue", "red"))
+#p2 = p2 + scale_color_manual(values = c("black", "blue", "red"))
 
-plot <- grid.arrange(p, p2, clip="off")
-ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 21, height = 21, units = c("in"))
+#plot <- grid.arrange(p, p2, clip="off")
+#ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 21, height = 21, units = c("in"))
 
 
 
