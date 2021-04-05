@@ -49,17 +49,17 @@ getwd()
 ##### PHOTOSYNTHESIS AND RESPIRATION #####
   
 # get file path
-path.p <- "data/PR/raw" #the location of all your respirometry files 
+path.p <- "../data/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/PR/PR_sample_metadata.csv")
+sample.info <- read_csv(file = "../data/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/PR/PR_run_metadata.csv")
+run.info <- read_csv(file = "../data/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -91,7 +91,7 @@ df <- df %>%
 
 ## 'data' now contains the O2 data with the corresponding light level as another column
 ## Example of what 'data' for each sample looks like:
-df$data
+#df$data
 ```
 
 ### Thin data
@@ -206,7 +206,7 @@ ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.save, "output/PR_rates.csv")
+write.csv(pr.save, "../output/PR_rates.csv")
 ```
 
 # Plot mean rates by irradiance 
@@ -218,7 +218,8 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
     Date == "20210204" ~ "Time0",
-    Date == "20210304" ~ "Time1"))
+    Date == "20210304" ~ "Time1",
+    Date == "20210401" ~ "Time2"))
 
 p = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
    geom_point(alpha = .4, aes(colour = Treatment, shape = Timepoint), size = 4) +
@@ -226,6 +227,7 @@ p = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
    #geom_point(data = gd, size = 4) +
    theme_bw() 
 p = p + scale_color_manual(values = c("black", "blue", "red"))
+p
 
 p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
    geom_point(alpha = .4, aes(colour = Light_Value, shape = Treatment), size = 4) +
@@ -246,7 +248,7 @@ indiv = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
    #geom_point(data = gd, size = 4) +
    theme_bw() +
    facet_wrap(~colony_id, ncol = 3)
-ggsave("output/PR/IndividualSample_PR.pdf", indiv, width = 21, height = 21, units = c("in"))
+ggsave("../output/PR/IndividualSample_PR.pdf", indiv, width = 21, height = 21, units = c("in"))
 
 
 # p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
