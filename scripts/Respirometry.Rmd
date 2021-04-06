@@ -33,6 +33,7 @@ library(LoLinR)
 library(tidyverse)
 library(lubridate)
 library(cowplot)
+library(gridExtra)
 
 ## libraries for parallel processing
 library(future)
@@ -49,17 +50,17 @@ getwd()
 ##### PHOTOSYNTHESIS AND RESPIRATION #####
   
 # get file path
-path.p <- "../data/PR/raw" #the location of all your respirometry files 
+path.p <- "data/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "../data/PR/PR_sample_metadata.csv")
+sample.info <- read_csv(file = "data/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "../data/PR/PR_run_metadata.csv")
+run.info <- read_csv(file = "data/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -91,7 +92,7 @@ df <- df %>%
 
 ## 'data' now contains the O2 data with the corresponding light level as another column
 ## Example of what 'data' for each sample looks like:
-# df$data
+#df$data
 ```
 
 ### Thin data
@@ -115,76 +116,9 @@ df <- df %>%
                             labs(title = .y)))
 
 # Example of plots
-cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
 cowplot::plot_grid(df$data_plot[[2]], df$thin_data_plot[[2]], nrow = 2,
                    labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
 
-cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[7]], df$thin_data_plot[[7]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[8]], df$thin_data_plot[[8]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[11]], df$thin_data_plot[[11]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[12]], df$thin_data_plot[[12]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-
-
-
-cowplot::plot_grid(df$data_plot[[17]], df$thin_data_plot[[17]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[18]], df$thin_data_plot[[18]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[19]], df$thin_data_plot[[18]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[21]], df$thin_data_plot[[21]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[25]], df$thin_data_plot[[25]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[26]], df$thin_data_plot[[26]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[29]], df$thin_data_plot[[29]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-cowplot::plot_grid(df$data_plot[[27]], df$thin_data_plot[[27]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-
-
-
-
-
-
-
-
-
-
-?cowplot::plot_grid(df$data_plot[[3]], df$thin_data_plot[[3]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[4]], df$thin_data_plot[[4]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[5]], df$thin_data_plot[[5]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[15]], df$thin_data_plot[[15]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[40]], df$thin_data_plot[[40]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
-cowplot::plot_grid(df$data_plot[[25]], df$thin_data_plot[[25]], nrow = 2,
-                   labels = c("Example plot: all data", "Example plot: thinned data"))
 ```
 
 # Fit regressions to each interval for each sample
@@ -273,11 +207,13 @@ ggplot(pr.out, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.save, "output/PR_Time0_rates.csv")
+write.csv(pr.save, "output/PR_rates.csv")
 ```
 
 # Plot mean rates by irradiance 
 ```{r}
+pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
+
 gd <- pr.save %>% group_by(Light_Value) %>% 
         summarise(avg = mean(micromol.cm2.h),
           sem = sd(micromol.cm2.h))
@@ -285,31 +221,50 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
     Date == "20210204" ~ "Time0",
-    Date == "20210304" ~ "Time1"))
+    Date == "20210304" ~ "Time1",
+    Date == "20210401" ~ "Time2"))
 
-p = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
-   geom_point(alpha = .4, aes(colour = Treatment, shape = Timepoint), size = 4) +
+pr.save <- pr.save %>% 
+  mutate(Assay = case_when(
+    Light_Value == "0" ~ "Rd",
+    Light_Value == "320" ~ "P",
+    Light_Value == "350" ~ "P",
+    Light_Value == "368" ~ "P"))
+
+gd <- pr.save %>% 
+        group_by(Assay,Timepoint,Treatment) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+
+trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
+   geom_point(alpha = .4, aes(colour = Treatment, shape = Treatment), size = 2) +
+    geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+    scale_color_manual(values=c('black','blue', 'red'))+
+    #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
    ylim(-0.3,0.5) +
-   #geom_point(data = gd, size = 4) +
-   theme_bw()
-p + scale_color_manual(values = c("black", "blue", "red"))
+  facet_wrap(~Assay, ncol = 2)+
+   theme_bw()+
+  theme(legend.position = c(0.63, 0.8),
+        legend.title = element_text(colour="black", size=6, 
+                                     face="bold"),
+        legend.text = element_text(size=4))+
+  guides(color = guide_legend(override.aes = list(size = 1)))
 
-p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
-   geom_point(alpha = .4, aes(colour = Light_Value, shape = Treatment), size = 4) +
-   ylim(-0.3,0.5) +
-   #geom_point(data = gd, size = 4) +
-   theme_bw()
-p2 + scale_color_manual(values = c("black", "blue", "red"))
+plot <- grid.arrange(trt.plot, clip="off")
+ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
 
 
-# Individual plots for each sample 
-ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
-   geom_point(alpha = .4, aes(colour = Treatment)) +
-   ylim(-0.3,0.5)+
-   #geom_point(data = gd, size = 4) +
-   theme_bw() +
-   facet_wrap(~colony_id, ncol = 3)
-
+# # Individual plots for each sample 
+# indiv = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+#    geom_point(alpha = .4, aes(colour = Treatment)) +
+#    ylim(-0.3,0.5)+
+#    #geom_point(data = gd, size = 4) +
+#    theme_bw() +
+#    facet_wrap(~colony_id, ncol = 3)
+# ggsave("../output/PR/IndividualSample_PR.pdf", indiv, width = 21, height = 21, units = c("in"))
+# 
+# 
 # p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
 #    geom_point(alpha = .4, aes(colour = Treatment, shape = Light_Value), size = 4) +
 #    ylim(-0.3,0.5) +

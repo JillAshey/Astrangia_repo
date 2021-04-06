@@ -35,7 +35,9 @@ library("Rmisc")
 Reading in quality controlled version of ImageJ data.
 Protocol for ImageJ Color Score Analysis found [here](https://emmastrand.github.io/EmmaStrand_Notebook/ImageJ-Analysis-Protocols/).  
 ```{r}
-Data <- read.csv("../data/ColorScore/Color_Score.csv", header=T, sep=",", na.string="NA") #read in data file
+Data <- read.csv("data/ColorScore/Color_Score.csv", header=T, sep=",", na.string="NA") #read in data file
+unique(Data$Treatment)
+unique(Data$Timepoint)
 ```
 
 Normalizing to color standards. 
@@ -68,16 +70,16 @@ rownames(color.score) <- Data$Fragment.ID #name columns in dataframe
 dist <- vegdist(color.score, method="euclidean") #calculate distance matrix of color scores
 PCA.color <- princomp(dist) #run principal components Analysis
 summary(PCA.color) # view variance explained by PCs
-Color <- as.data.frame(-PCA.color$scores[,1]) #extract PC1
+Color <- as.data.frame(PCA.color$scores[,1]) #extract PC1
 Color$Fragment.ID <- rownames(color.score)
-Color  <- cbind(Color, Data$TimePoint, Data$Treatment)
+Color  <- cbind(Color, Data$Timepoint, Data$Treatment)
 colnames(Color) <- c("Color.Score", "Fragment.ID", "Timepoint", "Treatment")        
 Color$Group <- paste(Color$Timepoint, Color$Treatment)
 ```
 
 Output: Color Score dataframe and checking for outliers in the dataset. 
 ```{r}
-write.table(Color, file = "../output/Color_Score_Output.csv", append = FALSE, quote = TRUE, sep = ",",
+write.table(Color, file = "output/Color_Score_Output.csv", append = FALSE, quote = TRUE, sep = ",",
             eol = "\n", na = "NA", dec = ".", row.names = TRUE,
             col.names = TRUE, qmethod = c("escape", "double"),
             fileEncoding = "")
@@ -89,8 +91,8 @@ boxplot(Color.Score ~ Group, data = x, lwd = 1, ylab = 'PC1Color', las=2, cex=0.
 ** Statistical Analysis and Plotting ** 
 ```{r}
 # for use in plotting to avoid having to run PCA again
-Color.Score <- read.csv("../output/Color_Score_Output.csv", header=T, sep=",", na.string="NA") #read in data file
-mod1 <- aov(sqrt(Color.Score+200) ~ Treatment, data=Color.Score) #run an ANOVA ## add Timepoint as factor later 
+Color.Score <- read.csv("output/Color_Score_Output.csv", header=T, sep=",", na.string="NA") #read in data file
+mod1 <- aov(sqrt(Color.Score+200) ~ Treatment*Timepoint, data=Color.Score) #run an ANOVA ## add Timepoint as factor later 
 hist(residuals(mod1)) #look at normality of data
 boxplot(residuals(mod1)) #look at normality of data
 summary(mod1)
@@ -107,7 +109,9 @@ phlett
 
 Calculating means, sample size, and standard error for timepoint and treatment groups. 
 ```{r}
-All.Means <- summarySE(Color.Score, measurevar="Color.Score", groupvars=c("Treatment")) %>% 
+
+
+All.Means <- summarySE(Color.Score, measurevar="Color.Score", groupvars=c("Treatment", "Timepoint")) %>% 
   filter(N>2) %>% na.omit()
 #All.Means <- ddply(Color.Score, c('Timepoint','Species','Treatment'), summarize,
                   #  mean= mean(Bleaching.Score, na.rm=T), #mean pnet
@@ -123,11 +127,10 @@ All.Means <- summarySE(Color.Score, measurevar="Color.Score", groupvars=c("Treat
 
 Plot data 
 ```{r}
-Color.Score_plot <- ggplot(All.Means, aes(x=Treatment, y = Color.Score)) +
+Color.Score_plot <- ggplot(All.Means, aes(x=Timepoint, y = Color.Score, group=Treatment, shape=Treatment)) +
   geom_line() + geom_point() +
   #facet_grid(~Species, scales = "free", labeller = species_labeller) +
   geom_errorbar(aes(ymin=Color.Score-se, ymax=Color.Score+se), width=.2) +
-  scale_color_manual(values = cols) + 
   xlab("Treatment") + 
   ylab("Color Score") + # y-axis label and y axis range
   theme_classic() + 
