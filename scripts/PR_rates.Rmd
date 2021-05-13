@@ -221,12 +221,14 @@ gd <- pr.save %>%
                   sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
 
 trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
-   geom_point(alpha = .4, aes(colour = Treatment, shape = Treatment), size = 2) +
+   geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
     geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-    scale_color_manual(values=c('blue', 'red'))+
+    scale_color_manual(values=c('black','blue', 'red'))+
     #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
    geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-   ylim(-0.3,0.5) +
+   ylim(-0.4,0.5) +
   facet_wrap(~Assay, ncol = 2)+
    theme_bw()+
   theme(legend.position = c(0.63, 0.8),
