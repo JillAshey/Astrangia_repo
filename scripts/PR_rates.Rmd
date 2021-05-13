@@ -29,17 +29,17 @@ library(furrr)
 
 ## Import data
 ```{r}
-path.p <- "data/PR/Time0" #the location of all your respirometry files 
+path.p <- "data/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/PR/Time0/PR_sample_metadata.csv")
+sample.info <- read_csv(file = "data/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/PR/Time0/PR_run_metadata.csv")
+run.info <- read_csv(file = "data/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -47,13 +47,13 @@ metadata <- full_join(sample.info, run.info) %>%
 
 # Select only certain columnns
 metadata <- metadata %>%
-  select(colony_id, Run, Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
+  select(colony_id, Run, Treatment,Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
 
 # Read in all data files
 df <- tibble(file.name = file.names) %>%
   mutate(colony_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
           info = map(colony_id, ~filter(metadata, colony_id == .)),           # Get associated sample info
-         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 0)))   # Get associated O2 data
+         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1)))   # Get associated O2 data
 
 # Select only Time, Value, and Temp columns from O2 data
 df <- df %>%
@@ -151,7 +151,7 @@ df.out <- df %>%
 ### Merge rates with sample info
 pr <- left_join(
   select(df.out, colony_id, Light_Value, micromol.L.s),
-  distinct(metadata, colony_id, Run, Chamber.Vol.L, Surface.Area.cm2)
+  distinct(metadata, colony_id, Run, Treatment,Chamber.Vol.L, Surface.Area.cm2, Date)
 )
 
 ### Correct for chamber volume and blanks
@@ -181,15 +181,80 @@ pr <- pr %>%
 ```{r, fig.height=2, fig.width = 8}
 ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point() +
-  facet_wrap(~colony_id*Light_Level, ncol = 9)
+  facet_wrap(~colony_id*Light_Value, ncol = 9)
 ```
 
 # Write to output file
 ```{r}
 # Select variables to write to file
-pr.out <- pr %>% select(colony_id, Light_Value, Run, micromol.cm2.s, micromol.cm2.h)
+pr.out <- pr %>% select(colony_id, Light_Value, Run,Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
 write.csv(pr.out, "output/PR_rates.csv")
 ```
 
+```{r}
+pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
+
+gd <- pr.save %>% group_by(Light_Value) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+          sem = sd(micromol.cm2.h))
+
+pr.save <- pr.save %>% 
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "Time0",
+    Date == "2021-03-04" ~ "Time1",
+    Date == "2021-04-01" ~ "Time2",
+    Date == "2021-04-29" ~ "Time3"))
+
+pr.save <- pr.save %>% 
+  mutate(Assay = case_when(
+    Light_Value == "0" ~ "Rd",
+    Light_Value == "320" ~ "P",
+    Light_Value == "350" ~ "P",
+    Light_Value == "368" ~ "P",
+    Light_Value == "337" ~ "P"))
+
+gd <- pr.save %>% 
+        group_by(Assay,Timepoint,Treatment) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+
+trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
+   geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
+    geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+    scale_color_manual(values=c('black','blue', 'red'))+
+    #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+   ylim(-0.4,0.5) +
+  facet_wrap(~Assay, ncol = 2)+
+   theme_bw()+
+  theme(legend.position = c(0.63, 0.8),
+        legend.title = element_text(colour="black", size=6, 
+                                     face="bold"),
+        legend.text = element_text(size=4))+
+  guides(color = guide_legend(override.aes = list(size = 1)))
+
+plot <- grid.arrange(trt.plot, clip="off")
+ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+
+
+# # Individual plots for each sample 
+# indiv = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+#    geom_point(alpha = .4, aes(colour = Treatment)) +
+#    ylim(-0.3,0.5)+
+#    #geom_point(data = gd, size = 4) +
+#    theme_bw() +
+#    facet_wrap(~colony_id, ncol = 3)
+# ggsave("../output/PR/IndividualSample_PR.pdf", indiv, width = 21, height = 21, units = c("in"))
+# 
+# 
+# p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
+#    geom_point(alpha = .4, aes(colour = Treatment, shape = Light_Value), size = 4) +
+#    ylim(-0.3,0.5) +
+#    #geom_point(data = gd, size = 4) +
+#    theme_bw()
+# p2 + scale_color_manual(values = c("black", "blue", "red"))
+```
