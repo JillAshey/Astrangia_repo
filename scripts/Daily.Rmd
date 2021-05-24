@@ -20,6 +20,7 @@ library(gridExtra)
 # Check working directory
 ```{r}
 getwd() 
+# blah blah ignore 
 ```
 
 # Load data
