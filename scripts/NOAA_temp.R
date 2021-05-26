@@ -524,7 +524,7 @@ weekly2018$year <- "2018"
 colnames(weekly2018) <- c("week", "temp", "year")
 
 # Read in Newport, RI buoy data from 2019
-newport2019 <- read.delim("data/NOAA_temp/nwpr1h2019.txt", na.strings='999')
+newport2019 <- read.delim("data/NOAA_temp/nwpr1h2019_match.txt", na.strings='999')
 newport2019 <- cbind("datetime"=paste(paste(newport2019$X.YY, newport2019$MM, newport2019$DD, sep="-")," ",paste(newport2019$hh,newport2019$mm, sep=":"),sep=""),newport2019)
 newport2019$datetime <- strptime(newport2019$datetime, format="%Y-%m-%d %H")
 newport2019$WTMP[newport2019$WTMP==999] <- NA
@@ -590,12 +590,68 @@ dev.off()
 
 
 
+newport2019 <- read.csv("data/NOAA_temp/qptr1h2020_2021dates.csv", sep=",", na.strings='999')
+newport2019 <- cbind("datetime"=paste(paste(newport2019$YY, newport2019$MM, newport2019$DD, sep="-")," ",paste(newport2019$hh,newport2019$mm, sep=":"),sep=""),newport2019)
+newport2019$datetime <- strptime(newport2019$datetime, format="%Y-%m-%d %H")
+newport2019$WTMP[newport2019$WTMP==999] <- NA
+
+buoy.temp <- newport2019[,c(1,16)]
 
 
+# Read in data 
+Tank1 <- read.csv("data/Hobo/Tank1.csv", sep=",", skip=c(1508), header=F, na.strings = "NA")[ ,1:2]
+Tank3 <- read.csv("data/Hobo/Tank3.csv", sep=",", skip=c(1508), header=F, na.strings = "NA")[ ,1:2]
+Tank3 <- Tank3[1:nrow(Tank1),]
+#12/21/20 13:10
+Tank1$V1 <- parse_date_time(Tank1$V1, "mdy HM", tz = "EST")
+Tank1$V1 <- Tank1$V1 + hours(5) # add x hours
+Tank3$V1 <- parse_date_time(Tank3$V1, "mdy HM", tz = "EST")
+Tank3$V1 <- Tank3$V1 + hours(5) # add x hours
+
+trt.temp <- cbind(Tank1,Tank3$V2)
+colnames(trt.temp) <- c("datetime", "Ambient", "High")
+
+data <- full_join(trt.temp, buoy.temp, by="datetime")
+
+# Convert to Long
+ldf <- pivot_longer(data, cols = Ambient:WTMP, names_to="Tank" )
 
 
+ggplot(ldf, aes(x=datetime, y=value)) +
+  geom_line(aes(color = Tank), size = 1)+
+  geom_vline(xintercept=as.numeric(ldf$datetime[36829]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[66520]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[96526]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[126730]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[154183]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[126730]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[176428]), linetype=4, colour="grey")+
+  geom_vline(xintercept=as.numeric(ldf$datetime[197611]), linetype=4, colour="grey")+
+  #geom_vline(xintercept=as.numeric(ldf$datetime[219484]), linetype=4, colour="grey")+
+  scale_color_manual(values=c( "blue", "red","black"))+
+  #ylim(5,15)+
+  ylab("Temperature °C")+
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave("output/Hobo/temp_light_logger/Seasonal_Buoy_and_Treatment.png", plot = last_plot(), width = 8, height = 4)
 
 
+data2 <- left_join(trt.temp, buoy.temp, by="datetime")
+
+# Convert to Long
+ldf <- pivot_longer(data2, cols = Ambient:WTMP, names_to="Tank" )
+
+
+ggplot(ldf, aes(x=datetime, y=value)) +
+  geom_line(aes(color = Tank), size = 1)+
+  scale_color_manual(values=c( "blue", "red","black"))+
+  #ylim(5,15)+
+  ylab("Temperature °C")+
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave("output/Hobo/temp_light_logger/Buoy_and_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
 
 
 
