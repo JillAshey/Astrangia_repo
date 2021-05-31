@@ -187,16 +187,37 @@ hist(mod.flow$residuals)
 ```{r}
 # Plot and save
 # By Treatment
-timepoint.trt <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Treatment)) +
+temp.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Treatment)) +
+  geom_line(aes(color = Treatment), size = 1) 
+sal.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Salinity.psu, group=Treatment)) +
+  geom_line(aes(color = Treatment), size = 1) 
+ph.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=pH.Total, group=Treatment)) +
+  geom_line(aes(color = Treatment), size = 1) 
+light.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Light, group=Treatment)) +
+  geom_line(aes(color = Treatment), size = 1) 
+flow.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Flow.mL.sec, group=Treatment)) +
   geom_line(aes(color = Treatment), size = 1) 
 
-# By Tank
-timepoint.tank <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C)) +
-  geom_line(aes(color = Tank), size = 1) +
-  scale_fill_brewer("Dark2") 
+plot.trt.timepoint <- grid.arrange(temp.trt.date, sal.trt.date, ph.trt.date, light.trt.date, flow.trt.date, ncol=1, nrow = 5, clip="off")
+ggsave("output/Daily_Measurements.By.Date.Treatment.pdf", plot.trt.timepoint, width = 30, height = 21, units = c("in"))
 
-plot.timepoint <- grid.arrange(timepoint.tank, timepoint.trt, ncol=1, nrow = 2, clip="off")
-ggsave("output/Daily_Measurements.By.Date.pdf", plot.tank, width = 21, height = 25, units = c("in"))
+# By Tank
+temp.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Tank)) +
+  geom_line(aes(color = Tank), size = 1) 
+sal.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Salinity.psu, group=Tank)) +
+  geom_line(aes(color = Tank), size = 1) 
+ph.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=pH.Total, group=Tank)) +
+  geom_line(aes(color = Tank), size = 1) 
+light.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Light, group=Tank)) +
+  geom_line(aes(color = Tank), size = 1) 
+flow.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Flow.mL.sec, group=Tank)) +
+  geom_line(aes(color = Tank), size = 1) 
+
+plot.tank.timepoint <- grid.arrange(temp.tank.date, sal.tank.date, ph.tank.date, light.tank.date, flow.tank.date, ncol=1, nrow = 5, clip="off")
+ggsave("output/Daily_Measurements.By.Date.Tank.pdf", plot.timepoint, width = 21, height = 25, units = c("in"))
+
+plot.all <- grid.arrange(temp.trt.date, temp.tank.date, sal.trt.date, sal.tank.date, ph.trt.date,ph.tank.date,  light.trt.date, light.tank.date, flow.trt.date, flow.tank.date, ncol=2, nrow=5)
+ggsave("output/Daily_Measurements.By.Date.pdf", plot.all, width = 30, height = 25, units = c("in"))
 ```
 
 
