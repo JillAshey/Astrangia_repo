@@ -510,7 +510,80 @@ figure <- ggarrange(trt.plot, field_trt.plot,
 figure
 
 plot <- grid.arrange(figure, clip="off")
-ggsave("output/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+ggsave("output/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 7, units = c("in"))
 
 ```
+
+
+## Plot experimental and field data in one plot 
+
+### Import data 
+```{r}
+exp <- read_csv(file = "output/PR_rates.csv")
+field <- read_csv(file = "output/PR_field_rates.csv")
+
+all <- full_join(exp, field) %>%
+  as_tibble()
+  
+all <- all %>% 
+  mutate(Timepoint = case_when(
+    Date == "2/1/21" ~ "Time0",
+    Date == "3/4/21" ~ "Time1",
+    Date == "4/1/21" ~ "Time2",
+    Date == "4/10/21" ~ "Time2",
+    Date == "4/29/21" ~ "Time3",
+    Date == "4/30/21" ~ "Time3",
+    Date == "5/27/21" ~ "Time4")) 
+  
+all <- all %>% 
+  mutate(Assay = case_when(
+    Light_Value == "0" ~ "Rd",
+    Light_Value == "320" ~ "P",
+    Light_Value == "337" ~ "P",
+    Light_Value == "340" ~ "P",
+    Light_Value == "350" ~ "P",
+    Light_Value == "355" ~ "P",
+    Light_Value == "368" ~ "P",
+    Light_Value == "392" ~ "P"))
+
+
+```  
+
+```{r}
+gd <- all %>% 
+        group_by(Assay,Timepoint,Treatment) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+
+
+# Remove Acclimatization rows, if desired
+all <- all %>%
+  filter(!Treatment==c("Acclimatization"))
+
+all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
+   geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
+    geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+    scale_color_manual(values=c('blue', 'green', "green", "red"))+
+    #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+   #ylim(-0.4,0.5) +
+  facet_wrap(~Assay, ncol = 2)+
+   theme_bw()+
+  theme(legend.position = c(0.63, 0.8),
+        legend.title = element_text(colour="black", size=6, 
+                                     face="bold"),
+        legend.text = element_text(size=4))+
+  guides(color = guide_legend(override.aes = list(size = 1)))
+all.plot
+
+plot <- grid.arrange(all.plot, clip="off")
+ggsave("output/PR/All_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+```
+
+
+
+
+
 
