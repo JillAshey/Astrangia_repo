@@ -16,7 +16,6 @@ editor_options:
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-#knitr::opts_knit$set(root.dir = normalizePath(".."))
 
 ## install packages if you don't already have them in your library
 if (!require("devtools")) install.packages("devtools")
