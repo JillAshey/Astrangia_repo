@@ -182,3 +182,23 @@ mod.flow
 summary(mod.flow)
 hist(mod.flow$residuals)
 ```
+
+# Plot by date 
+```{r}
+# Plot and save
+# By Treatment
+timepoint.trt <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Treatment)) +
+  geom_line(aes(color = Treatment), size = 1) 
+
+# By Tank
+timepoint.tank <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C)) +
+  geom_line(aes(color = Tank), size = 1) +
+  scale_fill_brewer("Dark2") 
+
+plot.timepoint <- grid.arrange(timepoint.tank, timepoint.trt, ncol=1, nrow = 2, clip="off")
+ggsave("output/Daily_Measurements.By.Date.pdf", plot.tank, width = 21, height = 25, units = c("in"))
+```
+
+
+
+
