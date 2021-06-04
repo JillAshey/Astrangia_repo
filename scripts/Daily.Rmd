@@ -214,7 +214,7 @@ flow.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Flow.mL.sec, group=Tank)) +
   geom_line(aes(color = Tank), size = 1) 
 
 plot.tank.timepoint <- grid.arrange(temp.tank.date, sal.tank.date, ph.tank.date, light.tank.date, flow.tank.date, ncol=1, nrow = 5, clip="off")
-ggsave("output/Daily_Measurements.By.Date.Tank.pdf", plot.timepoint, width = 21, height = 25, units = c("in"))
+ggsave("output/Daily_Measurements.By.Date.Tank.pdf", plot.tank.timepoint, width = 21, height = 25, units = c("in"))
 
 plot.all <- grid.arrange(temp.trt.date, temp.tank.date, sal.trt.date, sal.tank.date, ph.trt.date,ph.tank.date,  light.trt.date, light.tank.date, flow.trt.date, flow.tank.date, ncol=2, nrow=5)
 ggsave("output/Daily_Measurements.By.Date.pdf", plot.all, width = 30, height = 25, units = c("in"))
