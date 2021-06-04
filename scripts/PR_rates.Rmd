@@ -347,7 +347,7 @@ cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
 #### The full or thinned data plot for any sample can be accessed like this:
 ```{r}
 df %>%
-  filter(colony_id == "FLD-0001") %>%
+  filter(colony_id == "FLD-0009") %>%
   pull(thin_data_plot)
 ```
 
@@ -382,7 +382,7 @@ plot_rankLcRg <- function(colony_id, interval_number) {
 
 #### The diagnostics for any regression can be plotted like this, specifying a colony_id and the number of the light curve interval:
 ```{r}
-plot_rankLcRg("FLD-0001", 1) 
+plot_rankLcRg("FLD-0008", 1) 
 ```
 
 ### Extract slope of best regression for each interval for each sample
@@ -449,14 +449,16 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
     Date == "2021-04-10" ~ "FLD-Time2",
-    Date == "2021-04-30" ~ "FLD-Time3"))
+    Date == "2021-04-30" ~ "FLD-Time3",
+    Date == "2021-06-02" ~ "FLD-Time4"))
 
 
 pr.save <- pr.save %>% 
   mutate(Assay = case_when(
     Light_Value == "0" ~ "Rd",
     Light_Value == "340" ~ "P",
-    Light_Value == "392" ~ "P"))
+    Light_Value == "392" ~ "P",
+    Light_Value == "321" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
@@ -535,7 +537,8 @@ all <- all %>%
     Date == "4/10/21" ~ "Time2",
     Date == "4/29/21" ~ "Time3",
     Date == "4/30/21" ~ "Time3",
-    Date == "5/27/21" ~ "Time4")) 
+    Date == "5/27/21" ~ "Time4",
+    Date == "6/2/21" ~ "Time4")) 
   
 all <- all %>% 
   mutate(Assay = case_when(
@@ -546,8 +549,16 @@ all <- all %>%
     Light_Value == "350" ~ "P",
     Light_Value == "355" ~ "P",
     Light_Value == "368" ~ "P",
-    Light_Value == "392" ~ "P"))
+    Light_Value == "392" ~ "P",
+    Light_Value == "321" ~ "P"))
 
+# all <- all %>% 
+#   mutate(Assay = case_when(
+#     Treatment == "Ambient" ~ "Ambient",
+#     Treatment == "Heat" ~ "Heat",
+#     Treatment == "Field-TP2" ~ "Field",
+#     Treatment == "Field-TP3" ~ "Field",
+#     Treatment == "Field-TP4" ~ "Field"))
 
 ```  
 
@@ -557,7 +568,6 @@ gd <- all %>%
         summarise(avg = mean(micromol.cm2.h),
                   sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
 
-
 # Remove Acclimatization rows, if desired
 all <- all %>%
   filter(!Treatment==c("Acclimatization"))
@@ -565,7 +575,7 @@ all <- all %>%
 all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
    geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
     geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-    scale_color_manual(values=c('blue', 'green', "green", "red"))+
+    #scale_color_manual(values=c('blue', 'green', "green", "green", "green", "red"))+
     #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
   geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
