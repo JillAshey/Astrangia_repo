@@ -49,7 +49,7 @@ hist(position.model$residuals)
 
 Plot light by treatment 
 ```{r}
-pdf("../output/Light.by.Treatment.pdf")
+pdf("output/Light.by.Treatment.pdf")
 plot(as.factor(light$Treatment), light$PAR, xlab="Treamtment", ylab="PAR", ylim=c(0,160), las=2)
 boxplot(PAR ~ Treatment, data = light, outpch = NA) 
 stripchart(PAR ~ Treatment, data = light, 
@@ -61,7 +61,7 @@ dev.off()
 
 Plot light by tank
 ```{r}
-pdf("../output/Light.by.Tank.pdf")
+pdf("output/Light.by.Tank.pdf")
 plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
 boxplot(PAR ~ Tank, data = light, outpch = NA) 
 stripchart(PAR ~ Tank, data = light, 
@@ -73,7 +73,7 @@ dev.off()
 
 Plot light by position
 ```{r}
-pdf("../output/Light.by.Position.pdf")
+pdf("output/Light.by.Position.pdf")
 par(mfrow=c(4,4))
 Tank1 <- subset(light, Tank==1)
 plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
