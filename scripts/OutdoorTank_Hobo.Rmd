@@ -9,6 +9,25 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Load packages 
+```{r}
+#Install and Load necessary libraries
+if("lubridate" %in% rownames(installed.packages()) == 'FALSE') install.packages('lubridate') 
+if("tidyverse" %in% rownames(installed.packages()) == 'FALSE') install.packages('tidyverse') 
+if("emmeans" %in% rownames(installed.packages()) == 'FALSE') install.packages('emmeans') 
+if("gridExtra" %in% rownames(installed.packages()) == 'FALSE') install.packages('gridExtra') 
+
+library(lubridate)
+library(tidyverse)
+library(emmeans)
+library(gridExtra)
+```
+
+# Check working directory
+```{r}
+getwd()
+```
+
 # Read in data 
 ```{r}
 outdoor <- read.csv("data/Hobo/temp_light_logger/20210606/OutdoorTank_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
@@ -25,7 +44,7 @@ ggplot(outdoor, aes(x=Date.Time, y=Temperature)) +
   ylab("Temperature °C")
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
 
-# Plot temperature data
+# Plot light data
 ggplot(outdoor, aes(x=Date.Time, y=Light)) +
   geom_line(size = 1)+
   #ylim(5,15)+
@@ -33,7 +52,7 @@ ggplot(outdoor, aes(x=Date.Time, y=Light)) +
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.pdf", plot = last_plot(), width = 8, height = 4)
 ```
 
-# Plot June data (time when outdoor corals were collected)
+# Plot June data (time when outdoor corals for AB were collected)
 ```{r}
 # Filter by June dates
 june.temp <- outdoor %>% filter(Date.Time >= "2021-06-01 00:00:00")
