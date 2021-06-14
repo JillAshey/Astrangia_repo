@@ -1,0 +1,54 @@
+---
+title: "Outdoor Tank Temperature"
+author: "jillashey"
+date: "6/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Read in data 
+```{r}
+outdoor <- read.csv("data/Hobo/temp_light_logger/20210606/OutdoorTank_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
+outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
+```
+
+# Plot data
+```{r}
+# Plot temperature data
+ggplot(outdoor, aes(x=Date.Time, y=Temperature)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Temperature °C")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
+
+# Plot temperature data
+ggplot(outdoor, aes(x=Date.Time, y=Light)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Light")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.pdf", plot = last_plot(), width = 8, height = 4)
+```
+
+# Plot June data (time when outdoor corals were collected)
+```{r}
+# Filter by June dates
+june.temp <- outdoor %>% filter(Date.Time >= "2021-06-01 00:00:00")
+
+# Plot June temperature data
+ggplot(june.temp, aes(x=Date.Time, y=Temperature)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Temperature °C")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.June.pdf", plot = last_plot(), width = 8, height = 4)
+
+# Plot June light data 
+ggplot(june.temp, aes(x=Date.Time, y=Light)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Light")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.June.pdf", plot = last_plot(), width = 8, height = 4)
+```
