@@ -1,8 +1,8 @@
 #Title: Astrangia Field Temps
 #Project: Astrangia CGP
 #Author: HM Putnam 
-#Edited by: HM Putnam
-#Date Last Modified: 20210227
+#Edited by: HM Putnam; J Ashey
+#Date Last Modified: 20210614
 #See Readme file for details
 
 library(lubridate)
@@ -434,74 +434,28 @@ write.csv(data.weekly, "data/NOAA_temp/NOAA_weekly.mean.csv")
 
 
 ##### Plotting my own data with NOAA buoy data 
-Tank1 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank1_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank2 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank2_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank2 <- Tank2[1:nrow(Tank1),]
-Tank3 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank3_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank3 <- Tank3[1:nrow(Tank1),]
-Tank4 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank4_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank4 <- Tank4[1:nrow(Tank1),]
-Tank5 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank5_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank5 <- Tank5[1:nrow(Tank1),]
-Tank6 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank6_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank6 <- Tank6[1:nrow(Tank1),]
-Tank7 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank7_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank7 <- Tank7[1:nrow(Tank1),]
-Tank8 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank8_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank8 <- Tank8[1:nrow(Tank1),]
-Tank9 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank9_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank9 <- Tank9[1:nrow(Tank1),]
-Tank10 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank10_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank10 <- Tank10[1:nrow(Tank1),]
-Tank11 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank11_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank11 <- Tank11[1:nrow(Tank1),]
-Tank12 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank12_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank12 <- Tank12[1:nrow(Tank1),]
-Tank15 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank15_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank15 <- Tank15[1:nrow(Tank1),]
-Tank16 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank16_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank16 <- Tank16[1:nrow(Tank1),]
-Tank17 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank17_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank17 <- Tank17[1:nrow(Tank1),]
-Tank18 <- read.csv("data/Hobo/temp_light_logger/20210310/Tank18_20210310.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank18 <- Tank18[1:nrow(Tank1),]
+my.data <- read.csv("output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+colnames(my.data)[colnames(my.data) == 'Date'] <- 'Date.Time'
+my.data <- my.data[,c("Date.Time", 
+                      "Tank1_Temp", 
+                      "Tank2_Temp", 
+                      "Tank3_Temp",
+                      "Tank4_Temp",
+                      "Tank5_Temp", 
+                      "Tank6_Temp", 
+                      "Tank7_Temp",
+                      "Tank8_Temp",
+                      "Tank9_Temp",
+                      "Tank10_Temp", 
+                      "Tank11_Temp", 
+                      "Tank12_Temp", 
+                      "Tank15_Temp",
+                      "Tank16_Temp", 
+                      "Tank17_Temp", 
+                      "Tank18_Temp")]
 
-my.data <- cbind(Tank1, 
-              Tank2$V3, Tank2$V4, 
-              Tank3$V3, Tank3$V4, 
-              Tank4$V3, Tank4$V4,
-              Tank5$V3, Tank5$V4,
-              Tank6$V3, Tank6$V4,
-              Tank7$V3, Tank7$V4,
-              Tank8$V3, Tank8$V4,
-              Tank9$V3, Tank9$V4,
-              Tank10$V3, Tank10$V4,
-              Tank11$V3, Tank11$V4,
-              Tank12$V3, Tank12$V4,
-              Tank15$V3, Tank15$V4,
-              Tank16$V3, Tank16$V4,
-              Tank17$V3, Tank17$V4,
-              Tank18$V3, Tank18$V4)
-my.data <- na.omit(my.data)
-colnames(my.data) <- c("Date.Time", 
-                    "Tank1_Temp", "Tank1_Light",
-                    "Tank2_Temp", "Tank2_Light",
-                    "Tank3_Temp", "Tank3_Light",
-                    "Tank4_Temp", "Tank4_Light",
-                    "Tank5_Temp", "Tank5_Light",
-                    "Tank6_Temp", "Tank6_Light",
-                    "Tank7_Temp", "Tank7_Light",
-                    "Tank8_Temp", "Tank8_Light",
-                    "Tank9_Temp", "Tank9_Light",
-                    "Tank10_Temp", "Tank10_Light",
-                    "Tank11_Temp", "Tank11_Light",
-                    "Tank12_Temp", "Tank12_Light",
-                    "Tank15_Temp", "Tank15_Light",
-                    "Tank16_Temp", "Tank16_Light",
-                    "Tank17_Temp", "Tank17_Light",
-                    "Tank18_Temp", "Tank18_Light")
-
-my.data$Date.Time <- parse_date_time(my.data$Date.Time, "mdy HMS", tz = "EST")
+#my.data <- na.omit(my.data)
+my.data$Date.Time <- parse_date_time(my.data$Date.Time, "ymdHMS", tz = "EST")
 my.data$Date.Time <- my.data$Date.Time + hours(5)
 
 my.data <- separate(my.data, col = Date.Time, into = c("Date", "Time"), sep = " ")
@@ -517,8 +471,8 @@ my.data$Date.Time <- paste0(my.data$Date, sep=" ", my.data$Time)
 
 range(my.data$Tank1_Temp, na.rm=TRUE)
 my.data$Date.Time <- parse_date_time(my.data$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
-my.data <- my.data %>%
-  filter(Date.Time <= "0000-02-27 19:50:00" | Date.Time >= "0000-02-28 20:20:00")
+#my.data <- my.data %>%
+#  filter(Date.Time <= "0000-02-27 19:50:00" | Date.Time >= "0000-02-28 20:20:00")
 my.data$Temp_Amb <- rowMeans(my.data[,c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
                                         "Tank8_Temp", "Tank10_Temp", "Tank12_Temp",
                                         "Tank16_Temp", "Tank18_Temp")], na.rm=TRUE)
@@ -544,10 +498,30 @@ points(Temp_2017$Date.Time, Temp_2017$WTMP, cex=0.1, col="cyan1")
 points(Temp_2018$Date.Time, Temp_2018$WTMP, cex=0.1, col="darkorange3")
 points(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="darkolivegreen1")
 points(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4")
-points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+dev.off()
+
+pdf("output/Newport_Buoy_Temps.2020.MyData.pdf")
+plot(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("2020"),
+       col=c("bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+dev.off()
+
+pdf("output/Newport_Buoy_Temps.2019.MyData.pdf")
+plot(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("2020"),
+       col=c("bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
@@ -604,8 +578,8 @@ points(Temp_2017_sub$Date.Time, Temp_2017_sub$WTMP, cex=0.1, col="cyan1")
 points(Temp_2018_sub$Date.Time, Temp_2018_sub$WTMP, cex=0.1, col="darkorange3")
 points(Temp_2019_sub$Date.Time, Temp_2019_sub$WTMP, cex=0.1, col="darkolivegreen1")
 points(Temp_2020_sub$Date.Time, Temp_2020_sub$WTMP, cex=0.1, col="bisque4")
-points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),

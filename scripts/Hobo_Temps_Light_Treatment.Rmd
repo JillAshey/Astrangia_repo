@@ -35,13 +35,13 @@ library(gridExtra)
 Tank1 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank1_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 colnames(Tank1) <- c("Date", "Temperature", "Light")
 Tank1$Date <- parse_date_time(Tank1$Date, "mdyHMS", tz = "EST")
-Tank1$Treatment <- "Ambient"
+#Tank1$Treatment <- "Ambient"
 # Tank2
 Tank2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank2_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 #Tank2 <- Tank2[1:nrow(Tank1),]
 colnames(Tank2) <- c("Date", "Temperature", "Light")
 Tank2$Date <- parse_date_time(Tank2$Date, "mdyHMS", tz = "EST")
-Tank2$Treatment <- "Ambient"
+#Tank2$Treatment <- "Ambient"
 all <- merge(Tank1, Tank2, by = "Date", all = T)
 colnames(all) <- c("Date", "Tank1_Temp", "Tank1_Light", "Tank2_Temp", "Tank2_Light")
 # Tank3
@@ -49,7 +49,7 @@ Tank3 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank3_20210606.csv", sep
 #Tank3 <- Tank3[1:nrow(Tank1),]
 colnames(Tank3) <- c("Date", "Temperature", "Light")
 Tank3$Date <- parse_date_time(Tank3$Date, "mdyHMS", tz = "EST")
-Tank3$Treatment <- "Heat"
+#Tank3$Treatment <- "Heat"
 all <- merge(all, Tank3, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank3_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank3_Light'
@@ -58,7 +58,7 @@ Tank4 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank4_20210606.csv", sep
 #Tank3 <- Tank3[1:nrow(Tank1),]
 colnames(Tank4) <- c("Date", "Temperature", "Light")
 Tank4$Date <- parse_date_time(Tank4$Date, "mdyHMS", tz = "EST")
-Tank4$Treatment <- "Heat"
+#Tank4$Treatment <- "Heat"
 all <- merge(all, Tank4, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank4_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank4_Light'
@@ -70,7 +70,7 @@ colnames(Tank5.2) <- c("Date", "Temperature", "Light")
 Tank5.full <- rbind(Tank5.1, Tank5.2) # bind data from Tank 5 together
 Tank5.full <- Tank5.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank5.full$Treatment <- "Ambient"
+#Tank5.full$Treatment <- "Ambient"
 all <- merge(all, Tank5.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank5_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank5_Light'
@@ -82,7 +82,7 @@ colnames(Tank6.2) <- c("Date", "Temperature", "Light")
 Tank6.full <- rbind(Tank6.1, Tank6.2) # bind data from Tank 5 together
 Tank6.full <- Tank6.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank6.full$Treatment <- "Heat"
+#Tank6.full$Treatment <- "Heat"
 all <- merge(all, Tank6.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank6_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank6_Light'
@@ -94,7 +94,7 @@ colnames(Tank7.2) <- c("Date", "Temperature", "Light")
 Tank7.full <- rbind(Tank7.1, Tank7.2) # bind data from Tank 5 together
 Tank7.full <- Tank7.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank7.full$Treatment <- "Heat"
+#Tank7.full$Treatment <- "Heat"
 all <- merge(all, Tank7.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank7_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank7_Light'
@@ -108,7 +108,7 @@ colnames(Tank8.3) <- c("Date", "Temperature", "Light")
 Tank8.full <- rbind(Tank8.1, Tank8.2, Tank8.3) # bind data from Tank 5 together
 Tank8.full <- Tank8.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank8.full$Treatment <- "Ambient"
+#Tank8.full$Treatment <- "Ambient"
 all <- merge(all, Tank8.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank8_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank8_Light'
@@ -120,7 +120,7 @@ colnames(Tank9.2) <- c("Date", "Temperature", "Light")
 Tank9.full <- rbind(Tank9.1, Tank9.2) # bind data from Tank 5 together
 Tank9.full <- Tank9.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank9.full$Treatment <- "Heat"
+#Tank9.full$Treatment <- "Heat"
 all <- merge(all, Tank9.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank9_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank9_Light'
@@ -132,7 +132,7 @@ colnames(Tank10.2) <- c("Date", "Temperature", "Light")
 Tank10.full <- rbind(Tank10.1, Tank10.2) # bind data from Tank 5 together
 Tank10.full <- Tank10.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank10.full$Treatment <- "Ambient"
+#Tank10.full$Treatment <- "Ambient"
 all <- merge(all, Tank10.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank10_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank10_Light'
@@ -144,7 +144,7 @@ colnames(Tank11.2) <- c("Date", "Temperature", "Light")
 Tank11.full <- rbind(Tank11.1, Tank11.2) # bind data from Tank 5 together
 Tank11.full <- Tank11.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank11.full$Treatment <- "Heat"
+#Tank11.full$Treatment <- "Heat"
 all <- merge(all, Tank11.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank11_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank11_Light'
@@ -156,7 +156,7 @@ colnames(Tank12.2) <- c("Date", "Temperature", "Light")
 Tank12.full <- rbind(Tank12.1, Tank12.2) # bind data from Tank 5 together
 Tank12.full <- Tank12.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank12.full$Treatment <- "Ambient"
+#Tank12.full$Treatment <- "Ambient"
 all <- merge(all, Tank12.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank12_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank12_Light'
@@ -168,7 +168,7 @@ colnames(Tank15.2) <- c("Date", "Temperature", "Light")
 Tank15.full <- rbind(Tank15.1, Tank15.2) # bind data from Tank 5 together
 Tank15.full <- Tank15.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank15.full$Treatment <- "Heat"
+#Tank15.full$Treatment <- "Heat"
 all <- merge(all, Tank15.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank15_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank15_Light'
@@ -180,7 +180,7 @@ colnames(Tank16.2) <- c("Date", "Temperature", "Light")
 Tank16.full <- rbind(Tank16.1, Tank16.2) # bind data from Tank 5 together
 Tank16.full <- Tank16.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank16.full$Treatment <- "Ambient"
+#Tank16.full$Treatment <- "Ambient"
 all <- merge(all, Tank16.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank16_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank16_Light'
@@ -192,7 +192,7 @@ colnames(Tank17.2) <- c("Date", "Temperature", "Light")
 Tank17.full <- rbind(Tank17.1, Tank17.2) # bind data from Tank 5 together
 Tank17.full <- Tank17.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank17.full$Treatment <- "Heat"
+#Tank17.full$Treatment <- "Heat"
 all <- merge(all, Tank17.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank17_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank17_Light'
@@ -204,7 +204,7 @@ colnames(Tank18.2) <- c("Date", "Temperature", "Light")
 Tank18.full <- rbind(Tank18.1, Tank18.2) # bind data from Tank 5 together
 Tank18.full <- Tank18.full %>% 
   mutate(Date = parse_date_time(Date, orders = c('ymdHMS', "mdyHMS"), tz = "EST"))
-Tank18.full$Treatment <- "Ambient"
+#Tank18.full$Treatment <- "Ambient"
 all <- merge(all, Tank18.full, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank18_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank18_Light'
@@ -262,6 +262,7 @@ temp.data$Tank8 <- as.double(temp.data$Tank8)
 # Convert to Long
 temp.trt.data <- pivot_longer(temp.data, cols = Tank1:Tank18, names_to="Tank" )
 
+# Assign treatment to each tank
 temp.trt.data <- temp.trt.data %>% 
   mutate(Treatment = case_when(
     Tank == "Tank1" ~ "Ambient",
@@ -290,19 +291,18 @@ ggplot(temp.trt.data, aes(x=Date.Time, y=value)) +
   ylab("Temperature °C")
 ggsave("output/Hobo/temp_light_logger/All_Tank_HoboTemp_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
 
+
+## Filter by June temps
+may.june.temp <- temp.trt.data %>% filter(Date.Time >= "2021-05-01 00:00:00")
+
+# Plot and save June temps 
+ggplot(may.june.temp, aes(x=Date.Time, y=value)) +
+  geom_line(aes(color = Treatment), size = 1)+
+  #ylim(5,15)+
+  ylab("Temperature °C")
+ggsave("output/Hobo/temp_light_logger/May.June_HoboTemp_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
+
 ```
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ```{r }
@@ -324,6 +324,7 @@ light.data <- all[,c("Date",
                      "Tank16_Light", 
                      "Tank17_Light", 
                      "Tank18_Light")]
+
 colnames(light.data) <- c("Date.Time", 
                      "Tank1", 
                      "Tank2", 
@@ -342,20 +343,16 @@ colnames(light.data) <- c("Date.Time",
                      "Tank17", 
                      "Tank18")
 
-
-
-
-
-
-
-
-
-
-
-
-
 light.data$Tank5 <- as.double(light.data$Tank5)
 light.data$Tank6 <- as.double(light.data$Tank6)
+light.data$Tank7 <- as.double(light.data$Tank7)
+
+
+
+
+
+
+
 
 
 # Convert to Long
