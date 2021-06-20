@@ -30,7 +30,7 @@ getwd()
 
 # Read in data 
 ```{r}
-outdoor <- read.csv("data/Hobo/temp_light_logger/20210606/OutdoorTank_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210620.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 ```
