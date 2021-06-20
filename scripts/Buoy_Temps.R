@@ -520,7 +520,7 @@ pdf("output/Newport_Buoy_Temps.2019.MyData.pdf")
 plot(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
-legend("topleft", legend=c("2020"),
+legend("topleft", legend=c("2019"),
        col=c("bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)

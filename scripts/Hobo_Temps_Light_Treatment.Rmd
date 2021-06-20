@@ -32,7 +32,10 @@ library(gridExtra)
 
 # Read in data 
 
-my.data <- read.csv("output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+my.data <- read.csv("output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)[,2:34]
+
+
+
 
 
 # Tank1
