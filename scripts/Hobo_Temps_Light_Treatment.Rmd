@@ -31,13 +31,17 @@ library(gridExtra)
 # Some loggers were stopped and restarted at different times. Because of this, each tank's data needs to be read in and merged with the tank's data before it 
 
 # Read in data 
+
+my.data <- read.csv("output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+
+
 # Tank1
-Tank1 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank1_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
+Tank1 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank1_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 colnames(Tank1) <- c("Date", "Temperature", "Light")
 Tank1$Date <- parse_date_time(Tank1$Date, "mdyHMS", tz = "EST")
 #Tank1$Treatment <- "Ambient"
 # Tank2
-Tank2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank2_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
+Tank2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank2_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 #Tank2 <- Tank2[1:nrow(Tank1),]
 colnames(Tank2) <- c("Date", "Temperature", "Light")
 Tank2$Date <- parse_date_time(Tank2$Date, "mdyHMS", tz = "EST")
@@ -45,7 +49,7 @@ Tank2$Date <- parse_date_time(Tank2$Date, "mdyHMS", tz = "EST")
 all <- merge(Tank1, Tank2, by = "Date", all = T)
 colnames(all) <- c("Date", "Tank1_Temp", "Tank1_Light", "Tank2_Temp", "Tank2_Light")
 # Tank3
-Tank3 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank3_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
+Tank3 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank3_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 #Tank3 <- Tank3[1:nrow(Tank1),]
 colnames(Tank3) <- c("Date", "Temperature", "Light")
 Tank3$Date <- parse_date_time(Tank3$Date, "mdyHMS", tz = "EST")
@@ -54,7 +58,7 @@ all <- merge(all, Tank3, by = "Date", all = T)
 colnames(all)[colnames(all) == 'Temperature'] <- 'Tank3_Temp'
 colnames(all)[colnames(all) == 'Light'] <- 'Tank3_Light'
 # Tank4
-Tank4 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank4_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
+Tank4 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank4_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 2/6/21 onward
 #Tank3 <- Tank3[1:nrow(Tank1),]
 colnames(Tank4) <- c("Date", "Temperature", "Light")
 Tank4$Date <- parse_date_time(Tank4$Date, "mdyHMS", tz = "EST")
@@ -65,7 +69,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank4_Light'
 # Tank5
 Tank5.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank5_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank5.1) <- c("Date", "Temperature", "Light")
-Tank5.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank5_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank5.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank5_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank5.2) <- c("Date", "Temperature", "Light")
 Tank5.full <- rbind(Tank5.1, Tank5.2) # bind data from Tank 5 together
 Tank5.full <- Tank5.full %>% 
@@ -77,7 +81,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank5_Light'
 # Tank6
 Tank6.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank6_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank6.1) <- c("Date", "Temperature", "Light")
-Tank6.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank6_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank6.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank6_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank6.2) <- c("Date", "Temperature", "Light")
 Tank6.full <- rbind(Tank6.1, Tank6.2) # bind data from Tank 5 together
 Tank6.full <- Tank6.full %>% 
@@ -89,7 +93,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank6_Light'
 # Tank7
 Tank7.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank7_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank7.1) <- c("Date", "Temperature", "Light")
-Tank7.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank7_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank7.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank7_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank7.2) <- c("Date", "Temperature", "Light")
 Tank7.full <- rbind(Tank7.1, Tank7.2) # bind data from Tank 5 together
 Tank7.full <- Tank7.full %>% 
@@ -101,9 +105,16 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank7_Light'
 # Tank8
 Tank8.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank8_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank8.1) <- c("Date", "Temperature", "Light")
-Tank8.2 <- read.csv("data/Hobo/temp_light_logger/20210524/Tank8_20210524.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
+Tank8.2 <- read.csv("data/Hobo/temp_light_logger/20210512/Tank8_20210512.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 4/30/21 to 5/12/21
 colnames(Tank8.2) <- c("Date", "Temperature", "Light")
-Tank8.3 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank8_20210606.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
+Tank8.2.early <- Tank8.2[1:6951,] 
+Tank8.2.early = Tank8.2.early[seq(1, nrow(Tank8.2.early), 10), ] # selecting every 10th row because logger was set to log every minute instead of every 10 mins during this period
+Tank8.2.late <- Tank8.2[6963:17210,] # had to make separate df because the data here did not follow the 10th row pattern
+Tank8.2.late = Tank8.2.late[seq(1, nrow(Tank8.2.late), 10), ] # selecting every 10th row because logger was set to log every minute instead of every 10 mins during this period
+colnames(Tank8.2.late) <- c("Date", "Temperature", "Light")
+Tank8.2 <- rbind(Tank8.2.early, Tank8.2.late)
+### missing data from 5/12/21 to 5/15/21
+Tank8.3 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank8_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 5/15/21 onward
 colnames(Tank8.3) <- c("Date", "Temperature", "Light")
 Tank8.full <- rbind(Tank8.1, Tank8.2, Tank8.3) # bind data from Tank 5 together
 Tank8.full <- Tank8.full %>% 
@@ -115,7 +126,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank8_Light'
 # Tank9
 Tank9.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank9_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank9.1) <- c("Date", "Temperature", "Light")
-Tank9.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank9_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank9.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank9_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank9.2) <- c("Date", "Temperature", "Light")
 Tank9.full <- rbind(Tank9.1, Tank9.2) # bind data from Tank 5 together
 Tank9.full <- Tank9.full %>% 
@@ -127,7 +138,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank9_Light'
 # Tank10
 Tank10.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank10_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank10.1) <- c("Date", "Temperature", "Light")
-Tank10.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank10_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank10.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank10_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank10.2) <- c("Date", "Temperature", "Light")
 Tank10.full <- rbind(Tank10.1, Tank10.2) # bind data from Tank 5 together
 Tank10.full <- Tank10.full %>% 
@@ -139,7 +150,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank10_Light'
 # Tank11
 Tank11.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank11_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank11.1) <- c("Date", "Temperature", "Light")
-Tank11.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank11_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank11.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank11_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank11.2) <- c("Date", "Temperature", "Light")
 Tank11.full <- rbind(Tank11.1, Tank11.2) # bind data from Tank 5 together
 Tank11.full <- Tank11.full %>% 
@@ -151,7 +162,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank11_Light'
 # Tank12
 Tank12.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank12_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank12.1) <- c("Date", "Temperature", "Light")
-Tank12.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank12_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank12.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank12_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank12.2) <- c("Date", "Temperature", "Light")
 Tank12.full <- rbind(Tank12.1, Tank12.2) # bind data from Tank 5 together
 Tank12.full <- Tank12.full %>% 
@@ -163,7 +174,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank12_Light'
 # Tank15
 Tank15.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank15_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank15.1) <- c("Date", "Temperature", "Light")
-Tank15.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank15_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank15.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank15_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank15.2) <- c("Date", "Temperature", "Light")
 Tank15.full <- rbind(Tank15.1, Tank15.2) # bind data from Tank 5 together
 Tank15.full <- Tank15.full %>% 
@@ -175,7 +186,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank15_Light'
 # Tank16
 Tank16.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank16_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank16.1) <- c("Date", "Temperature", "Light")
-Tank16.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank16_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank16.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank16_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank16.2) <- c("Date", "Temperature", "Light")
 Tank16.full <- rbind(Tank16.1, Tank16.2) # bind data from Tank 5 together
 Tank16.full <- Tank16.full %>% 
@@ -187,7 +198,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank16_Light'
 # Tank17
 Tank17.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank17_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank17.1) <- c("Date", "Temperature", "Light")
-Tank17.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank17_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank17.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank17_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank17.2) <- c("Date", "Temperature", "Light")
 Tank17.full <- rbind(Tank17.1, Tank17.2) # bind data from Tank 5 together
 Tank17.full <- Tank17.full %>% 
@@ -199,7 +210,7 @@ colnames(all)[colnames(all) == 'Light'] <- 'Tank17_Light'
 # Tank18
 Tank18.1 <- read.csv("data/Hobo/temp_light_logger/20210430/Tank18_20210430.csv", sep=",", skip = c(2), header=T, na.strings = "NA")[ ,1:3] # data from 2/6/21 to 4/30/21
 colnames(Tank18.1) <- c("Date", "Temperature", "Light")
-Tank18.2 <- read.csv("data/Hobo/temp_light_logger/20210606/Tank17_20210606.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
+Tank18.2 <- read.csv("data/Hobo/temp_light_logger/20210617/Tank17_20210617.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 4/30/21 onward
 colnames(Tank18.2) <- c("Date", "Temperature", "Light")
 Tank18.full <- rbind(Tank18.1, Tank18.2) # bind data from Tank 5 together
 Tank18.full <- Tank18.full %>% 
@@ -257,7 +268,6 @@ colnames(temp.data) <- c("Date.Time",
                      "Tank16", 
                      "Tank17", 
                      "Tank18")
-temp.data$Tank8 <- as.double(temp.data$Tank8)
 
 # Convert to Long
 temp.trt.data <- pivot_longer(temp.data, cols = Tank1:Tank18, names_to="Tank" )
@@ -325,6 +335,12 @@ light.data <- all[,c("Date",
                      "Tank17_Light", 
                      "Tank18_Light")]
 
+# Removing commas in columns with light data (not Date column!!)
+clean <- function(ttt){
+  as.numeric( gsub('[^a-zA-Z0-9.]', '', ttt))
+}
+light.data[,2:17] <- sapply(light.data[,2:17], clean)
+
 colnames(light.data) <- c("Date.Time", 
                      "Tank1", 
                      "Tank2", 
@@ -343,32 +359,47 @@ colnames(light.data) <- c("Date.Time",
                      "Tank17", 
                      "Tank18")
 
-light.data$Tank5 <- as.double(light.data$Tank5)
-light.data$Tank6 <- as.double(light.data$Tank6)
-light.data$Tank7 <- as.double(light.data$Tank7)
-
-
-
-
-
-
-
-
-
 # Convert to Long
 light.trt.data <- pivot_longer(light.data, cols = Tank1:Tank18, names_to="Tank" )
 
-#remove commas
-light.trt.data$value <- as.numeric(gsub("\\,", "", light.trt.data$value))
+# Assign treatment to each tank
+light.trt.data <- light.trt.data %>% 
+  mutate(Treatment = case_when(
+    Tank == "Tank1" ~ "Ambient",
+    Tank == "Tank2" ~ "Ambient",
+    Tank == "Tank3" ~ "Heat",
+    Tank == "Tank4" ~ "Heat",
+    Tank == "Tank5" ~ "Ambient",
+    Tank == "Tank6" ~ "Heat",
+    Tank == "Tank7" ~ "Heat",
+    Tank == "Tank8" ~ "Ambient",
+    Tank == "Tank9" ~ "Heat",
+    Tank == "Tank10" ~ "Ambient",
+    Tank == "Tank11" ~ "Heat",
+    Tank == "Tank12" ~ "Ambient",
+    Tank == "Tank15" ~ "Heat",
+    Tank == "Tank16" ~ "Ambient",
+    Tank == "Tank17" ~ "Heat",
+    Tank == "Tank18" ~ "Ambient"))
 
 ## Need to remove times when logger was out of water
 
-# Plot and save
+# Plot and save 
 ggplot(light.trt.data, aes(x=Date.Time, y=value)) +
-  geom_line(aes(color = Tank), size = 1) +
-  scale_fill_brewer("Dark2") +
+  geom_line(aes(color = Treatment), size = 1)+
+  #ylim(5,15)+
   ylab("Light (lux)")
 ggsave("output/Hobo/temp_light_logger/All_Tank_HoboLight_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
+
+## Filter by June temps
+may.june.light <- light.trt.data %>% filter(Date.Time >= "2021-05-01 00:00:00")
+
+# Plot and save June temps 
+ggplot(may.june.light, aes(x=Date.Time, y=value)) +
+  geom_line(aes(color = Treatment), size = 1)+
+  #ylim(5,15)+
+  ylab("Light (lux)")
+ggsave("output/Hobo/temp_light_logger/May.June_HoboTemp_Treatment.pdf", plot = last_plot(), width = 8, height = 4)
 
 ```
 
