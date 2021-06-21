@@ -30,7 +30,7 @@ getwd()
 
 # Read in data 
 ```{r}
-outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210620.csv", sep=",", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210620.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 ```
@@ -59,15 +59,13 @@ june.temp <- outdoor %>% filter(Date.Time >= "2021-06-01 00:00:00")
 
 # Plot June temperature data
 ggplot(june.temp, aes(x=Date.Time, y=Temperature)) +
-  geom_line(size = 1)+
-  #ylim(5,15)+
+  geom_line(size = 5)+
   ylab("Temperature °C")
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.June.pdf", plot = last_plot(), width = 8, height = 4)
 
 # Plot June light data 
 ggplot(june.temp, aes(x=Date.Time, y=Light)) +
   geom_line(size = 1)+
-  #ylim(5,15)+
   ylab("Light")
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.June.pdf", plot = last_plot(), width = 8, height = 4)
 ```
