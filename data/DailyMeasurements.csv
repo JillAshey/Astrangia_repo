@@ -1744,3 +1744,35 @@ Tank15,6/22/21,20210622,20210622,20.58,-47,30.94,NA,NA,Heat,NA
 Tank16,6/22/21,20210622,20210622,17.71,-44.3,30.92,NA,NA,Ambient,NA
 Tank17,6/22/21,20210622,20210622,20.52,-47.4,30.96,NA,NA,Heat,NA
 Tank18,6/22/21,20210622,20210622,16.75,-45.7,31.01,NA,NA,Ambient,NA
+Tank1,6/23/21,20210623,20210622,16.35,-44,30.68,97,NA,Ambient,Issues w/ circuits tripping today
+Tank2,6/23/21,20210623,20210622,16.08,-43.5,30.68,108,NA,Ambient,Issues w/ circuits tripping today
+Tank3,6/23/21,20210623,20210622,20.29,-43.9,30.6,81,NA,Heat,Issues w/ circuits tripping today
+Tank4,6/23/21,20210623,20210622,20.27,-42.8,30.58,101,NA,Heat,Issues w/ circuits tripping today
+Tank5,6/23/21,20210623,20210622,16.41,-44.6,30.73,92,NA,Ambient,Issues w/ circuits tripping today
+Tank6,6/23/21,20210623,20210622,20.08,-40.7,30.57,113,NA,Heat,Issues w/ circuits tripping today
+Tank7,6/23/21,20210623,20210622,20.82,-42.1,30.77,83,NA,Heat,Issues w/ circuits tripping today
+Tank8,6/23/21,20210623,20210622,15.67,-43.3,30.45,86,NA,Ambient,Issues w/ circuits tripping today
+Tank9,6/23/21,20210623,20210622,20.01,-42.5,30.69,92,NA,Heat,Issues w/ circuits tripping today
+Tank10,6/23/21,20210623,20210622,16.04,-41.7,30.64,123,NA,Ambient,Issues w/ circuits tripping today
+Tank11,6/23/21,20210623,20210622,19.99,-40.3,30.83,84,NA,Heat,Issues w/ circuits tripping today
+Tank12,6/23/21,20210623,20210622,16.36,-41.3,30.83,86,NA,Ambient,Issues w/ circuits tripping today
+Tank15,6/23/21,20210623,20210622,20.26,-42.7,30.61,73,NA,Heat,Issues w/ circuits tripping today
+Tank16,6/23/21,20210623,20210622,16.74,-41.5,30.59,89,NA,Ambient,Issues w/ circuits tripping today
+Tank17,6/23/21,20210623,20210622,20.01,-43.7,30.67,73,NA,Heat,Issues w/ circuits tripping today
+Tank18,6/23/21,20210623,20210622,16.15,-42.4,30.61,66,NA,Ambient,Issues w/ circuits tripping today
+Tank1,6/24/21,20210624,20210622,16.52,-44.7,30.54,NA,NA,Ambient,NA
+Tank2,6/24/21,20210624,20210622,17.32,-43.4,30.56,NA,NA,Ambient,NA
+Tank3,6/24/21,20210624,20210622,20.36,-45.6,30.6,NA,NA,Heat,NA
+Tank4,6/24/21,20210624,20210622,20.39,-45.6,30.6,NA,NA,Heat,NA
+Tank5,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
+Tank6,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank7,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank8,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
+Tank9,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank10,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
+Tank11,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank12,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
+Tank15,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank16,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
+Tank17,6/24/21,20210624,20210622,,,,NA,NA,Heat,NA
+Tank18,6/24/21,20210624,20210622,,,,NA,NA,Ambient,NA
