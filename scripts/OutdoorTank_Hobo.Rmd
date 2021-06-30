@@ -1,4 +1,4 @@
----
+yw---
 title: "Outdoor Tank Temperature"
 author: "jillashey"
 date: "6/14/2021"
@@ -30,7 +30,7 @@ getwd()
 
 # Read in data 
 ```{r}
-outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210620.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("../data/Hobo/temp_light_logger/Outdoor/A-frame_20210630.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 ```
@@ -42,14 +42,15 @@ ggplot(outdoor, aes(x=Date.Time, y=Temperature)) +
   geom_line(size = 1)+
   #ylim(5,15)+
   ylab("Temperature °C")
-ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
+ggsave("../output/Hobo/temp_light_logger/A-frametemp_20210630
+       .pdf", plot = last_plot(), width = 8, height = 4)
 
 # Plot light data
 ggplot(outdoor, aes(x=Date.Time, y=Light)) +
   geom_line(size = 1)+
   #ylim(5,15)+
   ylab("Light")
-ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.pdf", plot = last_plot(), width = 8, height = 4)
+ggsave("../output/Hobo/temp_light_logger/A-framlight_20210630.pdf", plot = last_plot(), width = 8, height = 4)
 ```
 
 # Plot June data (time when outdoor corals for AB were collected)
