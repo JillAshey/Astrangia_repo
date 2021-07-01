@@ -28,45 +28,100 @@ library(gridExtra)
 getwd()
 ```
 
+
+## Alice A-frame logger data 
 # Read in data 
 ```{r}
-outdoor <- read.csv("../data/Hobo/temp_light_logger/Outdoor/A-frame_20210630.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+aframe <- read.csv("data/Hobo/temp_light_logger/Outdoor/A-frame_20210630.csv", header=T, na.strings = "NA")[ ,2:4] 
+colnames(aframe) <- c("Date.Time", "Temperature", "Light")
+aframe$Date.Time <- parse_date_time(aframe$Date.Time, "mdyHMS", tz = "EST")
+```
+
+# Plot data from A-frame
+```{r}
+# Plot temperature data
+ggplot(aframe, aes(x=Date.Time, y=Temperature)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Temperature °C")
+ggsave("output/Hobo/temp_light_logger/A-frametemp_20210630.pdf", plot = last_plot(), width = 8, height = 4)
+
+# Plot light data
+ggplot(aframe, aes(x=Date.Time, y=Light)) +
+  geom_line(size = 1)+
+  #ylim(5,15)+
+  ylab("Light")
+ggsave("output/Hobo/temp_light_logger/A-framlight_20210630.pdf", plot = last_plot(), width = 8, height = 4)
+```
+
+## Outdoor tank logger data 
+# Read in data 
+```{r}
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210701.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 ```
 
-# Plot data
+# Plot data from outdoor tank
 ```{r}
 # Plot temperature data
 ggplot(outdoor, aes(x=Date.Time, y=Temperature)) +
   geom_line(size = 1)+
   #ylim(5,15)+
   ylab("Temperature °C")
-ggsave("../output/Hobo/temp_light_logger/A-frametemp_20210630
-       .pdf", plot = last_plot(), width = 8, height = 4)
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
 
 # Plot light data
 ggplot(outdoor, aes(x=Date.Time, y=Light)) +
   geom_line(size = 1)+
   #ylim(5,15)+
   ylab("Light")
-ggsave("../output/Hobo/temp_light_logger/A-framlight_20210630.pdf", plot = last_plot(), width = 8, height = 4)
+ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.pdf", plot = last_plot(), width = 8, height = 4)
 ```
 
-# Plot June data (time when outdoor corals for AB were collected)
+# Plot data from June onwards from outdoor tank (time when outdoor corals for AB were collected)
 ```{r}
 # Filter by June dates
-june.temp <- outdoor %>% filter(Date.Time >= "2021-06-01 00:00:00")
+june.outdoor <- outdoor %>% filter(Date.Time >= "2021-06-01 00:00:00")
 
 # Plot June temperature data
-ggplot(june.temp, aes(x=Date.Time, y=Temperature)) +
-  geom_line(size = 5)+
+ggplot(june.outdoor, aes(x=Date.Time, y=Temperature)) +
+  geom_line(size = 1)+
   ylab("Temperature °C")
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboTemp.June.pdf", plot = last_plot(), width = 8, height = 4)
 
 # Plot June light data 
-ggplot(june.temp, aes(x=Date.Time, y=Light)) +
+ggplot(june.outdoor, aes(x=Date.Time, y=Light)) +
   geom_line(size = 1)+
   ylab("Light")
 ggsave("output/Hobo/temp_light_logger/OutdoorTank_HoboLight.June.pdf", plot = last_plot(), width = 8, height = 4)
 ```
+
+# Plot data from aframe and outdoor loggers 
+```{r}
+# Filter by aframe start date 
+AB.outdoor <- outdoor %>% filter(Date.Time >= "2021-06-24 00:00:00")
+
+# Add a Tank column for both datasets
+AB.outdoor$Tank <- "Outdoor"
+aframe$Tank <- "A-frame"
+
+# Bind datasets together 
+all <- rbind(AB.outdoor, aframe)
+
+# Plot temperature data 
+ggplot() +
+  geom_point(data = all, aes(x = Date.Time, y = Temperature, color = Tank)) +
+  ylab("Temperature °C")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank-AFrame_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
+
+# Plot light data 
+ggplot() +
+  geom_point(data = all, aes(x = Date.Time, y = Light, color = Tank)) +
+  ylab("Light")
+ggsave("output/Hobo/temp_light_logger/OutdoorTank-AFrame_HoboLight.pdf", plot = last_plot(), width = 8, height = 4)
+
+
+```
+
+
