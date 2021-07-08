@@ -211,7 +211,8 @@ pr.save <- pr.save %>%
     Date == "2021-03-04" ~ "Time1",
     Date == "2021-04-01" ~ "Time2",
     Date == "2021-04-29" ~ "Time3",
-    Date == "2021-05-27" ~ "Time4"))
+    Date == "2021-05-27" ~ "Time4",
+    Date == "2021-06-24" ~ "Time5"))
 
 
 pr.save <- pr.save %>% 
@@ -221,7 +222,8 @@ pr.save <- pr.save %>%
     Light_Value == "350" ~ "P",
     Light_Value == "368" ~ "P",
     Light_Value == "337" ~ "P",
-    Light_Value == "355" ~ "P"))
+    Light_Value == "355" ~ "P",
+    Light_Value == "361" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
@@ -416,7 +418,6 @@ pr <- left_join(pr, blanks) %>%
   # After correcting for blank values, remove blanks from data
   filter(!grepl("BK", colony_id))
 
-
 # Normalize rates by surface area
 pr <- pr %>%
   mutate(micromol.cm2.s = micromol.s.adj / Surface.Area.cm2,
@@ -450,7 +451,8 @@ pr.save <- pr.save %>%
   mutate(Timepoint = case_when(
     Date == "2021-04-10" ~ "FLD-Time2",
     Date == "2021-04-30" ~ "FLD-Time3",
-    Date == "2021-06-02" ~ "FLD-Time4"))
+    Date == "2021-06-02" ~ "FLD-Time4",
+    Date == "2021-06-25" ~ "FLD-Time5"))
 
 
 pr.save <- pr.save %>% 
@@ -458,7 +460,8 @@ pr.save <- pr.save %>%
     Light_Value == "0" ~ "Rd",
     Light_Value == "340" ~ "P",
     Light_Value == "392" ~ "P",
-    Light_Value == "321" ~ "P"))
+    Light_Value == "321" ~ "P",
+    Light_Value == "319" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
@@ -468,7 +471,7 @@ gd <- pr.save %>%
 field_trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
    geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
     geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-    scale_color_manual(values=c('black','blue', 'red'))+
+    #scale_color_manual(values=c('black','blue', 'red'))+
     #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
   geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
@@ -525,20 +528,24 @@ ggsave("output/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width =
 ```{r}
 exp <- read_csv(file = "output/PR_rates.csv")
 field <- read_csv(file = "output/PR_field_rates.csv")
+field$Treatment <- "Field"
+
 
 all <- full_join(exp, field) %>%
   as_tibble()
   
 all <- all %>% 
   mutate(Timepoint = case_when(
-    Date == "2/1/21" ~ "Time0",
-    Date == "3/4/21" ~ "Time1",
-    Date == "4/1/21" ~ "Time2",
-    Date == "4/10/21" ~ "Time2",
-    Date == "4/29/21" ~ "Time3",
-    Date == "4/30/21" ~ "Time3",
-    Date == "5/27/21" ~ "Time4",
-    Date == "6/2/21" ~ "Time4")) 
+    Date == "2021-02-04" ~ "Time0",
+    Date == "2021-03-04" ~ "Time1",
+    Date == "2021-04-01" ~ "Time2",
+    Date == "2021-04-10" ~ "Time2",
+    Date == "2021-04-29" ~ "Time3",
+    Date == "2021-04-30" ~ "Time3",
+    Date == "2021-05-27" ~ "Time4",
+    Date == "2021-06-02" ~ "Time4",
+    Date == "2021-06-24" ~ "Time5",
+    Date == "2021-06-25" ~ "Time5")) 
   
 all <- all %>% 
   mutate(Assay = case_when(
@@ -550,7 +557,9 @@ all <- all %>%
     Light_Value == "355" ~ "P",
     Light_Value == "368" ~ "P",
     Light_Value == "392" ~ "P",
-    Light_Value == "321" ~ "P"))
+    Light_Value == "321" ~ "P",
+    Light_Value == "361" ~ "P",
+    Light_Value == "319" ~ "P"))
 
 # all <- all %>% 
 #   mutate(Assay = case_when(
@@ -569,13 +578,13 @@ gd <- all %>%
                   sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
 
 # Remove Acclimatization rows, if desired
-all <- all %>%
-  filter(!Treatment==c("Acclimatization"))
+#all <- all %>%
+#  filter(!Treatment==c("Acclimatization"))
 
 all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
    geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
     geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-    #scale_color_manual(values=c('blue', 'green', "green", "green", "green", "red"))+
+    scale_color_manual(values=c("black", "blue", "green", "red"))+
     #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
   geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
