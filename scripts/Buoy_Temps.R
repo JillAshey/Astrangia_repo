@@ -291,7 +291,6 @@ daily_2020 <- aggregate(x = Temp_2020$WTMP,                # Specify data column
                          na.rm = T) 
 
 
-
 pdf("output/Newport_Buoy_Temps.test.pdf")
 plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
@@ -498,8 +497,8 @@ points(Temp_2017$Date.Time, Temp_2017$WTMP, cex=0.1, col="cyan1")
 points(Temp_2018$Date.Time, Temp_2018$WTMP, cex=0.1, col="darkorange3")
 points(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="darkolivegreen1")
 points(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4")
-points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
@@ -508,8 +507,8 @@ dev.off()
 
 pdf("output/Newport_Buoy_Temps.2020.MyData.pdf")
 plot(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2020"),
        col=c("bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
@@ -518,8 +517,8 @@ dev.off()
 
 pdf("output/Newport_Buoy_Temps.2019.MyData.pdf")
 plot(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2019"),
        col=c("bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
@@ -578,8 +577,8 @@ points(Temp_2017_sub$Date.Time, Temp_2017_sub$WTMP, cex=0.1, col="cyan1")
 points(Temp_2018_sub$Date.Time, Temp_2018_sub$WTMP, cex=0.1, col="darkorange3")
 points(Temp_2019_sub$Date.Time, Temp_2019_sub$WTMP, cex=0.1, col="darkolivegreen1")
 points(Temp_2020_sub$Date.Time, Temp_2020_sub$WTMP, cex=0.1, col="bisque4")
-points(my.data$Date.Time, my.data$Tank1_Temp, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Tank3_Temp, cex=0.25, col="firebrick1")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
 legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
        col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
 legend("topright", legend=c("Ambient", "Heat"),
@@ -587,80 +586,68 @@ legend("topright", legend=c("Ambient", "Heat"),
 dev.off()
 
 
-## examine data from March 1st to Aug 15th in all years 
-Temp_2005.filt <- Temp_2005 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2006.filt <- Temp_2006 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2007.filt <- Temp_2007 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2008.filt <- Temp_2008 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2009.filt <- Temp_2009 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2010.filt <- Temp_2010 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2011.filt <- Temp_2011 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2012.filt <- Temp_2012 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2013.filt <- Temp_2013 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2014.filt <- Temp_2014 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2015.filt <- Temp_2015 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2016.filt <- Temp_2016 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2017.filt <- Temp_2017 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2018.filt <- Temp_2018 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2019.filt <- Temp_2019 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
-Temp_2020.filt <- Temp_2020 %>%
-  filter(Date.Time > "0000-03-01 00:06:00" & Date.Time < "0000-8-15 23:54:00")
+## Plotting with 2021 data 
+# Newport 2021
+# Link to real time Newport buoy data: https://www.ndbc.noaa.gov/station_realtime.php?station=nwpr1
+nwpr2021 <- read.csv("data/NOAA_temp/nwpr2021.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+nwpr2021$Date <- paste0(nwpr2021$MM, sep = "-", nwpr2021$DD)
+nwpr2021$Time <- paste0(nwpr2021$hh, sep = ":", nwpr2021$mm)
+nwpr2021$Date.Time <- paste0(nwpr2021$Date, sep=" ", nwpr2021$Time)
+unique(nwpr2021$WTMP)
+nwpr2021 <- nwpr2021 %>% naniar::replace_with_na(nwpr2021, replace = list(WTMP=c("MM", "9   9.", ".0 999", "999", "0 999.")))
+unique(nwpr2021$WTMP)
+nwpr2021$WTMP <- as.numeric(nwpr2021$WTMP)
+range(nwpr2021$WTMP, na.rm=TRUE)
+nwpr2021$Date.Time <- parse_date_time(nwpr2021$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+daily_nwpr2021 <- aggregate(x = nwpr2021$WTMP,                # Specify data column
+                        by = list(nwpr2021$Date),          # Specify group indicator
+                        FUN = mean, 
+                        na.rm = T) 
 
-pdf("output/Newport_Buoy_Temps.Mar_Aug.pdf")
-plot(Temp_2005.filt$Date.Time, Temp_2005.filt$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-points(Temp_2006.filt$Date.Time, Temp_2006.filt$WTMP, cex=0.1, col="orange")
-points(Temp_2007.filt$Date.Time, Temp_2007.filt$WTMP, cex=0.1, col="yellow")
-points(Temp_2008.filt$Date.Time, Temp_2008.filt$WTMP, cex=0.1, col="green")
-points(Temp_2009.filt$Date.Time, Temp_2009.filt$WTMP, cex=0.1, col="lightblue")
-points(Temp_2010.filt$Date.Time, Temp_2010.filt$WTMP, cex=0.1, col="purple")
-points(Temp_2011.filt$Date.Time, Temp_2011.filt$WTMP, cex=0.1, col="pink")
-points(Temp_2012.filt$Date.Time, Temp_2012.filt$WTMP, cex=0.1, col="gray")
-points(Temp_2013.filt$Date.Time, Temp_2013.filt$WTMP, cex=0.1, col="brown")
-points(Temp_2014.filt$Date.Time, Temp_2014.filt$WTMP, cex=0.1, col="salmon")
-points(Temp_2015.filt$Date.Time, Temp_2015.filt$WTMP, cex=0.1, col="blueviolet")
-points(Temp_2016.filt$Date.Time, Temp_2016.filt$WTMP, cex=0.1, col="palegreen")
-points(Temp_2017.filt$Date.Time, Temp_2017.filt$WTMP, cex=0.1, col="cyan1")
-points(Temp_2018.filt$Date.Time, Temp_2018.filt$WTMP, cex=0.1, col="darkorange3")
-points(Temp_2019.filt$Date.Time, Temp_2019.filt$WTMP, cex=0.1, col="darkolivegreen1")
-points(Temp_2020.filt$Date.Time, Temp_2020.filt$WTMP, cex=0.1, col="bisque4")
-legend("topleft", legend=c("2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020"),
-       col=c("red", "orange", "yellow", "green", "lightblue", "purple", "pink", "gray", "brown", "salmon", "blueviolet", "palegreen", "cyan1", "darkorange3", "darkolivegreen1", "bisque4"), lty=1:2, cex=0.8)
+# Quonset Point 2021
+# Link to real time Quonset buoy data: https://www.ndbc.noaa.gov/station_realtime.php?station=qptr1
+qptr2021 <- read.csv("data/NOAA_temp/qptr2021.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+qptr2021$Date <- paste0(qptr2021$MM, sep = "-", qptr2021$DD)
+qptr2021$Time <- paste0(qptr2021$hh, sep = ":", qptr2021$mm)
+qptr2021$Date.Time <- paste0(qptr2021$Date, sep=" ", qptr2021$Time)
+unique(qptr2021$WTMP)
+qptr2021 <- qptr2021 %>% naniar::replace_with_na(qptr2021, replace = list(WTMP=c("MM", "9   9.", ".0 999", "999", "0 999.")))
+unique(qptr2021$WTMP)
+qptr2021$WTMP <- as.numeric(qptr2021$WTMP)
+range(qptr2021$WTMP, na.rm=TRUE)
+qptr2021$Date.Time <- parse_date_time(qptr2021$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+daily_qptr2021 <- aggregate(x = qptr2021$WTMP,                # Specify data column
+                            by = list(qptr2021$Date),          # Specify group indicator
+                            FUN = mean, 
+                            na.rm = T) 
+
+# Plot Newport and Quonset 2021 w/ my data 
+pdf("output/NOAA.2021.MyData.pdf")
+par(mfrow=c(1,2))
+plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("Newport 2021"),
+       col=c("bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+plot(qptr2021$Date.Time, qptr2021$WTMP, col="green", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("Quonset 2021"),
+       col=c("green"), lty=1:2, cex=0.8)
+legend("topright", legend=c("Ambient", "Heat"),
+       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
 
-
-
-
-data.filt <- rbind(Temp_2005.filt,Temp_2006.filt,Temp_2007.filt,Temp_2008.filt,Temp_2009.filt,Temp_2010.filt,
-              Temp_2011.filt,Temp_2012.filt,Temp_2013.filt,Temp_2014.filt,Temp_2015.filt,Temp_2016.filt,
-              Temp_2017.filt,Temp_2018.filt,Temp_2019.filt, Temp_2020.filt)
-range(data.filt$WTMP, na.rm=TRUE)
-plot(data.filt$Date.Time, data.filt$WTMP)
-data.filt.lm <- lm(WTMP~Date.Time, data.filt)
-summary(data.filt.lm)
-hist(residuals(data.filt.lm)) #look at normality of data
-
-
-data.mean <- aggregate(x = data.filt$WTMP,                # Specify data column
-                             by = list(data.filt$Date),          # Specify group indicator
-                             FUN = mean, 
-                             na.rm = T) 
-colnames(data.mean) <- c("Date", "WTMP")
-plot(data.mean$Date, data.mean$WTMP)
-data.mean.lm <- lm(WTMP~Date, data.mean)
-summary(data.mean.lm)
+# pdf("output/NOAA.2021.MyData.pdf")
+# plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+# points(qptr2021$Date.Time, qptr2021$WTMP, col = "green", cex=0.25)
+# points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+# points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+# legend("topleft", legend=c("Newport 2021", "Quonset 2021"),
+#        col=c("bisque4", "green"), lty=1:2, cex=0.8)
+# legend("topright", legend=c("Ambient", "Heat"),
+#        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+# dev.off()
 
