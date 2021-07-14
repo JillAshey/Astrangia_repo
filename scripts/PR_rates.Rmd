@@ -536,16 +536,16 @@ all <- full_join(exp, field) %>%
   
 all <- all %>% 
   mutate(Timepoint = case_when(
-    Date == "2021-02-04" ~ "Time0",
-    Date == "2021-03-04" ~ "Time1",
-    Date == "2021-04-01" ~ "Time2",
-    Date == "2021-04-10" ~ "Time2",
-    Date == "2021-04-29" ~ "Time3",
-    Date == "2021-04-30" ~ "Time3",
-    Date == "2021-05-27" ~ "Time4",
-    Date == "2021-06-02" ~ "Time4",
-    Date == "2021-06-24" ~ "Time5",
-    Date == "2021-06-25" ~ "Time5")) 
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-10" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-04-30" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-02" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-06-25" ~ "TP5")) 
   
 all <- all %>% 
   mutate(Assay = case_when(
