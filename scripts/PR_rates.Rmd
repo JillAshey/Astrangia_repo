@@ -582,19 +582,18 @@ gd <- all %>%
 #  filter(!Treatment==c("Acclimatization"))
 
 all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
-   geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
-    geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-    scale_color_manual(values=c("black", "blue", "green", "red"))+
-    #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+  scale_color_manual(values=c("black", "blue", "green", "red"))+
+  #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
   geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-   #ylim(-0.4,0.5) +
+  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  #ylim(-0.4,0.5) +
   facet_wrap(~Assay, ncol = 2)+
-   theme_bw()+
+  theme_bw()+
   theme(legend.position = c(0.63, 0.8),
-        legend.title = element_text(colour="black", size=6, 
-                                     face="bold"),
+        legend.title = element_text(colour="black", size=6, face="bold"),
         legend.text = element_text(size=4))+
   guides(color = guide_legend(override.aes = list(size = 1)))
 all.plot
