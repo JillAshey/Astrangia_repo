@@ -216,7 +216,7 @@ pr.save <- pr.save %>%
 pr.save <- pr.save %>% 
   mutate(Assay = case_when(
     Light_Value == "0" ~ "Rd",
-    Light_Value == "360" ~ "P"))
+    Light_Value == "352" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
