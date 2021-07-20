@@ -47,7 +47,7 @@ for(i in 1:length(file.names)) { # for every file in list start at the first and
   model <-lm(mVTris ~ TTris, data=Calib.Data) #runs a linear regression of mV as a function of temperature
   coe <- coef(model) #extracts the coeffecients
   summary(model)$r.squared #extracts the r squared
-  plot(Calib.Data$mVTris, Calib.Data$TTris) #plots the regression data
+  plot(Calib.Data$mVTris, Calib.Data$TTris, main = summary(model)$r.squared) #plots the regression data
   pH.cals[i,2:3] <- coe #inserts coefficients in the dataframe
   pH.cals[i,1] <- substr(file.names[i],1,8) #stores the file name in the Date column
 }
