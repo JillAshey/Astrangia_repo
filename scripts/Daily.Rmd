@@ -2,8 +2,11 @@
 title: "DailyMeasures"
 author: "JAshey"
 date: "2/2/2021"
-output: html_document
-editor_options: 
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+editor_options:
   chunk_output_type: console
 ---
 
