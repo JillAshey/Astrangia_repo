@@ -130,3 +130,23 @@
 20210624,AST-1562,2,2,24,20.05,Heat,0.6,25,Did not take temp; temp is average of first and last value from PR file
 20210624,AST-2412,7,7,24,20.27,Heat,0.615,25,Did not take temp; temp is average of first and last value from PR file
 20210624,BK-38,5,5,24,20.21,Heat,0.635,NA,Did not take temp; temp is average of first and last value from PR file
+20210722,AST-1167,7,7,25,19.21,Ambient,0.615,25,Spilled some water while taking volume
+,AST-1290,8,8,25,19.21,Ambient,0.625,25,NA
+,AST-2208,4,4,25,19.21,Ambient,0.61,25,Spilled some water while taking volume
+,AST-1255,5,5,25,19.21,Ambient,0.625,25,NA
+,BK-41,2,2,25,19.21,Ambient,0.64,NA,NA
+,AST-1189,2,2,26,19.75,Ambient,0.63,25,NA
+,AST-1748,8,8,26,19.75,Ambient,0.62,25,NA
+,AST-2168,5,5,26,19.75,Ambient,0.63,25,NA
+,AST-1145,4,4,26,19.75,Ambient,0.63,25,NA
+,BK-42,7,7,26,19.75,Ambient,0.645,NA,NA
+,AST-2870,4,4,27,22.78,Heat,0.63,25,NA
+,AST-1540,7,7,27,22.78,Heat,0.635,25,NA
+,AST-2044,2,2,27,22.78,Heat,0.61,25,NA
+,AST-1117,5,5,27,22.78,Heat,0.62,25,NA
+,BK-43,8,8,27,22.78,Heat,0.635,NA,NA
+,AST-2079,5,5,28,24,Heat,0.61,25,NA
+,AST-1742,4,4,28,24,Heat,0.625,25,NA
+,AST-1074,2,2,28,24,Heat,0.62,25,NA
+,AST-1698,7,7,28,24,Heat,0.625,25,NA
+,BK-44,8,8,28,24,Heat,0.64,NA,NA
