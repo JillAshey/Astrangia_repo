@@ -451,10 +451,11 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
-    Date == "2021-04-10" ~ "FLD-Time2",
-    Date == "2021-04-30" ~ "FLD-Time3",
-    Date == "2021-06-02" ~ "FLD-Time4",
-    Date == "2021-06-25" ~ "FLD-Time5"))
+    Date == "2021-04-10" ~ "FLD-TP2",
+    Date == "2021-04-30" ~ "FLD-TP3",
+    Date == "2021-06-02" ~ "FLD-TP4",
+    Date == "2021-06-25" ~ "FLD-TP5",
+    Date == "2021-07-23" ~ "FLD-TP6"))
 
 
 pr.save <- pr.save %>% 
@@ -463,7 +464,8 @@ pr.save <- pr.save %>%
     Light_Value == "340" ~ "P",
     Light_Value == "392" ~ "P",
     Light_Value == "321" ~ "P",
-    Light_Value == "319" ~ "P"))
+    Light_Value == "319" ~ "P",
+    Light_Value == "366" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
@@ -548,7 +550,8 @@ all <- all %>%
     Date == "2021-06-02" ~ "TP4",
     Date == "2021-06-24" ~ "TP5",
     Date == "2021-06-25" ~ "TP5", 
-    Date == "2021-07-22" ~ "TP6")) 
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-07-23" ~ "TP6")) 
   
 all <- all %>% 
   mutate(Assay = case_when(
@@ -563,7 +566,8 @@ all <- all %>%
     Light_Value == "321" ~ "P",
     Light_Value == "361" ~ "P",
     Light_Value == "319" ~ "P", 
-    Light_Value == "334" ~ "P"))
+    Light_Value == "334" ~ "P",
+    Light_Value == "366" ~ "P"))
 
 # all <- all %>% 
 #   mutate(Assay = case_when(

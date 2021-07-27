@@ -33,3 +33,13 @@
 20210625,FLD-0021,5,5,5,18.25,Field-TP5,0.595,25,Did not take temp; temp is average of first and last value from PR file
 20210625,FLD-0022,7,7,5,18.47,Field-TP5,0.595,25,Did not take temp; temp is average of first and last value from PR file
 20210625,BK-40,8,8,5,18.76,Field-TP5,0.62,NA,Did not take temp; temp is average of first and last value from PR file
+20210723,FLD-0023,2,2,6,22.38,Field-TP6,0.625,25,NA
+20210723,FLD-0024,4,4,6,22.38,Field-TP6,0.63,25,NA
+20210723,FLD-0025,7,7,6,22.38,Field-TP6,0.63,25,NA
+20210723,FLD-0026,8,8,6,22.38,Field-TP6,0.625,25,NA
+20210723,BK-45,5,5,6,22.38,Field-TP6,0.64,NA,NA
+20210723,FLD-0027,8,8,7,22.76,Field-TP6,0.625,25,NA
+20210723,FLD-0028,7,7,7,22.76,Field-TP6,0.63,25,NA
+20210723,FLD-0029,5,5,7,22.76,Field-TP6,0.615,25,NA
+20210723,FLD-0030,4,4,7,22.76,Field-TP6,0.63,25,NA
+20210723,BK-46,2,2,7,22.76,Field-TP6,0.635,NA,NA
