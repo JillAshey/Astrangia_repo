@@ -464,10 +464,6 @@ my.data$Date <- paste0(my.data$MM, sep = "-", my.data$DD)
 my.data$Time <- paste0(my.data$hh, sep = ":", my.data$mm)
 my.data$Date.Time <- paste0(my.data$Date, sep=" ", my.data$Time)
 
-
-
-
-
 range(my.data$Tank1_Temp, na.rm=TRUE)
 my.data$Date.Time <- parse_date_time(my.data$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
 #my.data <- my.data %>%
@@ -655,14 +651,37 @@ legend("topright", legend=c("Ambient", "Heat"),
        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
 
-# pdf("output/NOAA.2021.MyData.pdf")
-# plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-# points(qptr2021$Date.Time, qptr2021$WTMP, col = "green", cex=0.25)
-# points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-# points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-# legend("topleft", legend=c("Newport 2021", "Quonset 2021"),
-#        col=c("bisque4", "green"), lty=1:2, cex=0.8)
-# legend("topright", legend=c("Ambient", "Heat"),
-#        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
-# dev.off()
+
+
+# Plot Newport and Quonset 2021 w/ outdoor tank data 
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210729.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
+outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
+outdoor$Date.Time <- outdoor$Date.Time + hours(5)
+outdoor <- separate(outdoor, col = Date.Time, into = c("Date", "Time"), sep = " ")
+outdoor <- separate(outdoor, col = Date, into = c("YYYY", "MM", "DD"), sep = "-")
+outdoor <- separate(outdoor, col = Time, into = c("hh", "mm", "ss"), sep = ":")
+outdoor$Date <- paste0(outdoor$MM, sep = "-", outdoor$DD)
+outdoor$Time <- paste0(outdoor$hh, sep = ":", outdoor$mm)
+outdoor$Date.Time <- paste0(outdoor$Date, sep=" ", outdoor$Time)
+outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+outdoor <- na.omit(outdoor)
+
+pdf("output/NOAA.2021.OutdoorTank.pdf")
+par(mfrow=c(1,2))
+plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,35))
+points(outdoor$Date.Time, outdoor$Temperature, cex=0.25, col="dodgerblue")
+legend("topleft", legend=c("Newport 2021"),
+       col=c("bisque4"), lty=1:2, cex=0.8)
+legend("topright", legend=c("OutdoorTank"),
+       col=c("dodgerblue"), lty=1, cex=0.8)
+plot(qptr2021$Date.Time, qptr2021$WTMP, col="green", xlab="Date", ylab="Temperature °C", ylim=c(0,35))
+points(outdoor$Date.Time, outdoor$Temperature, cex=0.25, col="dodgerblue")
+legend("topleft", legend=c("Quonset 2021"),
+       col=c("green"), lty=1:2, cex=0.8)
+legend("topright", legend=c("OutdoorTank"),
+       col=c("dodgerblue"), lty=1, cex=0.8)
+dev.off()
+
+
 

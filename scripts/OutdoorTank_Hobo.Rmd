@@ -32,7 +32,7 @@ getwd()
 ## Alice A-frame logger data 
 # Read in data 
 ```{r}
-aframe <- read.csv("data/Hobo/temp_light_logger/Outdoor/A-frame_20210718.csv", header=T, na.strings = "NA")[ ,2:4] 
+aframe <- read.csv("data/Hobo/temp_light_logger/Outdoor/A-frame_20210729.csv", header=T, na.strings = "NA")[ ,2:4] 
 colnames(aframe) <- c("Date.Time", "Temperature", "Light")
 aframe$Date.Time <- parse_date_time(aframe$Date.Time, "mdyHMS", tz = "EST")
 ```
@@ -57,7 +57,7 @@ ggsave("output/Hobo/temp_light_logger/A-frame_HoboLight.pdf", plot = last_plot()
 ## Outdoor tank logger data 
 # Read in data 
 ```{r}
-outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210718.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210729.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 ```
