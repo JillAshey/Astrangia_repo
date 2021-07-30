@@ -49,7 +49,7 @@ hist(position.model$residuals)
 
 Plot light by treatment 
 ```{r}
-pdf("output/Light.by.Treatment.pdf")
+pdf("output/Daily/Light.by.Treatment.pdf")
 plot(as.factor(light$Treatment), light$PAR, xlab="Treamtment", ylab="PAR", ylim=c(0,160), las=2)
 boxplot(PAR ~ Treatment, data = light, outpch = NA) 
 stripchart(PAR ~ Treatment, data = light, 
@@ -61,7 +61,7 @@ dev.off()
 
 Plot light by tank
 ```{r}
-pdf("output/Light.by.Tank.pdf")
+pdf("output/Daily/Light.by.Tank.pdf")
 plot(as.factor(light$Tank), light$PAR, xlab="Tank", ylab="PAR", ylim=c(0,160), las=2)
 boxplot(PAR ~ Tank, data = light, outpch = NA) 
 stripchart(PAR ~ Tank, data = light, 
@@ -73,7 +73,7 @@ dev.off()
 
 Plot light by position
 ```{r}
-pdf("output/Light.by.Position.pdf")
+pdf("output/Daily/Light.by.Position.pdf")
 par(mfrow=c(4,4))
 Tank1 <- subset(light, Tank==1)
 plot(PAR ~ Position, data=Tank1, col=Position, ylim=c(0,160), main = "Tank1")
@@ -130,16 +130,16 @@ dev.off()
 light.trt.date <- ggplot(light, aes(x=Timepoint, y=PAR, group=Treatment)) +
   geom_line(aes(color = Treatment), size = 1) 
 light.trt.date
-ggsave("output/Light.By.Date.Treatment.pdf", light.trt.date, width = 30, height = 21, units = c("in"))
+ggsave("output/Daily/Light.By.Date.Treatment.pdf", light.trt.date, width = 30, height = 21, units = c("in"))
 
 
 light.tank.date <- ggplot(light, aes(x=Timepoint, y=PAR, group=Tank)) +
   geom_line(aes(color = Tank), size = 1) 
 light.tank.date
-ggsave("output/Light.By.Date.Tank.pdf", light.tank.date, width = 30, height = 21, units = c("in"))
+ggsave("output/Daily/Light.By.Date.Tank.pdf", light.tank.date, width = 30, height = 21, units = c("in"))
 
 plot.all <- grid.arrange(light.trt.date, light.tank.date, ncol=1, nrow=2)
-ggsave("output/Light.By.Date.pdf", plot.all, width = 30, height = 25, units = c("in"))
+ggsave("output/Daily/Light.By.Date.pdf", plot.all, width = 30, height = 25, units = c("in"))
 ```
 
 
