@@ -84,7 +84,8 @@ sq10$ParentTreatment <- "Ambient"
 ```{r}
 data <- rbind(sq1, sq2, sq3, sq4, sq5, sq6, sq7, sq8, sq9, sq10)
 #colnames(data) <- c("Date.Time", "Temperature", "Squarical", "ParentTreatment")
-#data$Date.Time <- parse_date_time(data$Date.Time, "%Y/%m/%d %H:%M:%S", tz = "EST")
+data$Date.Time <- strptime(data$Date.Time, "%m/%d/%y %I:%M:%S %p")
+
 write.csv(data,file="output/Hobo/temp_logger/Squarical_HoboTemp.csv")
 ```
 
@@ -104,7 +105,7 @@ Temps
 
 
 
-ggsave("output/All_Tank_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
+ggsave("output/Hobo/temp_logger/Squarical_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
 ```
 
 
