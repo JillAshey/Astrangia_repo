@@ -27,7 +27,7 @@ library("tidyverse")
 # read in xml info
 ```{r}
 # Read in xml info
-xmlfile1 <- xmlParse("http://131.128.103.229:80/cgi-bin/datalog.xml?sdate=210401&days=31") #read in the date plus x days of Apex data
+xmlfile1 <- xmlParse("http://131.128.103.229:80/cgi-bin/datalog.xml?sdate=210401&days=3") #read in the date plus x days of Apex data
 xmlfile2 <- xmlParse("http://131.128.103.229:80/cgi-bin/datalog.xml?sdate=210503&days=10") #read in the date plus x days of Apex data
 
 Apex.Data <- ldply(xmlToList(xmlfile1), data.frame) #convert xml to dataframe

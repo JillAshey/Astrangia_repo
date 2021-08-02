@@ -85,6 +85,7 @@ sq10$ParentTreatment <- "Ambient"
 data <- rbind(sq1, sq2, sq3, sq4, sq5, sq6, sq7, sq8, sq9, sq10)
 #colnames(data) <- c("Date.Time", "Temperature", "Squarical", "ParentTreatment")
 data$Date.Time <- strptime(data$Date.Time, "%m/%d/%y %I:%M:%S %p")
+data$Date.Time <- as.POSIXct(data$Date.Time)
 
 write.csv(data,file="output/Hobo/temp_logger/Squarical_HoboTemp.csv")
 ```
@@ -96,15 +97,6 @@ Temps <- data %>% ggplot(aes(x=Date.Time, y=Temperature)) +
   #ylim(5,15)+
   ylab("Temperature °C")
 Temps
-
-
-
-
-
-
-
-
-
 ggsave("output/Hobo/temp_logger/Squarical_HoboTemp.pdf", plot = last_plot(), width = 8, height = 4)
 ```
 
