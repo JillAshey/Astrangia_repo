@@ -603,17 +603,17 @@ daily_nwpr2021 <- aggregate(x = nwpr2021$WTMP,                # Specify data col
                         by = list(nwpr2021$Date),          # Specify group indicator
                         FUN = mean, 
                         na.rm = T) 
-pdf("output/Newport.2021.MyData.pdf")
-plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-legend("topleft", legend=c("Newport 2021"),
-       col=c("bisque4"), lty=1:2, cex=0.8)
-legend("topright", legend=c("Ambient", "Heat"),
-       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
-abline(v=as.POSIXct(c("0000-02-07 13:00:00", "0000-03-04 13:00:00", "0000-04-01 13:00:00", "0000-04-29 13:00:00", "0000-05-27 13:00:00", "0000-06-24 13:00:00", "0000-07-22 13:00:00", "0000-08-18 13:00:00")), 
-       col=c("gray"), lty=c(2), lwd=c(3))
-dev.off()
+# pdf("output/Newport.2021.MyData.pdf")
+# plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+# points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+# points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+# legend("topleft", legend=c("Newport 2021"),
+#        col=c("bisque4"), lty=1:2, cex=0.8)
+# legend("topright", legend=c("Ambient", "Heat"),
+#        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+# abline(v=as.POSIXct(c("0000-02-07 13:00:00", "0000-03-04 13:00:00", "0000-04-01 13:00:00", "0000-04-29 13:00:00", "0000-05-27 13:00:00", "0000-06-24 13:00:00", "0000-07-22 13:00:00", "0000-08-18 13:00:00")), 
+#        col=c("gray"), lty=c(2), lwd=c(3))
+# dev.off()
 
 # Quonset Point 2021
 # Link to real time Quonset buoy data: https://www.ndbc.noaa.gov/station_realtime.php?station=qptr1
@@ -654,7 +654,7 @@ dev.off()
 
 
 # Plot Newport and Quonset 2021 w/ outdoor tank data 
-outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210729.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210806.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 outdoor$Date.Time <- outdoor$Date.Time + hours(5)
