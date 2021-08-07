@@ -47,7 +47,7 @@ Modified from A. Huffmyer [scripts](https://github.com/AHuffmyer/EarlyLifeHistor
 
 Set the path of all respirometry files within the R project.   
 ```{r, warning=FALSE, message=FALSE}
-path.p<-"data/Data/LarvalResp/Runs" #location of files
+path.p<-"data/LarvalResp/Runs" #location of files
 ```
 
 Bring in the file names.
@@ -77,22 +77,22 @@ Sample.Info<-read.csv("data/LarvalResp/Resp_Sample_Info.csv") #information on li
 rename <- Sample.Info$Chamber.ID
 samp <- Sample.Info$Sample.ID
 run <- str_sub(file.names, 10, 13) #grab run from file name
-date <- str_sub(file.names, 1, str_length(file.names)-16) #grab date from file name
+date <- str_sub(file.names, 1, str_length(file.names)-29) #grab date from file name
 
 #load in respiration start times as a list the same length as the number of files
-starttimes<-read.csv("data/LarvalResp//starttimes.csv") #read in file of starting R and P phase times
-rtime<-starttimes$Rtime #list respiration start times. For respiration measurements, filter as > than this time
-ptime<-starttimes$Ptime #for photosynthesis, filter as < than this time
+#starttimes<-read.csv("data/LarvalResp//starttimes.csv") #read in file of starting R and P phase times
+#rtime<-starttimes$Rtime #list respiration start times. For respiration measurements, filter as > than this time
+#ptime<-starttimes$Ptime #for photosynthesis, filter as < than this time
 ```
 
-Run loop to extract slopes from respiration data. Subset for respiration data by filtering time >= respiration start time. Start and end time datasheet has removed first 5 minutes of each run to allow for temp equilibration.  
+Run loop to extract slopes from respiration data. 
 ```{r, results=FALSE, warning=FALSE, message=FALSE}
 for(i in 1:length(file.names)) { # for every file in list start at the first and run this following function
   Resp.Data <-read.table(file.path(path.p,file.names[i]), skip = 72, header=T, sep=",", na.string="NA", fill = TRUE, as.is=TRUE, fileEncoding="latin1") #reads in the data files
   Resp.Data$Temp <- Resp.Data[,31] #assigns temp column
   Resp.Data$Time.Min <- seq.int(0.017, (nrow(Resp.Data))*0.25, by = 0.25) #set time in min
-  Resp.Data <- Resp.Data %>% #filters data by phase (respiration only)
-     filter(Time.Min > rtime[i])
+  Resp.Data <- Resp.Data %>% #filters data by including only data past the first 10 minutes (allowing for equilibration)
+     filter(Time.Min > 10)
   Resp.Data.N <- Resp.Data[,3:26] #subset desired columns
   
   for(j in 1:(ncol(Resp.Data.N))){
@@ -177,7 +177,7 @@ Resp.Rates$Run<-as.integer(Resp.Rates$Run) #format as # rather than run #, set a
 <!-- Photo.Rates$Run<-as.integer(Photo.Rates$Run) #format as integer -->
 <!-- ``` -->
 
-Merge P and R files with sample info for testing and manipulation.  
+Merge R files with sample info for testing and manipulation.  
 ```{r, warning=FALSE, message=FALSE}
 oxygen<-full_join(Sample.Info, Resp.Rates) #add respiration data
 colnames(oxygen)[colnames(oxygen) == 'Intercept'] <- 'Resp.Intercept' #rename to specify R
@@ -187,11 +187,11 @@ colnames(oxygen)[colnames(oxygen) == 'umol.L.min'] <- 'R.umol.L.min' #rename to 
 #colnames(oxygen)[colnames(oxygen) == 'umol.L.min'] <- 'P.umol.L.min' #rename to specify P
 ```
 
-Account for volume and substract blank values. Average blank calculated for each run for P and R phases. Display mean blank value in order of R and P phases.    
+Account for volume and substract blank values. Average blank calculated for each run for P and R phases. Display mean blank value.  
 ```{r, results=TRUE, warning=FALSE, message=FALSE}
 #Account for chamber volume to convert from umol L-1 m-1 to umol m-1. This standardizes across water volumes (different because of coral size) and removes per Liter
 oxygen$R.umol.min <- oxygen$R.umol.L.min * oxygen$Volume #calculate
-oxygen$P.umol.min <- oxygen$P.umol.L.min * oxygen$Volume #calculate
+#oxygen$P.umol.min <- oxygen$P.umol.L.min * oxygen$Volume #calculate
 blank_data <- subset(oxygen, Type == "Blank") #subset to blank data only
 plot(blank_data$R.umol.min , ylab="umol O2 min-1") #blanks during dark phase
 #plot(blank_data$P.umol.min , ylab="umol O2 min-1") #blanks during light phase
@@ -239,7 +239,7 @@ oxygen.bio$R.nmol.org.min <- oxygen.bio$R.umol.org.min*1000 #calculate nanmoles
 
 Save as .csv file.  
 ```{r, warning=FALSE, message=FALSE}
-write.csv(oxygen.bio, paste0("output/LarvalResp/oxygen_P_R_calc.csv", sep="")) #save final file
+write.csv(oxygen.bio, paste0("output/LarvalResp/oxygen_R_calc.csv", sep="")) #save final file
 ```
 
 
