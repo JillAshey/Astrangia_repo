@@ -249,11 +249,13 @@ trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatme
         legend.title = element_text(colour="black", size=6, 
                                      face="bold"),
         legend.text = element_text(size=4))+
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(angle=90, hjust=1)) +
   guides(color = guide_legend(override.aes = list(size = 1)))
 trt.plot
 
 plot <- grid.arrange(trt.plot, clip="off")
-ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 6, height = 5, units = c("in"))
 
 
 # # Individual plots for each sample 
