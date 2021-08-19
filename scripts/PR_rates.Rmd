@@ -207,14 +207,14 @@ gd <- pr.save %>% group_by(Light_Value) %>%
 
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
-    Date == "2021-02-04" ~ "Time0",
-    Date == "2021-03-04" ~ "Time1",
-    Date == "2021-04-01" ~ "Time2",
-    Date == "2021-04-29" ~ "Time3",
-    Date == "2021-05-27" ~ "Time4",
-    Date == "2021-06-24" ~ "Time5", 
-    Date == "2021-07-22" ~ "Time6",
-    Date == "2021-08-19" ~ "Time7"))
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5", 
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7"))
 
 
 pr.save <- pr.save %>% 
