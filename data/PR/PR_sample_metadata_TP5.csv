@@ -1,0 +1,21 @@
+﻿Date,colony_id,Chamber.Channel,Chamber ,Run,Temp.Cat,Treatment,Chamber.Vol.L,Surface.Area.cm2,Notes
+20210624,AST-1692,3,3,21,16.33,Ambient,0.621,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1412,8,8,21,16.35,Ambient,0.62,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1458,4,4,21,16,Ambient,0.615,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2360,7,7,21,16.33,Ambient,0.625,25,Did not take temp; temp is average of first and last value from PR file
+20210624,BK-35,5,5,21,16.19,Ambient,0.619,NA,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2375,8,8,22,15.04,Ambient,0.61,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2000,7,7,22,14.93,Ambient,0.605,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1617,5,5,22,15.46,Ambient,0.628,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1087,4,4,22,14.94,Ambient,0.608,25,Did not take temp; temp is average of first and last value from PR file
+20210624,BK-36,2,2,22,15.6,Ambient,0.63,NA,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1498,4,4,23,19.61,Heat,0.625,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2563,5,5,23,19.71,Heat,0.605,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1416,2,2,23,20.04,Heat,0.615,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2512,8,8,23,20.08,Heat,0.63,25,Did not take temp; temp is average of first and last value from PR file
+20210624,BK-37,7,7,23,20,Heat,0.63,NA,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1578,4,4,24,19.58,Heat,0.62,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2404,8,8,24,20.04,Heat,0.61,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-1562,2,2,24,20.05,Heat,0.6,25,Did not take temp; temp is average of first and last value from PR file
+20210624,AST-2412,7,7,24,20.27,Heat,0.615,25,Did not take temp; temp is average of first and last value from PR file
+20210624,BK-38,5,5,24,20.21,Heat,0.635,NA,Did not take temp; temp is average of first and last value from PR file
