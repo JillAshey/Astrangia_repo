@@ -66,3 +66,200 @@ df <- tibble(file.name = file.names) %>%
 df <- df %>%
   mutate(data0 = map(data0, ~select(., Time, Value, Temp)))    
 ```
+
+## Use the time breaks in the sample info to link O2 data with light levels
+```{r, warning = FALSE}
+df <- df %>%
+  mutate(intervals = map2(data0, info, function(.x, .y) {
+    split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
+                      labels = as.character(.y$Light_Value)))})) %>%
+  mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
+
+## 'data' now contains the O2 data with the corresponding light level as another column
+## Example of what 'data' for each sample looks like:
+# df$data[[1]]
+```
+
+### Thin data
+```{r, fig.height = 8, fig.width = 8}
+# Set thinning parameter
+thin_par <- 20
+
+# Thin data for all samples
+df <- df %>%
+  mutate(thin_data = map(data, ~ slice(., seq(1, nrow(.), thin_par))))
+
+# Create plots for full dataset and thinned data
+df <- df %>%
+  mutate(data_plot = map2(data, colony_id, ~ ggplot(.x, aes(x = Time, y = Value)) + 
+                            facet_wrap(~ as.numeric(Light_Value), scales = "free") +
+                            geom_point() +
+                            labs(title = .y)),
+    thin_data_plot = map2(thin_data, colony_id, ~ ggplot(.x, aes(x = Time, y = Value)) + 
+                            facet_wrap(~ as.numeric(Light_Value), scales = "free") +
+                            geom_point() +
+                            labs(title = .y)))
+
+# Example of plots
+cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
+                   labels = c("Example plot: all data", "Example plot: thinned data"))
+```
+
+#### The full or thinned data plot for any sample can be accessed like this:
+```{r}
+df %>%
+  filter(colony_id == "SKL-1186") %>%
+  pull(thin_data_plot)
+```
+
+# Fit regressions to each interval for each sample
+```{r}
+# Define function for fitting LoLinR regressions to be applied to all intervals for all samples
+fit_reg <- function(df) {
+  rankLocReg(xall = as.numeric(df$Time), yall = df$Value, 
+             alpha = 0.2, method = "pc", verbose = FALSE)
+}
+
+# Setup for parallel processing
+future::plan(multiprocess)
+
+# Map LoLinR function onto all intervals of each sample's thinned dataset
+df <- df %>%
+  mutate(regs = furrr::future_map(thin_data, function(.) {       # future_map executes function in parallel
+    group_by(., Light_Value) %>%
+    do(rankLcRg = fit_reg(.))
+  }))
+
+## Now 'regs' contains the fitted local regressions for each interval of each sample's thinned dataset
+
+# Define function to pull out and plot regression diagnostics
+plot_rankLcRg <- function(colony_id, interval_number) {
+  df %>%
+    filter(colony_id == colony_id) %>%
+    pluck("regs", 1, "rankLcRg", interval_number) %>%
+    plot()
+}
+```
+
+#### The diagnostics for any regression can be plotted like this, specifying a colony_id and the number of the light curve interval:
+```{r}
+plot_rankLcRg("SKL-1186", 1) 
+```
+
+### Extract slope of best regression for each interval for each sample
+```{r}
+df.out <- df %>% 
+  unnest(regs) %>%
+  mutate(micromol.L.s = map_dbl(rankLcRg, ~ pluck(., "allRegs", "b1", 1)))
+```
+
+# Adjust by chamber volume and normalize to surface area
+```{r}
+### Merge rates with sample info
+pr <- left_join(
+  select(df.out, colony_id, Light_Value, micromol.L.s),
+  distinct(metadata, colony_id, Run, Treatment,Chamber.Vol.L, Surface.Area.cm2, Date)
+)
+
+### Correct for chamber volume and blanks
+pr <- pr %>%
+  mutate(micromol.s = micromol.L.s * Chamber.Vol.L)
+
+# Get blank values -- average for each run and light value in case multiple blanks
+blanks <- pr %>%
+  filter(grepl("BK", colony_id)) %>%
+  group_by(Run, Light_Value) %>%
+  summarise(micromol.s.blank = mean(micromol.s))
+
+# Join blank values with rest of data and subtract values from samples for same run and light value
+pr <- left_join(pr, blanks) %>%
+  mutate(micromol.s.adj = micromol.s - micromol.s.blank) %>%
+  # After correcting for blank values, remove blanks from data
+  filter(!grepl("BK", colony_id))
+
+
+# Normalize rates by surface area
+pr <- pr %>%
+  mutate(micromol.cm2.s = micromol.s.adj / Surface.Area.cm2,
+         micromol.cm2.h = micromol.cm2.s * 3600)
+```
+
+# Plot rates vs. irradiance for each sample
+```{r, fig.height=2, fig.width = 8}
+ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+  geom_point() +
+  facet_wrap(~colony_id*Light_Value, ncol = 9)
+```
+
+# Write to output file
+```{r}
+# Select variables to write to file
+pr.out <- pr %>% select(colony_id, Light_Value, Run,Treatment, micromol.cm2.s, micromol.cm2.h, Date)
+
+# Write to output file
+write.csv(pr.out, "output/PR_skeletal_rates.csv")
+```
+
+```{r}
+pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
+
+gd <- pr.save %>% group_by(Light_Value) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+          sem = sd(micromol.cm2.h))
+
+pr.save <- pr.save %>% 
+  mutate(Timepoint = case_when(
+    Date == "2021-08-20" ~ "TP7"))
+
+pr.save <- pr.save %>% 
+  mutate(Assay = case_when(
+    Light_Value == "0" ~ "Rd",
+    Light_Value == "381" ~ "P"))
+
+gd <- pr.save %>% 
+        group_by(Assay,Timepoint,Treatment) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+
+skl.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
+   geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
+    geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+    scale_color_manual(values=c('blue', 'red'))+
+    #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+   #ylim(-0.4,0.5) +
+  facet_wrap(~Assay, ncol = 2)+
+   theme_bw()+
+  theme(legend.position = c(0.63, 0.8),
+        legend.title = element_text(colour="black", size=6, 
+                                     face="bold"),
+        legend.text = element_text(size=4))+
+  theme(text = element_text(size=15),
+        axis.text.x = element_text(angle=90, hjust=1)) +
+  guides(color = guide_legend(override.aes = list(size = 1)))
+skl.plot
+
+plot <- grid.arrange(skl.plot, clip="off")
+ggsave("output/PR/Skeletal.Treatment_PR.pdf", plot, width = 6, height = 5, units = c("in"))
+
+
+# # Individual plots for each sample 
+# indiv = ggplot(pr.save, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+#    geom_point(alpha = .4, aes(colour = Treatment)) +
+#    ylim(-0.3,0.5)+
+#    #geom_point(data = gd, size = 4) +
+#    theme_bw() +
+#    facet_wrap(~colony_id, ncol = 3)
+# ggsave("../output/PR/IndividualSample_PR.pdf", indiv, width = 21, height = 21, units = c("in"))
+# 
+# 
+# p2 = ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h)) +
+#    geom_point(alpha = .4, aes(colour = Treatment, shape = Light_Value), size = 4) +
+#    ylim(-0.3,0.5) +
+#    #geom_point(data = gd, size = 4) +
+#    theme_bw()
+# p2 + scale_color_manual(values = c("black", "blue", "red"))
+```
+
