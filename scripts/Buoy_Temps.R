@@ -654,7 +654,7 @@ dev.off()
 
 
 # Plot Newport and Quonset 2021 w/ outdoor tank data 
-outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210806.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
+outdoor <- read.csv("data/Hobo/temp_light_logger/Outdoor/OutdoorTank_20210820.csv", header=T, na.strings = "NA")[ ,2:4] # data from 20201221 onward
 colnames(outdoor) <- c("Date.Time", "Temperature", "Light")
 outdoor$Date.Time <- parse_date_time(outdoor$Date.Time, "mdyHMS", tz = "EST")
 outdoor$Date.Time <- outdoor$Date.Time + hours(5)
