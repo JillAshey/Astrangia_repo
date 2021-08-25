@@ -635,21 +635,32 @@ daily_qptr2021 <- aggregate(x = qptr2021$WTMP,                # Specify data col
 # Plot Newport and Quonset 2021 w/ my data 
 pdf("output/NOAA.2021.MyData.pdf")
 par(mfrow=c(1,2))
-plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,35))
+plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="black", xlab="Date", ylab="Temperature °C", ylim=c(-2,30), cex=0.25)
 points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-legend("topleft", legend=c("Newport 2021"),
-       col=c("bisque4"), lty=1:2, cex=0.8)
-legend("topright", legend=c("Ambient", "Heat"),
-       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
-plot(qptr2021$Date.Time, qptr2021$WTMP, col="green", xlab="Date", ylab="Temperature °C", ylim=c(0,35))
+legend("topleft", legend=c("Newport 2021", "Ambient", "Heat"),
+       col=c("black", "dodgerblue", "firebrick1"), lty=1, cex=0.8)
+#legend("topright", legend=c("Ambient", "Heat"),
+#       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+plot(qptr2021$Date.Time, qptr2021$WTMP, col="black", xlab="Date", ylab="Temperature °C", ylim=c(-2,30), cex=0.25)
 points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-legend("topleft", legend=c("Quonset 2021"),
-       col=c("green"), lty=1:2, cex=0.8)
-legend("topright", legend=c("Ambient", "Heat"),
-       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
+legend("topleft", legend=c("Quonset 2021", "Ambient", "Heat"),
+       col=c("black", "dodgerblue", "firebrick1"), lty=1, cex=0.8)
+#legend("topright", legend=c("Ambient", "Heat"),
+#       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
+
+pdf("output/test_NOAA.2021.MyData.pdf")
+par(mfrow=c(1,2))
+plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="black", xlab="Date", ylab="Temperature °C", ylim=c(-2,30), cex=0.25)
+points(qptr2021$Date.Time, qptr2021$WTMP, cex=0.25, col="grey")
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+legend("topleft", legend=c("Newport 2021", "Quonset 2021", "Ambient", "Heat"),
+       col=c("black", "grey", "dodgerblue", "firebrick1"), lty=1:2, cex=0.8)
+dev.off()
+
 
 
 
