@@ -355,7 +355,7 @@ cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
 #### The full or thinned data plot for any sample can be accessed like this:
 ```{r}
 df %>%
-  filter(colony_id == "FLD-0009") %>%
+  filter(colony_id == "FLD-0037") %>%
   pull(thin_data_plot)
 ```
 
@@ -390,7 +390,7 @@ plot_rankLcRg <- function(colony_id, interval_number) {
 
 #### The diagnostics for any regression can be plotted like this, specifying a colony_id and the number of the light curve interval:
 ```{r}
-plot_rankLcRg("FLD-0008", 1) 
+plot_rankLcRg("FLD-0037", 1) 
 ```
 
 ### Extract slope of best regression for each interval for each sample
@@ -459,7 +459,8 @@ pr.save <- pr.save %>%
     Date == "2021-04-30" ~ "FLD-TP3",
     Date == "2021-06-02" ~ "FLD-TP4",
     Date == "2021-06-25" ~ "FLD-TP5",
-    Date == "2021-07-23" ~ "FLD-TP6"))
+    Date == "2021-07-23" ~ "FLD-TP6",
+    Date == "2021-09-01" ~ "FLD-TP7"))
 
 
 pr.save <- pr.save %>% 
@@ -469,7 +470,8 @@ pr.save <- pr.save %>%
     Light_Value == "392" ~ "P",
     Light_Value == "321" ~ "P",
     Light_Value == "319" ~ "P",
-    Light_Value == "366" ~ "P"))
+    Light_Value == "366" ~ "P",
+    Light_Value == "342" ~ "P"))
 
 gd <- pr.save %>% 
         group_by(Assay,Timepoint,Treatment) %>% 
@@ -556,7 +558,8 @@ all <- all %>%
     Date == "2021-06-25" ~ "TP5", 
     Date == "2021-07-22" ~ "TP6",
     Date == "2021-07-23" ~ "TP6",
-    Date == "2021-08-19" ~ "TP6")) 
+    Date == "2021-08-19" ~ "TP7",
+    Date == "2021-09-01" ~ "TP7")) 
   
 all <- all %>% 
   mutate(Assay = case_when(
@@ -573,7 +576,8 @@ all <- all %>%
     Light_Value == "319" ~ "P", 
     Light_Value == "334" ~ "P",
     Light_Value == "366" ~ "P",
-    Light_Value == "358" ~ "P"))
+    Light_Value == "358" ~ "P",
+    Light_Value == "342" ~ "P"))
 
 # all <- all %>% 
 #   mutate(Assay = case_when(
