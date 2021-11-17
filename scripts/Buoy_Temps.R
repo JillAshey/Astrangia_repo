@@ -603,17 +603,16 @@ daily_nwpr2021 <- aggregate(x = nwpr2021$WTMP,                # Specify data col
                         by = list(nwpr2021$Date),          # Specify group indicator
                         FUN = mean, 
                         na.rm = T) 
-# pdf("output/Newport.2021.MyData.pdf")
-# plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
-# points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-# points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-# legend("topleft", legend=c("Newport 2021"),
-#        col=c("bisque4"), lty=1:2, cex=0.8)
-# legend("topright", legend=c("Ambient", "Heat"),
-#        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
-# abline(v=as.POSIXct(c("0000-02-07 13:00:00", "0000-03-04 13:00:00", "0000-04-01 13:00:00", "0000-04-29 13:00:00", "0000-05-27 13:00:00", "0000-06-24 13:00:00", "0000-07-22 13:00:00", "0000-08-18 13:00:00")), 
-#        col=c("gray"), lty=c(2), lwd=c(3))
-# dev.off()
+pdf("output/Newport.2021.MyData.pdf")
+plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
+points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
+#par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE) # Add extra space to right of plot area; change clipping to figure
+#legend("topright", inset=c(-0.2,0), legend=c("Ambient", "Heat", "Newport 2021"), pch=c(1,3), title="Treatment", col=c("dodgerblue", "firebrick1", "bisque4"), lty=1, cex=0.8)
+abline(v=as.POSIXct(c("0000-02-25 13:00:00", "0000-04-11 13:00:00", "0000-06-04 13:00:00", "0000-06-26 13:00:00","0000-07-23 13:00:00", "0000-08-25 13:00:00")),
+       col=c("gray"), lty=c(2), lwd=c(3))
+legend("topleft", legend=c("Ambient", "Heat", "Newport 2021"), col=c("dodgerblue", "firebrick1", "bisque4"), lty=1, cex=0.8)
+dev.off()
 
 # Quonset Point 2021
 # Link to real time Quonset buoy data: https://www.ndbc.noaa.gov/station_realtime.php?station=qptr1
@@ -651,15 +650,6 @@ legend("topleft", legend=c("Quonset 2021", "Ambient", "Heat"),
 #       col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
 
-pdf("output/test_NOAA.2021.MyData.pdf")
-par(mfrow=c(1,2))
-plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="black", xlab="Date", ylab="Temperature °C", ylim=c(-2,30), cex=0.25)
-points(qptr2021$Date.Time, qptr2021$WTMP, cex=0.25, col="grey")
-points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
-points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
-legend("topleft", legend=c("Newport 2021", "Quonset 2021", "Ambient", "Heat"),
-       col=c("black", "grey", "dodgerblue", "firebrick1"), lty=1:2, cex=0.8)
-dev.off()
 
 
 
