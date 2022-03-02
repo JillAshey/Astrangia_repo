@@ -2,7 +2,7 @@
 #Project: Astrangia CGP
 #Author: HM Putnam 
 #Edited by: HM Putnam; J Ashey
-#Date Last Modified: 20210614
+#Date Last Modified: 20220302
 #See Readme file for details
 
 library(lubridate)
@@ -682,6 +682,91 @@ legend("topleft", legend=c("Quonset 2021"),
        col=c("green"), lty=1:2, cex=0.8)
 legend("topright", legend=c("OutdoorTank"),
        col=c("dodgerblue"), lty=1, cex=0.8)
+dev.off()
+
+
+
+
+### Plotting Newport buoy data from last 5 years (2017-2022)
+# 2017
+Temp_2017 <- read.csv("data/NOAA_temp/nwpr1h2017.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2017$Date <- paste0(Temp_2017$MM, sep = "-", Temp_2017$DD)
+Temp_2017$Time <- paste0(Temp_2017$hh, sep = ":", Temp_2017$mm)
+Temp_2017$Date.Time <- paste0(Temp_2017$Date, sep=" ", Temp_2017$Time)
+unique(Temp_2017$WTMP)
+Temp_2017 <- Temp_2017 %>% naniar::replace_with_na(Temp_2017, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2017$WTMP)
+Temp_2017$WTMP <- as.numeric(Temp_2017$WTMP)
+range(Temp_2017$WTMP, na.rm=TRUE)
+Temp_2017$Date.Time <- parse_date_time(Temp_2017$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+# 2018
+Temp_2018 <- read.csv("data/NOAA_temp/nwpr1h2018.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2018$Date <- paste0(Temp_2018$MM, sep = "-", Temp_2018$DD)
+Temp_2018$Time <- paste0(Temp_2018$hh, sep = ":", Temp_2018$mm)
+Temp_2018$Date.Time <- paste0(Temp_2018$Date, sep=" ", Temp_2018$Time)
+unique(Temp_2018$WTMP)
+Temp_2018 <- Temp_2018 %>% naniar::replace_with_na(Temp_2018, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2018$WTMP)
+Temp_2018$WTMP <- as.numeric(Temp_2018$WTMP)
+range(Temp_2018$WTMP, na.rm=TRUE)
+Temp_2018$Date.Time <- parse_date_time(Temp_2018$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+# 2019
+Temp_2019 <- read.csv("data/NOAA_temp/nwpr1h2019.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2019$Date <- paste0(Temp_2019$MM, sep = "-", Temp_2019$DD)
+Temp_2019$Time <- paste0(Temp_2019$hh, sep = ":", Temp_2019$mm)
+Temp_2019$Date.Time <- paste0(Temp_2019$Date, sep=" ", Temp_2019$Time)
+unique(Temp_2019$WTMP)
+Temp_2019 <- Temp_2019 %>% naniar::replace_with_na(Temp_2019, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(Temp_2019$WTMP)
+Temp_2019$WTMP <- as.numeric(Temp_2019$WTMP)
+range(Temp_2019$WTMP, na.rm=TRUE)
+Temp_2019$Date.Time <- parse_date_time(Temp_2019$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+# 2020
+nwpr2020 <- read.csv("data/NOAA_temp/nwpr1h2020.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+nwpr2020$Date <- paste0(nwpr2020$MM, sep = "-", nwpr2020$DD)
+nwpr2020$Time <- paste0(nwpr2020$hh, sep = ":", nwpr2020$mm)
+nwpr2020$Date.Time <- paste0(nwpr2020$Date, sep=" ", nwpr2020$Time)
+unique(nwpr2020$WTMP)
+nwpr2020 <- nwpr2020 %>% naniar::replace_with_na(nwpr2020, replace = list(WTMP=c("9   9.", ".0 999", "999", "0 999.")))
+unique(nwpr2020$WTMP)
+nwpr2020$WTMP <- as.numeric(nwpr2020$WTMP)
+range(nwpr2020$WTMP, na.rm=TRUE)
+nwpr2020$Date.Time <- parse_date_time(nwpr2020$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+# Newport 2021 data 
+nwpr2021 <- read.csv("data/NOAA_temp/nwpr1h2021.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+nwpr2021$Date <- paste0(nwpr2021$MM, sep = "-", nwpr2021$DD)
+nwpr2021$Time <- paste0(nwpr2021$hh, sep = ":", nwpr2021$mm)
+nwpr2021$Date.Time <- paste0(nwpr2021$Date, sep=" ", nwpr2021$Time)
+unique(nwpr2021$WTMP)
+nwpr2021 <- nwpr2021 %>% naniar::replace_with_na(nwpr2021, replace = list(WTMP=c("MM", "9   9.", ".0 999", "999", "0 999.")))
+unique(nwpr2021$WTMP)
+nwpr2021$WTMP <- as.numeric(nwpr2021$WTMP)
+range(nwpr2021$WTMP, na.rm=TRUE)
+nwpr2021$Date.Time <- parse_date_time(nwpr2021$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+# Newport 2022 data 
+nwpr2022 <- read.csv("data/NOAA_temp/nwpr2022.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+nwpr2022$Date <- paste0(nwpr2022$MM, sep = "-", nwpr2022$DD)
+nwpr2022$Time <- paste0(nwpr2022$hh, sep = ":", nwpr2022$mm)
+nwpr2022$Date.Time <- paste0(nwpr2022$Date, sep=" ", nwpr2022$Time)
+unique(nwpr2022$WTMP)
+nwpr2022 <- nwpr2022 %>% naniar::replace_with_na(nwpr2022, replace = list(WTMP=c("MM", "9   9.", ".0 999", "999", "0 999.")))
+unique(nwpr2022$WTMP)
+nwpr2022$WTMP <- as.numeric(nwpr2022$WTMP)
+range(nwpr2022$WTMP, na.rm=TRUE)
+nwpr2022$Date.Time <- parse_date_time(nwpr2022$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+
+# Plot data 
+pdf("output/Newport.2017-2022.pdf")
+plot(Temp_2017$Date.Time, Temp_2017$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
+points(Temp_2018$Date.Time, Temp_2018$WTMP, col = "purple", cex=0.25)
+points(Temp_2019$Date.Time, Temp_2019$WTMP, col = "green", cex=0.25)
+points(nwpr2020$Date.Time, nwpr2020$WTMP, col = "orange", cex=0.25)
+points(nwpr2021$Date.Time, nwpr2021$WTMP, col = "red", cex=0.25)
+points(nwpr2022$Date.Time, nwpr2022$WTMP, col = "dodgerblue", cex=0.25)
+par(mar=c(5.1, 4.1, 4.1, 10), xpd=TRUE) # Add extra space to right of plot area; change clipping to figure
+legend("topright", inset=c(-0.2,0), legend=c("2017", "2018", "2019", "2020", "2021", "2022"), pch=c(1,3), title="Year", col=c("bisque4", "purple", "green", "orange", "red", "dodgerblue"), lty=1, cex=0.8)
+abline(v=as.POSIXct(c("0000-08-15 12:00:00")), col=c("gray"), lty=c(2), lwd=c(3))
+#legend("topleft", legend=c("Ambient", "Heat", "Newport 2021"), col=c("dodgerblue", "firebrick1", "bisque4"), lty=1, cex=0.8)
 dev.off()
 
 
