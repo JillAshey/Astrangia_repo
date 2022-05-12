@@ -34,17 +34,17 @@ library(furrr)
 
 ## Import data
 ```{r}
-path.p <- "data/PR/raw" #the location of all your respirometry files 
+path.p <- "data/Physiology/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/PR/PR_sample_metadata.csv")
+sample.info <- read_csv(file = "data/Physiology/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/PR/PR_run_metadata.csv")
+run.info <- read_csv(file = "data/Physiology/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -66,7 +66,7 @@ df <- df %>%
 ```
 
 ## Use the time breaks in the sample info to link O2 data with light levels
-```{r, warning = FALSE}
+```{r}
 df <- df %>%
   mutate(intervals = map2(data0, info, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),

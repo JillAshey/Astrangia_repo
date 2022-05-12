@@ -1,0 +1,111 @@
+---
+title: "Carbohydrates"
+author: "jillashey"
+date: "4/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script is modified from A. Huffmyer's original [script](https://github.com/AHuffmyer/SymbioticIntegration/blob/main/Mcap2021/Scripts/Carbohydrates.Rmd). AH and I ran multiple plates but only plate 3 had Astrangia samples. Using only plate 3, this script analyzes and plots carbohydrate data for the Astrangia 2021 experiment. The carb assays were done on 4/6/22 with AH 
+
+## Load libraries
+```{r}
+library(dbplyr)
+library(readr)
+library(stringr)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(Rmisc)
+library(ggpubr)
+library(lsmeans)
+library(tidyverse)
+```
+
+## Load data 
+```{r}
+data <- read.csv("data/Physiology/Carbohydrates/20220406_Carbohydrates_Data.csv")
+Meta <- read.csv("data/Physiology/Carbohydrates/20220406_Carbohydrates_Meta.csv")
+```
+
+## Calculate standard curve
+Merge files and rename cols
+```{r}
+data.1 <- merge(Meta, data, by = c("Well", "Run"))
+
+# Blank correction for each run separately
+Blank <- data.1 %>% 
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+data.1$abs.corr <- data.1$X485 - Blank$blk.avg
+```
+
+Plot standard curve 
+```{r}
+Standard <- data.1 %>% 
+  filter(Sample.Type == "Standard")
+Standard.plot <- ggplot(data = Standard, aes(x=Concentration, y=abs.corr))+
+  #facet_grid(~Run)+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1));Standard.plot
+```
+
+Extract standard curve. 
+```{r}
+lmstandard <- lm (Concentration ~ abs.corr, data = Standard)
+lmsummary <- summary(lmstandard) 
+```
+
+## Calculations (initial curve)
+
+Obtain concentration values for samples from standard curve.  
+```{r}
+Samples <- data.1 %>% #subsetting Samples
+  filter(Sample.Type == "Sample")
+
+Samples$Concentration <- predict(lmstandard, newdata = Samples) #using model to get concentration
+```
+
+Accounting for dilution factor (1000/10) and normalizing to homogenate volume 
+```{r}
+Samples$Carb.uL <- (Samples$Concentration * Samples$Homo_vol * 10)
+```
+
+Remove AH samples 
+```{r}
+Samples <- Samples %>% 
+  filter(!Sample.ID == "X")
+
+Samples <- Samples %>% 
+  filter(!Sample.ID == "W")
+```
+
+
+Plot Astrangia
+```{r}
+Carb.Plot.Ast <- Samples%>%
+  ggplot(aes(x=Treatment, y=Carb.uL, fill = Treatment)) +
+  #facet_grid(~Sample.ID)+
+  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.4)) +
+#  stat_summary(fun=mean, aes(group=Fraction, color = Fraction), position = position_dodge(width = 0.5))  + 
+  geom_point(pch = 21, position=position_jitterdodge(dodge.width=0.4)) +
+  #  ylim(0,0.5) +
+  xlab("Temperature") + ylab(expression("Total Carbohydrate " (mg~uL))) + #Axis titles
+  theme_bw() + theme(panel.border = element_rect(color="black", fill=NA, size=0.75), panel.grid.major = element_blank(), #Makes background theme white
+                     panel.grid.minor = element_blank(), axis.line = element_blank()) +
+  #  theme(axis.text = element_text(size = 30, color = "black"),
+  #        axis.title = element_text(size = 36, color = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)); Carb.Plot.Ast
+ggsave("output/Physiology/Carbohydrates/Carbohydrates.pdf", Carb.Plot.Ast)
+```
+
