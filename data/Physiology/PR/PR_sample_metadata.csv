@@ -1,13 +1,13 @@
 ﻿Date,colony_id,Chamber.Channel,Chamber ,Run,Temp.Cat,Treatment,Chamber.Vol.L,Surface.Area.cm2,Notes
-20210204,AST-2533,3,3,1,8,Acclimatization,0.601,25,NA
-20210204,AST-2003,7,7,1,8,Acclimatization,0.566,25,NA
-20210204,AST-2873,8,8,1,8,Acclimatization,0.596,25,NA
-20210204,AST-1585,1,1,1,8,Acclimatization,0.596,25,NA
-20210204,AST-1722,6,6,1,8,Acclimatization,0.578,25,NA
+20210204,AST-2533,3,3,1,8,Acclimatization,0.601,0.972,NA
+20210204,AST-2003,7,7,1,8,Acclimatization,0.566,11.752,NA
+20210204,AST-2873,8,8,1,8,Acclimatization,0.596,2.332,NA
+20210204,AST-1585,1,1,1,8,Acclimatization,0.596,1.216,NA
+20210204,AST-1722,6,6,1,8,Acclimatization,0.578,4.628,NA
 20210204,BK-1,5,5,1,8,Acclimatization,0.616,NA,NA
 20210204,BK-2,2,2,1,8,Acclimatization,0.612,NA,NA
-20210204,AST-2197,1,1,2,8,Acclimatization,0.59,25,NA
-20210204,AST-1618,2,2,2,8,Acclimatization,0.592,25,NA
+20210204,AST-2197,1,1,2,8,Acclimatization,0.59,2.339,NA
+20210204,AST-1618,2,2,2,8,Acclimatization,0.592,XXXXXXX,NA
 20210204,BK-4,3,3,2,8,Acclimatization,0.505,NA,NA
 20210204,AST-2859,5,5,2,8,Acclimatization,0.626,25,NA
 20210204,AST-1233,6,6,2,8,Acclimatization,0.586,25,NA
