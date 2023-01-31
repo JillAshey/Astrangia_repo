@@ -4,6 +4,26 @@ output: html_document
 ---
 
 # PR data from experimental corals
+
+Updated R/RStudio and packages are loading weirdly. Going to try to reinstall 
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("devtools")
+BiocManager::install("furr")
+BiocManager::install("future")
+BiocManager::install("tidyverse", force = TRUE)
+BiocManager::install("gridExtra")
+BiocManager::install("ggpubr")
+BiocManager::install("lubridate")
+BiocManager::install("cowplot")
+BiocManager::install("LoLinR")
+#BiocManager::install("dplyr", force = TRUE)
+```
+
+
+## load packages
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
@@ -26,11 +46,21 @@ library(gridExtra)
 library(ggpubr)
 library(lubridate)
 library(cowplot)
+#library(dplyr)
 
 ## libraries for parallel processing
 library(future)
 library(furrr)
 ```
+
+## Set working directory 
+```{r}
+#setwd('/Users/jillashey/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo/')
+
+#Warning: The working directory was changed to /Users/jillashey/Desktop/PutnamLab/Repositories/Astrangia_repo/Astrangia_repo inside a notebook chunk. The working directory will be reset when the chunk is finished running. Use the knitr root.dir option in the setup chunk to change the working directory for notebook chunks.
+## working directory is being weird 
+```
+
 
 ## Import data
 ```{r}
@@ -41,7 +71,7 @@ file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file n
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/Physiology/PR/PR_sample_metadata.csv")
+sample.info <- read_csv("data/Physiology/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
 run.info <- read_csv(file = "data/Physiology/PR/PR_run_metadata.csv")
@@ -68,14 +98,14 @@ df <- df %>%
 ## Use the time breaks in the sample info to link O2 data with light levels
 ```{r}
 df <- df %>%
-  mutate(intervals = map2(data0, info, function(.x, .y) {
+  dplyr::mutate(intervals = map2(data0, info, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
                       labels = as.character(.y$Light_Value)))})) %>%
-  mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
+  dplyr::mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
 
 ## 'data' now contains the O2 data with the corresponding light level as another column
 ## Example of what 'data' for each sample looks like:
-# df$data[[1]]
+df$data[[1]]
 ```
 
 ### Thin data
