@@ -1,0 +1,167 @@
+---
+title: "Chlorophyll-a"
+author: "jillashey"
+date: "2023-02-23"
+output: html_document
+---
+
+## Load packages 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+## install packages if you dont already have them
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("plotrix")) install.packages("plotrix")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("Rmisc")) install.packages("Rmisc")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("gridExtra")) install.packages("gridExtra")
+if (!require("formattable")) install.packages("formattable")
+if (!require("data.table")) install.packages("data.table")
+if (!require("htmltools")) install.packages("htmltools")
+if (!require("webshot")) install.packages("webshot")
+# load packages
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(plotrix)
+library(Rmisc)
+library(ggplot2)
+library(gridExtra)
+library(formattable)
+library(data.table)
+library(htmltools)
+library(webshot)
+library(lme4)
+library(MuMIn)
+library(cowplot)
+library(corrplot)
+library(lmerTest)
+```
+
+## Read in dfs and merge into one large df
+```{r}
+## platemaps 
+df.platemaps <- 
+  list.files(path = "data/Physiology/Chlorophyll-a", pattern = "platemap.csv", full.names = TRUE) %>% 
+  #setnames(.) %>% 
+  map_dfr(read.csv, .id = "file.ID") %>% # join all files together in one df by file ID (ie day/date of run; plate 1, 2, etc)
+  group_by(file.ID)
+
+df.platemaps$file.ID <- gsub("data/Physiology/Chlorophyll-a", "", df.platemaps$file.ID)
+df.platemaps$file.ID <- gsub("_platemap.csv", "", df.platemaps$file.ID)
+
+## data
+df.data <- 
+  list.files(path = "data/Physiology/Chlorophyll-a", pattern = "data.csv", full.names = TRUE) %>% 
+  map_dfr(read.csv, .id = "file.ID") %>% # join all files together in one df by file ID (ie day/date of run; plate 1, 2, etc)
+  group_by(file.ID)
+
+df.data$file.ID <-gsub("data/Physiology/Chlorophyll-a", "", df.data$file.ID)
+df.data$file.ID <- gsub("_data.csv", "", df.data$file.ID)
+
+# cut off last empty rows in df.data 
+df.data <- df.data[1:480,]
+
+## Merge platemap and data for each plate 
+df <- left_join(df.data, df.platemaps)
+#str(df)
+
+# Remove unneeded columns 
+df <- subset(df, select = -c(X, X.1))
+```
+
+## Calculate chlorophyll concentrations 
+```{r}
+# Avg all technical replicates for each sample duplicates per plate 
+df <- df %>%
+  filter(!is.na(ID))
+
+# Group by run and sample ID
+df.1 <- df %>% 
+  dplyr::group_by(file.ID, ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750))
+
+# Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+df.1 <- df.1 %>% 
+  dplyr::mutate(adj630 = mean_A630 - mean_A750,
+                adj663 = mean_A663 - mean_A750)
+
+# Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+## units are ug/mL
+df.1 <- df.1 %>% 
+  dplyr::mutate(chla.ug.ml = (11.43 * adj663) - (0.64 * adj630),
+                chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663))
+
+# path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+df.1 <- df.1 %>%
+    dplyr::mutate(chla.ug.ml = chla.ug.ml*0.584,
+        chlc2.ug.ml = chlc2.ug.ml*0.584)
+```
+
+## Standardize to surface area and homogenate volume 
+```{r}
+# Load surface area 
+sa <- read.csv("data/Physiology/PR/PR_SurfaceArea.csv")%>% 
+  dplyr::select(ID, Site, Treatment, Timepoint, Area_cm)
+str(sa)
+
+## join chl and surface area dfs 
+df.chl <- left_join(sa, df.1)
+
+# Load homogenate volume 
+homog.vol <- read.csv("data/Physiology/homogenate_volume.csv") %>% 
+  select(PlugID, vol_mL) %>% 
+  rename_with(.cols = 1, ~ "ID")
+str(homog.vol)
+
+## join chl and homogenate dfs
+df.chl <- left_join(df.chl, homog.vol)
+
+
+# Account for homogenate volume and normalize to surface area 
+df.chl <- df.chl %>%
+    mutate(chla.ug.cm2 = (chla.ug.ml * vol_mL) / Area_cm, # I need to calculate surface area squared?
+         chlc2.ug.cm2 = (chlc2.ug.ml * vol_mL) / Area_cm) # I need to calculate surface area squared?
+         #chla.ug.cells = (chla.ug.ml * vol_mL) / cells, # this is for cell density 
+         #chlc2.ug.cells = (chlc2.ug.ml * vol_mL) / cells) # this is for cell density 
+
+# Remove blanks and NAs
+df.chl <- filter(df.chl, !ID %in% c("NA", "BK"))
+
+# Save chlorophyll a 
+df.chl %>% 
+  select(ID, Site, Treatment, Timepoint, chla.ug.ml, chlc2.ug.ml, chla.ug.cm2, chlc2.ug.cm2) %>%
+  write.csv(file = "Output/Physiology/chlorophyll.csv")
+```
+
+The df df.chl has timepoint and treatment in it. I'm going to drop the NAs in the 'chlc2.ug.cm2' column then plot by treatment and timepoint 
+```{r}
+# Remove NAs in chlc2.ug.cm2 column 
+df.chl <- df.chl %>% 
+  drop_na(chlc2.ug.cm2)
+```
+
+## Quality control!
+```{r}
+range(df.chl$chla.ug.ml)
+range(df.chl$chlc2.ug.ml)
+
+range(df.chl$chla.ug.cm2)
+range(df.chl$chlc2.ug.cm2)
+
+# filter 
+```
+
+
+
+
+
+
+
+
+
+
+
+
