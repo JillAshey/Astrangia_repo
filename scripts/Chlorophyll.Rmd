@@ -19,6 +19,7 @@ if (!require("formattable")) install.packages("formattable")
 if (!require("data.table")) install.packages("data.table")
 if (!require("htmltools")) install.packages("htmltools")
 if (!require("webshot")) install.packages("webshot")
+
 # load packages
 library(plyr)
 library(dplyr)
@@ -145,13 +146,23 @@ df.chl <- df.chl %>%
 
 ## Quality control!
 ```{r}
+## Check range
+# chl a
 range(df.chl$chla.ug.ml)
-range(df.chl$chlc2.ug.ml)
-
 range(df.chl$chla.ug.cm2)
+
+# chl c
+range(df.chl$chlc2.ug.ml)
 range(df.chl$chlc2.ug.cm2)
 
 # filter 
+dplyr::filter(df.chl, chlc2.ug.cm2 > 1.5) # none higher than 1.5
+dplyr::filter(df.chl, chla.ug.cm2 < 0) # output should be zero since negative values are not possible. 
+dplyr::filter(df.chl, chlc2.ug.cm2 < 0) # output should be zero since negative values are not possible. 
+
+Chl.duplicates <- Chl_final %>% dplyr::group_by(Plug_ID) %>% 
+  dplyr::summarise(n = n()) %>% filter(n > 1)
+Chl.duplicates
 ```
 
 
