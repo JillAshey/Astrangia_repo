@@ -13,6 +13,16 @@ if (!require("broom")) install.packages("broom")
 # load packages
 library(tidyverse)
 library(broom)
+
+library(dbplyr)
+library(tidyverse)
+library(readr)
+library(stringr)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(Rmisc)
 ```
 
 ## Import data 
@@ -45,4 +55,219 @@ p5_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate5_platemap.
 p5 <- left_join(p5_data, p5_platemap)
 
 ```
+
+## Subtract blank means for each run (Standard I is the blank)
+```{r}
+p1.blank <- p1 %>%
+  filter(ID == "StandardI") %>%
+  summarise(blk.avg = mean(X562))
+p1$abs.corr <- p1$X562 - p1.blank$blk.avg
+
+p2.blank <- p2 %>%
+  filter(ID == "StandardI") %>%
+  summarise(blk.avg = mean(X562))
+p2$abs.corr <- p2$X562 - p2.blank$blk.avg
+
+p3.blank <- p3 %>%
+  filter(ID == "StandardI") %>%
+  summarise(blk.avg = mean(X562))
+p3$abs.corr <- p3$X562 - p3.blank$blk.avg
+
+p4.blank <- p4 %>%
+  filter(ID == "StandardI") %>%
+  summarise(blk.avg = mean(X562))
+p4$abs.corr <- p4$X562 - p4.blank$blk.avg
+
+p5.blank <- p5 %>%
+  filter(ID == "StandardI") %>%
+  summarise(blk.avg = mean(X562))
+p5$abs.corr <- p5$X562 - p5.blank$blk.avg
+```
+
+## Plot standard curve 
+```{r}
+# Select only standards and plot 
+## Plate 1
+p1.standards <- p1[str_detect(p1$ID, "Standard"),]
+p1.standards$Concentration <- c(2000,2000, 1500, 1500, 1000, 1000, 750, 750, 500, 500, 250, 250, 125, 125, 25, 25, 0, 0) # making column for concentrations
+p1.standards.plot <- ggplot(data = p1.standards, aes(x = Concentration, y = abs.corr)) +
+  ylab("Absorbance (nm)") +
+  xlab("Concentration (ug/mL)") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p1.standards.plot
+
+## Plate 2
+p2.standards <- p2[str_detect(p2$ID, "Standard"),]
+p2.standards$Concentration <- c(2000,2000, 1500, 1500, 1000, 1000, 750, 750, 500, 500, 250, 250, 125, 125, 25, 25, 0, 0) # making column for concentrations
+p2.standards.plot <- ggplot(data = p2.standards, aes(x = Concentration, y = abs.corr)) +
+  ylab("Absorbance (nm)") +
+  xlab("Concentration (ug/mL)") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p2.standards.plot
+
+## Plate 3
+p3.standards <- p3[str_detect(p3$ID, "Standard"),]
+p3.standards$Concentration <- c(2000,2000, 1500, 1500, 1000, 1000, 750, 750, 500, 500, 250, 250, 125, 125, 25, 25, 0, 0) # making column for concentrations
+p3.standards.plot <- ggplot(data = p3.standards, aes(x = Concentration, y = abs.corr)) +
+  ylab("Absorbance (nm)") +
+  xlab("Concentration (ug/mL)") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p3.standards.plot
+
+## Plate 4
+p4.standards <- p4[str_detect(p4$ID, "Standard"),]
+p4.standards$Concentration <- c(2000,2000, 1500, 1500, 1000, 1000, 750, 750, 500, 500, 250, 250, 125, 125, 25, 25, 0, 0) # making column for concentrations
+p4.standards.plot <- ggplot(data = p4.standards, aes(x = Concentration, y = abs.corr)) +
+  ylab("Absorbance (nm)") +
+  xlab("Concentration (ug/mL)") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p4.standards.plot
+
+## Plate 5
+p5.standards <- p5[str_detect(p5$ID, "Standard"),] %>% na.omit()
+p5.standards$Concentration <- c(2000,2000, 1500, 1500, 1000, 1000, 750, 750, 500, 500, 250, 250, 125, 125, 25, 25, 0, 0) # making column for concentrations
+p5.standards.plot <- ggplot(data = p5.standards, aes(x = Concentration, y = abs.corr)) +
+  ylab("Absorbance (nm)") +
+  xlab("Concentration (ug/mL)") +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw() + 
+  theme(panel.border = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p5.standards.plot
+
+## reminder - concentration units is (ug/mL)
+```
+
+## Create model for standards data 
+```{r}
+p1.standards.lm <- lm(Concentration ~ abs.corr, data = p1.standards)
+summary(p1.standards.lm)
+
+p2.standards.lm <- lm(Concentration ~ abs.corr, data = p2.standards)
+summary(p2.standards.lm)
+
+p3.standards.lm <- lm(Concentration ~ abs.corr, data = p3.standards)
+summary(p3.standards.lm)
+
+p4.standards.lm <- lm(Concentration ~ abs.corr, data = p4.standards)
+summary(p4.standards.lm)
+
+p5.standards.lm <- lm(Concentration ~ abs.corr, data = p5.standards)
+summary(p5.standards.lm)
+```
+
+## Use model to find concentration of samples 
+```{r}
+p1.samples <- p1[!str_detect(p1$ID, "Standard"),]
+p1.samples$Concentration <- predict(p1.standards.lm, newdata = p1.samples)
+
+p2.samples <- p2[!str_detect(p2$ID, "Standard"),]
+p2.samples$Concentration <- predict(p2.standards.lm, newdata = p2.samples)
+
+p3.samples <- p3[!str_detect(p3$ID, "Standard"),]
+p3.samples$Concentration <- predict(p3.standards.lm, newdata = p3.samples)
+
+p4.samples <- p4[!str_detect(p4$ID, "Standard"),]
+p4.samples$Concentration <- predict(p4.standards.lm, newdata = p4.samples)
+
+p5.samples <- p5[!str_detect(p5$ID, "Standard"),]
+p5.samples$Concentration <- predict(p5.standards.lm, newdata = p5.samples)
+```
+
+## Combine all datasets 
+```{r}
+p.all <- rbind(p1.samples, p2.samples, p3.samples, p4.samples, p5.samples)
+
+p.all <- p.all %>%
+  select(ID, Concentration) %>%
+  dplyr::rename(PlugID = ID) %>%
+  na.omit() %>%
+  dplyr::group_by(PlugID) %>%
+  dplyr::summarise(mean_concentration = mean(Concentration))
+```
+
+## Read in surface area, homogenate volume and metadata 
+```{r}
+surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% select(PlugID, Area_cm)
+
+homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% select(PlugID, vol_mL) 
+
+master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% select(PlugID, Site, Treatment, Timepoint)
+
+# Merge dataframes
+metadata <- join_all(list(surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+#metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
+metadata$vol_mL <- as.numeric(metadata$vol_mL)
+```
+
+## Merge protein data w/ metadata and normalize data 
+```{r}
+prot <- left_join(metadata, p.all) %>%
+  mutate(prot_ug = mean_concentration * vol_mL,
+         prot_ug.cm2 = prot_ug / Area_cm,
+         prot_mg.cm2 = prot_ug.cm2 / 1000) %>% 
+  na.omit() # omitting NAs for now 
+
+## The FLD TP2 corals do not have surface area (I don't think I have pictures of them. Will need to get their surface area via wax dipping)
+```
+
+## Summarize 
+```{r}
+mean.prot <- summarySE(prot, measurevar = "prot_mg.cm2", groupvars = c("Treatment", "Timepoint"))
+
+mean.prot_site <- summarySE(prot, measurevar = "prot_mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+# I did not equally sample across site, which was a mistake on my part. I need to figure out how to present the data with site 
+```
+
+## Plot 
+```{r}
+gd <- prot %>% 
+  dplyr::group_by(Timepoint, Treatment) %>%
+  dplyr::summarise(avg = mean(prot_mg.cm2),
+            sem = sd(prot_mg.cm2)/sqrt(length(prot_mg.cm2)))
+
+plot <- ggplot(prot, aes(x = Timepoint, y = prot_mg.cm2, group = Treatment)) +
+  geom_point(aes(color = Treatment), size = 2) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_color_manual(values = c("blue", "green", "red"))
+plot
+
+## Right now, I'm only summarizing and plotting by Timepoint and Treatment. At some point, I will include site as a random effect variable 
+```
+
+
 
