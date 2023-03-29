@@ -84,28 +84,53 @@ metadata <- full_join(sample.info, run.info) %>%
 metadata <- metadata %>%
   select(colony_id, Run, Treatment,Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
 
-# Read in all data files
+# # Read in all data files
+# df <- tibble(file.name = file.names) %>%
+#   mutate(colony_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
+#           info = map(colony_id, ~filter(metadata, colony_id == .)),           # Get associated sample info
+#          data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1)))   # Get associated O2 data
+# 
+# # Select only Time, Value, and Temp columns from O2 data
+# df <- df %>%
+#   mutate(data0 = map(data0, ~select(., Time, Value, Temp))) %>% 
+#   mutate(data0 = map(data0, ~(.x %>% filter(complete.cases(.))))) #remove NAs to get rid of artifact line in our data
+
+
+
+
+
+
+
+
+
 df <- tibble(file.name = file.names) %>%
   mutate(colony_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
           info = map(colony_id, ~filter(metadata, colony_id == .)),           # Get associated sample info
-         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1)))   # Get associated O2 data
-
+         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1, col_types = cols(.default = "d", Time = "t"))))   # Get associated O2 data
 # Select only Time, Value, and Temp columns from O2 data
 df <- df %>%
-  mutate(data0 = map(data0, ~select(., Time, Value, Temp)))    
+  mutate(data0 = map(data0, ~select(., Time, Value, Temp)))%>%
+  mutate(data0 = map(data0, ~(.x %>% filter(complete.cases(.))))) #remove NAs to get rid of artifact line in our data
 ```
 
 ## Use the time breaks in the sample info to link O2 data with light levels
 ```{r}
+# df <- df %>%
+#   dplyr::mutate(intervals = map2(data0, info, function(.x, .y) {
+#     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
+#                       labels = as.character(.y$Light_Value)))})) %>%
+#   dplyr::mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
+# 
+# ## 'data' now contains the O2 data with the corresponding light level as another column
+# ## Example of what 'data' for each sample looks like:
+# #df$data[[1]]
+
+
 df <- df %>%
-  dplyr::mutate(intervals = map2(data0, info, function(.x, .y) {
+  mutate(intervals = map2(data0, info, function(.x, .y) {
     split(.x, f = cut(as.numeric(.x$Time), breaks = as.numeric(c(.y$Start.time, last(.y$Stop.time))),
                       labels = as.character(.y$Light_Value)))})) %>%
-  dplyr::mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
-
-## 'data' now contains the O2 data with the corresponding light level as another column
-## Example of what 'data' for each sample looks like:
-df$data[[1]]
+  mutate(data = map(intervals, ~ unnest(tibble(.), .id = "Light_Value")))
 ```
 
 ### Thin data
@@ -149,7 +174,7 @@ fit_reg <- function(df) {
 }
 
 # Setup for parallel processing
-future::plan(multiprocess)
+future::plan()
 
 # Map LoLinR function onto all intervals of each sample's thinned dataset
 df <- df %>%
@@ -225,7 +250,7 @@ ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.out <- pr %>% select(colony_id, Light_Value, Run,Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.out, "output/PR_rates.csv")
+write.csv(pr.out, "output/Physiology/PR/PR_rates.csv")
 ```
 
 ```{r}
@@ -285,7 +310,7 @@ trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatme
 trt.plot
 
 plot <- grid.arrange(trt.plot, clip="off")
-ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 6, height = 5, units = c("in"))
+ggsave("output/Physiology/PR/Timepoint.Treatment_PR.pdf", plot, width = 6, height = 5, units = c("in"))
 
 
 # # Individual plots for each sample 
@@ -312,17 +337,17 @@ ggsave("output/PR/Timepoint.Treatment_PR.pdf", plot, width = 6, height = 5, unit
 #################### PR data from field corals #################### 
 ## Import data
 ```{r}
-path.p <- "data/PR/raw_field" #the location of all your respirometry files 
+path.p <- "data/Physiology/PR/raw_field" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv(file = "data/PR/PR_field_sample_metadata.csv")
+sample.info <- read_csv(file = "data/Physiology/PR/PR_field_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/PR/PR_field_run_metadata.csv")
+run.info <- read_csv(file = "data/Physiology/PR/PR_field_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -332,15 +357,16 @@ metadata <- full_join(sample.info, run.info) %>%
 metadata <- metadata %>%
   select(colony_id, Run, Treatment,Chamber.Vol.L, Date, Start.time, Stop.time, Light_Value,Surface.Area.cm2)
 
-# Read in all data files
+# Read in all data
 df <- tibble(file.name = file.names) %>%
   mutate(colony_id = gsub("_.*", "", file.name),                              # Get colony_id from filename
           info = map(colony_id, ~filter(metadata, colony_id == .)),           # Get associated sample info
-         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1)))   # Get associated O2 data
+         data0 = map(file.name, ~read_csv(file.path(path.p, .), skip = 1, col_types = cols(.default = "d", Time = "t"))))   # Get associated O2 data
 
 # Select only Time, Value, and Temp columns from O2 data
 df <- df %>%
-  mutate(data0 = map(data0, ~select(., Time, Value, Temp)))    
+  mutate(data0 = map(data0, ~select(., Time, Value, Temp)))%>%
+  mutate(data0 = map(data0, ~(.x %>% filter(complete.cases(.))))) #remove NAs to get rid of artifact line in our data 
 ```
 
 
@@ -385,7 +411,7 @@ cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
 #### The full or thinned data plot for any sample can be accessed like this:
 ```{r}
 df %>%
-  filter(colony_id == "FLD-0037") %>%
+  filter(colony_id == "FLD-0015") %>%
   pull(thin_data_plot)
 ```
 
@@ -398,7 +424,7 @@ fit_reg <- function(df) {
 }
 
 # Setup for parallel processing
-future::plan(multiprocess)
+future::plan()
 
 # Map LoLinR function onto all intervals of each sample's thinned dataset
 df <- df %>%
@@ -473,7 +499,7 @@ ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.out <- pr %>% select(colony_id, Light_Value, Run,Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.out, "output/PR_field_rates.csv")
+write.csv(pr.out, "output/Physiology/PR/PR_field_rates.csv")
 ```
 
 ```{r}
@@ -527,7 +553,7 @@ field_trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=T
 field_trt.plot
 
 plot <- grid.arrange(field_trt.plot, clip="off")
-ggsave("output/PR/Field_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+ggsave("output/Physiology/PR/Field_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
 
 
 # # Individual plots for each sample 
@@ -557,7 +583,7 @@ figure <- ggarrange(trt.plot, field_trt.plot,
 figure
 
 plot <- grid.arrange(figure, clip="off")
-ggsave("output/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 7, units = c("in"))
+ggsave("output/Physiology/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 7, units = c("in"))
 
 ```
 
@@ -566,8 +592,8 @@ ggsave("output/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width =
 
 ### Import data 
 ```{r}
-exp <- read_csv(file = "output/PR_rates.csv")
-field <- read_csv(file = "output/PR_field_rates.csv")
+exp <- read_csv(file = "output/Physiology/PR/PR_rates.csv")
+field <- read_csv(file = "output/Physiology/PR/PR_field_rates.csv")
 field$Treatment <- "Field"
 
 
@@ -647,9 +673,44 @@ all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment))
 all.plot
 
 plot <- grid.arrange(all.plot, clip="off")
-ggsave("output/PR/All_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+ggsave("output/Physiology/PR/All_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
 ```
 
+Remove outliers (micromol.cm2.h > 20) and plot 
+```{r}
+sub <- all %>% 
+  filter(micromol.cm2.h <= 10) %>%
+  filter(micromol.cm2.h >= -5)
+
+gd <- sub %>% 
+        group_by(Assay,Timepoint,Treatment) %>% 
+        summarise(avg = mean(micromol.cm2.h),
+                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+
+# Remove Acclimatization rows, if desired
+#all <- all %>%
+#  filter(!Treatment==c("Acclimatization"))
+
+sub.plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
+  geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
+  scale_color_manual(values=c("black", "blue", "green", "red"))+
+  #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
+  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
+  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  #ylim(-0.4,0.5) +
+  facet_wrap(~Assay, ncol = 2)+
+  theme_bw()+
+  theme(legend.position = c(0.63, 0.8),
+        legend.title = element_text(colour="black", size=6, face="bold"),
+        legend.text = element_text(size=4))+
+  guides(color = guide_legend(override.aes = list(size = 1)))
+sub.plot
+
+plot <- grid.arrange(sub.plot, clip="off")
+ggsave("output/Physiology/PR/Sub_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+```
 
 
 

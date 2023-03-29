@@ -26,7 +26,7 @@ library(naniar)
 # #Temp_2004[Temp_2004==999.00] <- NA
 # Temp_2004$Date.Time <- parse_date_time(Temp_2004$Date.Time, "%Y!-%m!-%d! %H!:%M!" , tz="EST")
 
-Temp_2005 <- read.csv("data/NOAA_temp/nwpr1h2005.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2005 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2005.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2005$Date <- paste0(Temp_2005$MM, sep = "-", Temp_2005$DD)
 Temp_2005$Time <- paste0(Temp_2005$hh, sep = ":", Temp_2005$mm)
 Temp_2005$Date.Time <- paste0(Temp_2005$Date, sep=" ", Temp_2005$Time)
@@ -42,7 +42,7 @@ daily_2005 <- aggregate(x = Temp_2005$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2006 <- read.csv("data/NOAA_temp/nwpr1h2006.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2006 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2006.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2006$Date <- paste0(Temp_2006$MM, sep = "-", Temp_2006$DD)
 Temp_2006$Time <- paste0(Temp_2006$hh, sep = ":", Temp_2006$mm)
 Temp_2006$Date.Time <- paste0(Temp_2006$Date, sep=" ", Temp_2006$Time)
@@ -58,7 +58,7 @@ daily_2006 <- aggregate(x = Temp_2006$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2007 <- read.csv("data/NOAA_temp/nwpr1h2007.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2007 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2007.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2007$Date <- paste0(Temp_2007$MM, sep = "-", Temp_2007$DD)
 Temp_2007$Time <- paste0(Temp_2007$hh, sep = ":", Temp_2007$mm)
 Temp_2007$Date.Time <- paste0(Temp_2007$Date, sep=" ", Temp_2007$Time)
@@ -74,7 +74,7 @@ daily_2007 <- aggregate(x = Temp_2007$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2008 <- read.csv("data/NOAA_temp/nwpr1h2008.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2008 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2008.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2008$Date <- paste0(Temp_2008$MM, sep = "-", Temp_2008$DD)
 Temp_2008$Time <- paste0(Temp_2008$hh, sep = ":", Temp_2008$mm)
 Temp_2008$Date.Time <- paste0(Temp_2008$Date, sep=" ", Temp_2008$Time)
@@ -90,7 +90,7 @@ daily_2008 <- aggregate(x = Temp_2008$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2009 <- read.csv("data/NOAA_temp/nwpr1h2009.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2009 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2009.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2009$Date <- paste0(Temp_2009$MM, sep = "-", Temp_2009$DD)
 Temp_2009$Time <- paste0(Temp_2009$hh, sep = ":", Temp_2009$mm)
 Temp_2009$Date.Time <- paste0(Temp_2009$Date, sep=" ", Temp_2009$Time)
@@ -106,7 +106,7 @@ daily_2009 <- aggregate(x = Temp_2009$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2010 <- read.csv("data/NOAA_temp/nwpr1h2010.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2010 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2010.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2010$Date <- paste0(Temp_2010$MM, sep = "-", Temp_2010$DD)
 Temp_2010$Time <- paste0(Temp_2010$hh, sep = ":", Temp_2010$mm)
 Temp_2010$Date.Time <- paste0(Temp_2010$Date, sep=" ", Temp_2010$Time)
@@ -122,7 +122,7 @@ daily_2010 <- aggregate(x = Temp_2010$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2011 <- read.csv("data/NOAA_temp/nwpr1h2011.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2011 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2011.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2011$Date <- paste0(Temp_2011$MM, sep = "-", Temp_2011$DD)
 Temp_2011$Time <- paste0(Temp_2011$hh, sep = ":", Temp_2011$mm)
 Temp_2011$Date.Time <- paste0(Temp_2011$Date, sep=" ", Temp_2011$Time)
@@ -138,7 +138,7 @@ daily_2011 <- aggregate(x = Temp_2011$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2012 <- read.csv("data/NOAA_temp/nwpr1h2012.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2012 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2012.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2012$Date <- paste0(Temp_2012$MM, sep = "-", Temp_2012$DD)
 Temp_2012$Time <- paste0(Temp_2012$hh, sep = ":", Temp_2012$mm)
 Temp_2012$Date.Time <- paste0(Temp_2012$Date, sep=" ", Temp_2012$Time)
@@ -154,7 +154,7 @@ daily_2012 <- aggregate(x = Temp_2012$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2013 <- read.csv("data/NOAA_temp/nwpr1h2013.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2013 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2013.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2013$Date <- paste0(Temp_2013$MM, sep = "-", Temp_2013$DD)
 Temp_2013$Time <- paste0(Temp_2013$hh, sep = ":", Temp_2013$mm)
 Temp_2013$Date.Time <- paste0(Temp_2013$Date, sep=" ", Temp_2013$Time)
@@ -170,7 +170,7 @@ daily_2013 <- aggregate(x = Temp_2013$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2014 <- read.csv("data/NOAA_temp/nwpr1h2014.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2014 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2014.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2014$Date <- paste0(Temp_2014$MM, sep = "-", Temp_2014$DD)
 Temp_2014$Time <- paste0(Temp_2014$hh, sep = ":", Temp_2014$mm)
 Temp_2014$Date.Time <- paste0(Temp_2014$Date, sep=" ", Temp_2014$Time)
@@ -186,7 +186,7 @@ daily_2014 <- aggregate(x = Temp_2014$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2015 <- read.csv("data/NOAA_temp/nwpr1h2015.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2015 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2015.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2015$Date <- paste0(Temp_2015$MM, sep = "-", Temp_2015$DD)
 Temp_2015$Time <- paste0(Temp_2015$hh, sep = ":", Temp_2015$mm)
 Temp_2015$Date.Time <- paste0(Temp_2015$Date, sep=" ", Temp_2015$Time)
@@ -202,7 +202,7 @@ daily_2015 <- aggregate(x = Temp_2015$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2016 <- read.csv("data/NOAA_temp/nwpr1h2016.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2016 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2016.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2016$Date <- paste0(Temp_2016$MM, sep = "-", Temp_2016$DD)
 Temp_2016$Time <- paste0(Temp_2016$hh, sep = ":", Temp_2016$mm)
 Temp_2016$Date.Time <- paste0(Temp_2016$Date, sep=" ", Temp_2016$Time)
@@ -218,7 +218,7 @@ daily_2016 <- aggregate(x = Temp_2016$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2017 <- read.csv("data/NOAA_temp/nwpr1h2017.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2017 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2017.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2017$Date <- paste0(Temp_2017$MM, sep = "-", Temp_2017$DD)
 Temp_2017$Time <- paste0(Temp_2017$hh, sep = ":", Temp_2017$mm)
 Temp_2017$Date.Time <- paste0(Temp_2017$Date, sep=" ", Temp_2017$Time)
@@ -234,7 +234,7 @@ daily_2017 <- aggregate(x = Temp_2017$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2018 <- read.csv("data/NOAA_temp/nwpr1h2018.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2018 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2018.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2018$Date <- paste0(Temp_2018$MM, sep = "-", Temp_2018$DD)
 Temp_2018$Time <- paste0(Temp_2018$hh, sep = ":", Temp_2018$mm)
 Temp_2018$Date.Time <- paste0(Temp_2018$Date, sep=" ", Temp_2018$Time)
@@ -250,7 +250,7 @@ daily_2018 <- aggregate(x = Temp_2018$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2019 <- read.csv("data/NOAA_temp/nwpr1h2019.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+Temp_2019 <- read.csv("data/Environmental/NOAA_temp/nwpr1h2019.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 Temp_2019$Date <- paste0(Temp_2019$MM, sep = "-", Temp_2019$DD)
 Temp_2019$Time <- paste0(Temp_2019$hh, sep = ":", Temp_2019$mm)
 Temp_2019$Date.Time <- paste0(Temp_2019$Date, sep=" ", Temp_2019$Time)
@@ -266,7 +266,7 @@ daily_2019 <- aggregate(x = Temp_2019$WTMP,                # Specify data column
                          FUN = mean, 
                          na.rm = T) 
 
-Temp_2020 <- read.csv("data/NOAA_temp/NOAA_2020.csv", header=TRUE, na.strings = "NA")[,c(1:3)]
+Temp_2020 <- read.csv("data/Environmental/NOAA_temp/NOAA_2020.csv", header=TRUE, na.strings = "NA")[,c(1:3)]
 colnames(Temp_2020) <- c("Date", "Time", "WTMP.F")
 Temp_2020 <- separate(Temp_2020, col = Date, into = c("MM", "DD", "YYYY"), sep = "/")
 Temp_2020$YYYY<- "2020"
@@ -291,7 +291,7 @@ daily_2020 <- aggregate(x = Temp_2020$WTMP,                # Specify data column
                          na.rm = T) 
 
 
-pdf("output/Newport_Buoy_Temps.test.pdf")
+pdf("output/Environmental/Newport_Buoy_Temps.test.pdf")
 plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
 points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
@@ -409,20 +409,20 @@ data.daily <- rbind(daily_2005, daily_2006, daily_2007, daily_2008, daily_2009, 
 colnames(data.daily) <- c("Day", "WTMP")
 data.daily.lm <- lm(WTMP~Day, data.daily)
 summary(data.daily.lm)
-write.csv(data.daily, "data/NOAA_temp/NOAA_daily.csv")
+write.csv(data.daily, "data/Environmental/NOAA_temp/NOAA_daily.csv")
 
 data.daily.mean <- aggregate(x = data.daily$WTMP,                # Specify data column
                          by = list(data.daily$Day),          # Specify group indicator
                          FUN = mean, 
                          na.rm = T) 
 colnames(data.daily.mean) <- c("Day", "WTMP")
-write.csv(data.daily.mean, "data/NOAA_temp/NOAA_daily.mean.csv")
+write.csv(data.daily.mean, "data/Environmental/NOAA_temp/NOAA_daily.mean.csv")
 
 ## Weekly summary 
 n <- 7
 data.weekly <- aggregate(data.daily.mean, list(rep(1:(nrow(data.daily.mean) %/% n + 1), each = n, len = nrow(data.daily.mean))), mean)[-1]
 data.weekly$Week <- rep(1:53)
-write.csv(data.weekly, "data/NOAA_temp/NOAA_weekly.mean.csv")
+write.csv(data.weekly, "data/Environmental/NOAA_temp/NOAA_weekly.mean.csv")
 
 
 
@@ -433,7 +433,7 @@ write.csv(data.weekly, "data/NOAA_temp/NOAA_weekly.mean.csv")
 
 
 ##### Plotting my own data with NOAA buoy data 
-my.data <- read.csv("output/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+my.data <- read.csv("output/Environmental/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
 colnames(my.data)[colnames(my.data) == 'Date'] <- 'Date.Time'
 my.data <- my.data[,c("Date.Time", 
                       "Tank1_Temp", 
@@ -476,7 +476,7 @@ my.data$Temp_Heat <- rowMeans(my.data[,c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp
                                         "Tank15_Temp", "Tank17_Temp")], na.rm=TRUE)
 
 
-pdf("output/Newport_Buoy_Temps.MyData.pdf")
+pdf("output/Environmental/Newport_Buoy_Temps.MyData.pdf")
 plot(Temp_2005$Date.Time, Temp_2005$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006$Date.Time, Temp_2006$WTMP, cex=0.1, col="orange")
 points(Temp_2007$Date.Time, Temp_2007$WTMP, cex=0.1, col="yellow")
@@ -501,7 +501,7 @@ legend("topright", legend=c("Ambient", "Heat"),
        col=c("dodgerblue", "firebrick1"), lty=1, cex=0.8)
 dev.off()
 
-pdf("output/Newport_Buoy_Temps.2020.MyData.pdf")
+pdf("output/Environmental/Newport_Buoy_Temps.2020.MyData.pdf")
 plot(Temp_2020$Date.Time, Temp_2020$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
@@ -513,7 +513,7 @@ abline(v=as.POSIXct(c("0000-02-07 13:00:00", "0000-03-04 13:00:00", "0000-04-01 
        col=c("gray"), lty=c(2), lwd=c(3))
 dev.off()
 
-pdf("output/Newport_Buoy_Temps.2019.MyData.pdf")
+pdf("output/Environmental/Newport_Buoy_Temps.2019.MyData.pdf")
 plot(Temp_2019$Date.Time, Temp_2019$WTMP, cex=0.1, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
@@ -560,7 +560,7 @@ Temp_2019_sub <- Temp_2019 %>%
 Temp_2020_sub <- Temp_2020 %>%
   filter(Date.Time %in% my.data$Date.Time)
 
-pdf("output/Newport_Buoy_Temps.MyData.Subset.pdf")
+pdf("output/Environmental/Newport_Buoy_Temps.MyData.Subset.pdf")
 plot(Temp_2005_sub$Date.Time, Temp_2005_sub$WTMP, cex=0.1, col="red", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(Temp_2006_sub$Date.Time, Temp_2006_sub$WTMP, cex=0.1, col="orange")
 points(Temp_2007_sub$Date.Time, Temp_2007_sub$WTMP, cex=0.1, col="yellow")
@@ -589,7 +589,7 @@ dev.off()
 ## Plotting with 2021 data 
 # Newport 2021
 # Link to real time Newport buoy data: https://www.ndbc.noaa.gov/station_realtime.php?station=nwpr1
-nwpr2021 <- read.csv("data/NOAA_temp/nwpr2021.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
+nwpr2021 <- read.csv("data/Environmental/NOAA_temp/nwpr2021.txt", sep="\t", skip=c(0), header=TRUE, na.strings = "NA")[,c(1:5,15)]
 nwpr2021$Date <- paste0(nwpr2021$MM, sep = "-", nwpr2021$DD)
 nwpr2021$Time <- paste0(nwpr2021$hh, sep = ":", nwpr2021$mm)
 nwpr2021$Date.Time <- paste0(nwpr2021$Date, sep=" ", nwpr2021$Time)
@@ -603,13 +603,13 @@ daily_nwpr2021 <- aggregate(x = nwpr2021$WTMP,                # Specify data col
                         by = list(nwpr2021$Date),          # Specify group indicator
                         FUN = mean, 
                         na.rm = T) 
-pdf("output/Newport.2021.MyData.pdf")
+pdf("output/Environmental/Newport.2021.MyData.pdf")
 plot(nwpr2021$Date.Time, nwpr2021$WTMP, col="bisque4", xlab="Date", ylab="Temperature °C", ylim=c(0,25))
 points(my.data$Date.Time, my.data$Temp_Amb, cex=0.25, col="dodgerblue")
 points(my.data$Date.Time, my.data$Temp_Heat, cex=0.25, col="firebrick1")
 #par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE) # Add extra space to right of plot area; change clipping to figure
 #legend("topright", inset=c(-0.2,0), legend=c("Ambient", "Heat", "Newport 2021"), pch=c(1,3), title="Treatment", col=c("dodgerblue", "firebrick1", "bisque4"), lty=1, cex=0.8)
-abline(v=as.POSIXct(c("0000-02-25 13:00:00", "0000-04-11 13:00:00", "0000-06-04 13:00:00", "0000-06-26 13:00:00","0000-07-23 13:00:00", "0000-08-25 13:00:00")),
+abline(v=as.POSIXct(c("0000-02-07 13:00:00", "0000-03-04 13:00:00", "0000-04-01 13:00:00", "0000-04-29 13:00:00", "0000-05-27 13:00:00", "0000-06-24 13:00:00", "0000-07-22 13:00:00", "0000-08-18 13:00:00")), 
        col=c("gray"), lty=c(2), lwd=c(3))
 legend("topleft", legend=c("Ambient", "Heat", "Newport 2021"), col=c("dodgerblue", "firebrick1", "bisque4"), lty=1, cex=0.8)
 dev.off()

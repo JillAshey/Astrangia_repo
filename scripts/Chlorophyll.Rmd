@@ -159,15 +159,170 @@ range(df.chl$chlc2.ug.cm2)
 dplyr::filter(df.chl, chlc2.ug.cm2 > 1.5) # none higher than 1.5
 dplyr::filter(df.chl, chla.ug.cm2 < 0) # output should be zero since negative values are not possible. 
 dplyr::filter(df.chl, chlc2.ug.cm2 < 0) # output should be zero since negative values are not possible. 
+# remove negative values from chlc2.ug.cm2
+df.chl <- df.chl[df.chl$chlc2.ug.cm2 >= 0,]
+```
 
-Chl.duplicates <- Chl_final %>% dplyr::group_by(Plug_ID) %>% 
-  dplyr::summarise(n = n()) %>% filter(n > 1)
-Chl.duplicates
+## Calculate mean values for each TP and treatment group 
+```{r}
+df.chl <- df.chl %>% distinct()
+
+# select certain cols and list chla and chlc2 values by sample 
+df.chl_select <- df.chl %>%
+  select(ID, Site, Treatment, Timepoint, Area_cm, vol_mL, chla.ug.cm2, chlc2.ug.cm2) %>% 
+  gather("Measurement", "Value", 7:8) %>%
+  distinct()
+
+# Calculate means by Site, Treatment, and Timepoint 
+chl_means <- summarySE(df.chl_select, measurevar = "Value", groupvars = c("Site", "Treatment", "Timepoint", "Measurement")) %>% 
+  filter(N > 2)
+
+# Calculate means by Treatment and Timepoint 
+chl_means_NoSite <- summarySE(df.chl_select, measurevar = "Value", groupvars = c("Treatment", "Timepoint", "Measurement")) %>% 
+  filter(N > 2)
+```
+
+## Separate df into chla and chlc2
+```{r}
+chla_means <- chl_means %>%
+  filter(Measurement=="chla.ug.cm2")
+
+chlc2_means <- chl_means %>%
+  filter(Measurement=="chlc2.ug.cm2")
+
+## no site 
+chla_means_NoSite <- chl_means_NoSite %>% 
+    filter(Measurement=="chla.ug.cm2")
+
+chlc2_means_NoSite <- chl_means_NoSite %>% 
+  filter(Measurement=="chlc2.ug.cm2")
 ```
 
 
+## Plotting timeseries with mean table 
+```{r}
+cols <- c("blue", "green", "red")
+ 
+# chla cm2 plot 
+chla_means_plot <- ggplot(chla_means, aes(x=Timepoint, y=Value, color=Treatment, shape=Site)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Value - se, ymax = Value + se, width = 0.2)) +
+  scale_color_manual(values = cols) + 
+  xlab("") +
+  ylab(expression("Chlorophyll a" ~(ug ~cm^-2))) +
+  #theme(legend.position = "none")
+  theme_classic() +
+  theme(plot.title = element_text(face = 'bold.italic', size = 12, hjust = 0)) + 
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  theme(panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.text.x = element_text(size = 20, color = "black", face = "bold.italic"), # Change axis line
+  axis.line = element_line(colour = "black")) + theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title = element_text(size = 15)) +
+  theme(legend.text = element_text(size = 13)) +
+  theme(axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))) +
+  theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+  theme(legend.title = element_text(size = 15))
+chla_means_plot
+
+# chlc2 cm2 plot 
+chlc2_means_plot <- ggplot(chlc2_means, aes(x=Timepoint, y=Value, color=Treatment, shape=Site)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Value - se, ymax = Value + se, width = 0.2)) +
+  scale_color_manual(values = cols) + 
+  xlab("") +
+  ylab(expression("Chlorophyll c2" ~(ug ~cm^-2))) +
+  #theme(legend.position = "none")
+  theme_classic() +
+  theme(plot.title = element_text(face = 'bold.italic', size = 12, hjust = 0)) + 
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  theme(panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.text.x = element_text(size = 20, color = "black", face = "bold.italic"), # Change axis line
+  axis.line = element_line(colour = "black")) + theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title = element_text(size = 15)) +
+  theme(legend.text = element_text(size = 13)) +
+  theme(axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))) +
+  theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+  theme(legend.title = element_text(size = 15))
+chlc2_means_plot
 
 
+
+
+
+### PLOTS WITH NO SITE VARIABLE 
+# chla cm2 plot 
+chla_means_NoSite_plot <- ggplot(chla_means_NoSite, aes(x=Timepoint, y=Value, color=Treatment)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Value - se, ymax = Value + se, width = 0.2)) +
+  scale_color_manual(values = cols) + 
+  xlab("") +
+  ylab(expression("Chlorophyll a" ~(ug ~cm^-2))) +
+  #theme(legend.position = "none")
+  theme_classic() +
+  theme(plot.title = element_text(face = 'bold.italic', size = 12, hjust = 0)) + 
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  theme(panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.text.x = element_text(size = 20, color = "black", face = "bold.italic"), # Change axis line
+  axis.line = element_line(colour = "black")) + theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title = element_text(size = 15)) +
+  theme(legend.text = element_text(size = 13)) +
+  theme(axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))) +
+  theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+  theme(legend.title = element_text(size = 15))
+chla_means_NoSite_plot
+
+# chlc2 cm2 plot 
+chlc2_means_NoSite_plot <- ggplot(chlc2_means_NoSite, aes(x=Timepoint, y=Value, color=Treatment)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = Value - se, ymax = Value + se, width = 0.2)) +
+  scale_color_manual(values = cols) + 
+  xlab("") +
+  ylab(expression("Chlorophyll c2" ~(ug ~cm^-2))) +
+  #theme(legend.position = "none")
+  theme_classic() +
+  theme(plot.title = element_text(face = 'bold.italic', size = 12, hjust = 0)) + 
+  theme(axis.text.x = element_text(angle = 60, vjust = 1.2, hjust = 1.3)) + #Set the text angle
+  theme(panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.text.x = element_text(size = 20, color = "black", face = "bold.italic"), # Change axis line
+  axis.line = element_line(colour = "black")) + theme(axis.text = element_text(size = 12)) + 
+  theme(axis.title = element_text(size = 15)) +
+  theme(legend.text = element_text(size = 13)) +
+  theme(axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))) +
+  theme(axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0))) +
+  theme(legend.title = element_text(size = 15))
+chlc2_means_NoSite_plot
+```
+
+## Stats
+Raw data distribution view 
+```{r}
+hist(chla_means$Value)
+hist(chlc2_means$Value)
+
+hist(df.chl$chla.ug.cm2)
+hist(df.chl$chlc2.ug.cm2)
+```
+
+### Linear mixed models 
+```{r}
+# separate into chla and chlc2 dfs
+chla <- df.chl_select %>%
+  filter(Measurement=="chla.ug.cm2")
+
+chlc2 <- df.chl_select %>%
+  filter(Measurement=="chlc2.ug.cm2")
+
+## Chla per cm2
+chl_LMER_a <- lmer(log(Value) ~ Timepoint*Treatment + (1|Timepoint:Treatment), na.action = na.omit, data = chla)
+```
 
 
 

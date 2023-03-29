@@ -1,0 +1,48 @@
+---
+title: "Soluble Protein"
+author: "jillashey"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+## install packages if you dont already have them
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("broom")) install.packages("broom")
+# load packages
+library(tidyverse)
+library(broom)
+```
+
+## Import data 
+```{r}
+## There is definitely a better way to do this
+
+# Plate 1
+p1_data <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate1_data.csv")
+p1_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate1_platemap.csv")
+p1 <- left_join(p1_data, p1_platemap)
+
+# Plate 2
+p2_data <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate2_data.csv")
+p2_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate1_platemap.csv")
+p2 <- left_join(p2_data, p2_platemap)
+
+# Plate 3
+p3_data <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate3_data.csv")
+p3_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate3_platemap.csv")
+p3 <- left_join(p3_data, p3_platemap)
+
+# Plate 4
+p4_data <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate4_data.csv")
+p4_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate4_platemap.csv")
+p4 <- left_join(p4_data, p4_platemap)
+
+# Plate 5
+p5_data <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate5_data.csv")
+p5_platemap <- read.csv("data/Physiology/Protein/SP/20230327_SP_plate5_platemap.csv")
+p5 <- left_join(p5_data, p5_platemap)
+
+```
+

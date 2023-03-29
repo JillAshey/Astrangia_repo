@@ -1,0 +1,300 @@
+﻿PlugID,Site,DateCollected,ExperimentalTank,Treatment,Timepoint,Metric,DateSampled
+AST-1479,FW,,1,Ambient,TP0,Histology,20210225
+AST-2004,FW,,2,Ambient,TP0,Histology,20210225
+AST-2305,ENDV,,5,Ambient,TP0,Histology,20210225
+AST-1237,FW,,8,Ambient,TP0,Histology,20210225
+AST-2024,ENDV,,10,Ambient,TP0,Histology,20210225
+AST-1069,ENDV,,12,Ambient,TP0,Histology,20210225
+AST-2868,FW,,16,Ambient,TP0,Histology,20210225
+AST-2751,ENDV,,18,Ambient,TP0,Histology,20210225
+AST-1085,ENDV,,1,Ambient,TP2,Histology,20210402
+AST-2979,FW,,2,Ambient,TP2,Histology,20210402
+AST-2202,FW,,3,Heat,TP2,Histology,20210402
+AST-1042,ENDV,,4,Heat,TP2,Histology,20210402
+AST-1448,ENDV,,5,Ambient,TP2,Histology,20210402
+AST-1461,ENDV,,6,Heat,TP2,Histology,20210402
+AST-2384,ENDV,,7,Heat,TP2,Histology,20210402
+AST-1533,ENDV,,9,Heat,TP2,Histology,20210402
+AST-1225,ENDV,,10,Ambient,TP2,Histology,20210402
+AST-1053,ENDV,,11,Heat,TP2,Histology,20210402
+AST-2399,ENDV,,12,Ambient,TP2,Histology,20210402
+AST-1197,FW,,15,Heat,TP2,Histology,20210402
+AST-2757,FW,,16,Ambient,TP2,Histology,20210402
+AST-1576,FW,,17,Heat,TP2,Histology,20210402
+AST-1311,FW,,18,Ambient,TP2,Histology,20210402
+AST-1621,FW,,1,Ambient,TP4,Histology,
+AST-1238,FW,,2,Ambient,TP4,Histology,
+AST-1483,FW,,3,Heat,TP4,Histology,
+AST-1135,ENDV,,4,Heat,TP4,Histology,
+AST-2730,FW,,5,Ambient,TP4,Histology,
+AST-1440,FW,,6,Heat,TP4,Histology,
+AST-2976,FW,,7,Heat,TP4,Histology,
+AST-1205,FW,,8,Ambient,TP4,Histology,
+AST-1554,FW,,9,Heat,TP4,Histology,
+AST-1557,ENDV,,10,Ambient,TP4,Histology,
+AST-1430,ENDV,,11,Heat,TP4,Histology,
+AST-1071,FW,,12,Ambient,TP4,Histology,
+AST-1110,FW,,15,Heat,TP4,Histology,
+AST-1122,ENDV,,16,Ambient,TP4,Histology,
+AST-1470,FW,,17,Heat,TP4,Histology,
+AST-2075,FW,,18,Ambient,TP4,Histology,
+AST-1636,FW,,2,Ambient,TP6,Histology,20210723
+AST-1187,FW,,4,Heat,TP6,Histology,20210723
+AST-1170,FW,,5,Ambient,TP6,Histology,20210723
+AST-2566,FW,,6,Heat,TP6,Histology,20210723
+AST-1191,FW,,10,Ambient,TP6,Histology,20210723
+AST-1541,FW,,11,Heat,TP6,Histology,20210723
+AST-1466,FW,,16,Ambient,TP6,Histology,20210723
+AST-2279,ENDV,,1,Ambient,TP7,Histology,20210825
+AST-1043,FW,,4,Heat,TP7,Histology,20210825
+AST-1141,FW,,6,Heat,TP7,Histology,20210825
+AST-2990,ENDV,,8,Ambient,TP7,Histology,20210825
+AST-1204,FW,,11,Heat,TP7,Histology,20210825
+AST-1596,ENDV,,11,Heat,TP8,Histology,
+AST-2743,FW,,11,Heat,TP8,Histology,
+AST-1242,ENDV,,12,Ambient,TP7,Histology,
+AST-1214,FW,,17,Heat,TP8,Histology,
+AST-2372,ENDV,,17,Heat,TP7,Histology,
+AST-1247,FW,,18,Ambient,TP7,Histology,
+AST-1450,ENDV,,1,Ambient,TP8,Molec,
+AST-1163,ENDV,,5,Ambient,TP8,Molec,
+AST-2738,ENDV,,8,Ambient,TP8,Molec,
+AST-1409,ENDV,,9,Heat,TP8,Molec,
+AST-2737,FW,,12,Ambient,TP8,Molec,
+AST-1492,FW,,15,Heat,TP8,Molec,
+AST-1611,,,18,,TP8,Molec,
+AST-2197,FW,,1,Ambient,TP0,"P/R, molec",20210204
+AST-1147,FW,,2,Ambient,TP0,"P/R, molec",20210204
+AST-1618,FW,,3,Heat,TP0,"P/R, molec",20210204
+AST-1423,FW,,4,Heat,TP0,"P/R, molec",20210204
+AST-2198,FW,,5,Ambient,TP0,"P/R, molec",20210204
+AST-1585,FW,,6,Heat,TP0,"P/R, molec",20210204
+AST-1567,FW,,7,Heat,TP0,"P/R, molec",20210204
+AST-1593,FW,,8,Ambient,TP0,"P/R, molec",20210204
+AST-2533,FW,,8,Ambient,TP0,"P/R, molec",20210204
+AST-2398,FW,,9,Heat,TP0,"P/R, molec",20210204
+AST-1233,FW,,10,Ambient,TP0,"P/R, molec",20210204
+AST-2873,FW,,11,Heat,TP0,"P/R, molec",20210204
+AST-1345,FW,,12,Ambient,TP0,"P/R, molec",20210204
+AST-2859,FW,,15,Heat,TP0,"P/R, molec",20210204
+AST-2003,ENDV,,17,Heat,TP0,"P/R, molec",20210204
+AST-1722,FW,,18,Ambient,TP0,"P/R, molec",20210204
+AST-1497,FW,,1,Ambient,TP1,"P/R, molec",20210305
+AST-1138,ENDV,,2,Ambient,TP1,"P/R, molec",20210305
+AST-2301,ENDV,,3,Heat,TP1,"P/R, molec",20210305
+AST-1649,FW,,4,Heat,TP1,"P/R, molec",20210305
+AST-1058,ENDV,,5,Ambient,TP1,"P/R, molec",20210305
+AST-1146,FW,,6,Heat,TP1,"P/R, molec",20210305
+AST-1332,ENDV,,7,Heat,TP1,"P/R, molec",20210305
+AST-2378,ENDV,,8,Ambient,TP1,"P/R, molec",20210305
+AST-1630,ENDV,,9,Heat,TP1,"P/R, molec",20210305
+AST-2520,FW,,10,Ambient,TP1,"P/R, molec",20210305
+AST-1185,ENDV,,11,Heat,TP1,"P/R, molec",20210305
+AST-2209,FW,,12,Ambient,TP1,"P/R, molec",20210305
+AST-1777,FW,,15,Heat,TP1,"P/R, molec",20210305
+AST-1457,FW,,16,Ambient,TP1,"P/R, molec",20210305
+AST-1325,ENDV,,17,Heat,TP1,"P/R, molec",20210305
+AST-1696,FW,,18,Ambient,TP1,"P/R, molec",20210305
+AST-1182,FW,,1,Ambient,TP2,"P/R, molec",20220402
+AST-1337,FW,,2,Ambient,TP2,"P/R, molec",20220402
+AST-1735,FW,,3,Heat,TP2,"P/R, molec",20220402
+AST-1184,ENDV,,4,Heat,TP2,"P/R, molec",20220402
+AST-2403,FW,,5,Ambient,TP2,"P/R, molec",20220402
+AST-2541,FW,,6,Heat,TP2,"P/R, molec",20220402
+AST-1273,ENDV,,7,Heat,TP2,"P/R, molec",20220402
+AST-1037,FW,,8,Ambient,TP2,"P/R, molec",20220402
+AST-1761,FW,,9,Heat,TP2,"P/R, molec",20220402
+AST-2539,FW,,10,Ambient,TP2,"P/R, molec",20220402
+AST-1473,FW,,11,Heat,TP2,"P/R, molec",20220402
+AST-1288,ENDV,,12,Ambient,TP2,"P/R, molec",20220402
+AST-2165,ENDV,,15,Heat,TP2,"P/R, molec",20220402
+AST-2538,FW,,16,Ambient,TP2,"P/R, molec",20220402
+AST-1496,FW,,17,Heat,TP2,"P/R, molec",20220402
+AST-2020,FW,,18,Ambient,TP2,"P/R, molec",20220402
+AST-1443,FW,,1,Ambient,TP3,"P/R, molec",20210429
+AST-2016,ENDV,,2,Ambient,TP3,"P/R, molec",20210429
+AST-1075,ENDV,,3,Heat,TP3,"P/R, molec",20210429
+AST-1228,FW,,4,Heat,TP3,"P/R, molec",20210429
+AST-1077,ENDV,,5,Ambient,TP3,"P/R, molec",20210429
+AST-1148,ENDV,,6,Heat,TP3,"P/R, molec",20210429
+AST-2561,ENDV,,7,Heat,TP3,"P/R, molec",20210429
+AST-1434,FW,,8,Ambient,TP3,"P/R, molec",20210429
+AST-1080,FW,,9,Heat,TP3,"P/R, molec",20210429
+AST-1719,ENDV,,10,Ambient,TP3,"P/R, molec",20210429
+AST-1689,ENDV,,11,Heat,TP3,"P/R, molec",20210429
+AST-1432,ENDV,,12,Ambient,TP3,"P/R, molec",20210429
+AST-2731,ENDV,,15,Heat,TP3,"P/R, molec",20210429
+AST-1126,ENDV,,16,Ambient,TP3,"P/R, molec",20210429
+AST-1249,FW,,17,Heat,TP3,"P/R, molec",20210429
+AST-2867,ENDV,,18,Ambient,TP3,"P/R, molec",20210429
+AST-1174,FW,,1,Ambient,TP4,"P/R, molec",20210528
+AST-2060,FW,,2,Ambient,TP4,"P/R, molec",20210528
+AST-1499,ENDV,,3,Heat,TP4,"P/R, molec",20210528
+AST-1754,FW,,4,Heat,TP4,"P/R, molec",20210528
+AST-1109,FW,,5,Ambient,TP4,"P/R, molec",20210528
+AST-2669,ENDV,,6,Heat,TP4,"P/R, molec",20210528
+AST-1562,ENDV,,7,Heat,TP4,"P/R, molec",20210528
+AST-2728,ENDV,,7,Heat,TP4,"P/R, molec",20210528
+AST-2880,ENDV,,8,Ambient,TP4,"P/R, molec",20210528
+AST-1826,FW,,9,Heat,TP4,"P/R, molec",20210528
+AST-1343,ENDV,,10,Ambient,TP4,"P/R, molec",20210528
+AST-1152,FW,,11,Heat,TP4,"P/R, molec",20210528
+AST-1474,FW,,12,Ambient,TP4,"P/R, molec",20210528
+AST-2521,FW,,15,Heat,TP4,"P/R, molec",20210528
+AST-1568,FW,,16,Ambient,TP4,"P/R, molec",20210528
+AST-1694,FW,,17,Heat,TP4,"P/R, molec",20210528
+AST-1194,ENDV,,18,Ambient,TP4,"P/R, molec",20210528
+AST-1458,ENDV,,1,Ambient,TP5,"P/R, molec",20210625
+AST-2375,FW,,2,Ambient,TP5,"P/R, molec",20210625
+AST-2563,FW,,3,Heat,TP5,"P/R, molec",20210625
+AST-1578,ENDV,,4,Heat,TP5,"P/R, molec",20210625
+AST-2000,FW,,5,Ambient,TP5,"P/R, molec",20210625
+AST-2404,FW,,6,Heat,TP5,"P/R, molec",20210625
+AST-1617,FW,,8,Ambient,TP5,"P/R, molec",20210625
+AST-1416,ENDV,,9,Heat,TP5,"P/R, molec",20210625
+AST-1087,ENDV,,10,Ambient,TP5,"P/R, molec",20210625
+AST-2512,FW,,11,Heat,TP5,"P/R, molec",20210625
+AST-2360,FW,,12,Ambient,TP5,"P/R, molec",20210625
+AST-2412,FW,,15,Heat,TP5,"P/R, molec",20210625
+AST-1692,FW,,16,Ambient,TP5,"P/R, molec",20210625
+AST-1498,FW,,17,Heat,TP5,"P/R, molec",20210625
+AST-1412,FW,,18,Ambient,TP5,"P/R, molec",20210625
+AST-1290,ENDV,,1,Ambient,TP6,"P/R, molec",20210723
+AST-1189,ENDV,,2,Ambient,TP6,"P/R, molec",20210723
+AST-2079,ENDV,,3,Heat,TP6,"P/R, molec",20210723
+AST-1742,ENDV,,4,Heat,TP6,"P/R, molec",20210723
+AST-1167,ENDV,,5,Ambient,TP6,"P/R, molec",20210723
+AST-1117,ENDV,,6,Heat,TP6,"P/R, molec",20210723
+AST-2870,FW,,7,Heat,TP6,"P/R, molec",20210723
+AST-1145,ENDV,,8,Ambient,TP6,"P/R, molec",20210723
+AST-1074,FW,,9,Heat,TP6,"P/R, molec",20210723
+AST-2168,FW,,10,Ambient,TP6,"P/R, molec",20210723
+AST-1540,FW,,11,Heat,TP6,"P/R, molec",20210723
+AST-1748,ENDV,,12,Ambient,TP6,"P/R, molec",20210723
+AST-1698,FW,,15,Heat,TP6,"P/R, molec",20210723
+AST-1255,ENDV,,16,Ambient,TP6,"P/R, molec",20210723
+AST-2044,FW,,17,Heat,TP6,"P/R, molec",20210723
+AST-2208,FW,,18,Ambient,TP6,"P/R, molec",20210723
+AST-1159,ENDV,,1,Ambient,TP7,"P/R, molec",20210820
+AST-3002,ENDV,,2,Ambient,TP7,"P/R, molec",20210820
+AST-1647,ENDV,,3,Heat,TP7,"P/R, molec",20210820
+AST-2007,FW,,4,Heat,TP7,"P/R, molec",20210820
+AST-1105,FW,,5,Ambient,TP7,"P/R, molec",20210820
+AST-1065,FW,,6,Heat,TP7,"P/R, molec",20210820
+AST-1486,ENDV,,7,Heat,TP7,"P/R, molec",20210820
+AST-2523,FW,,8,Ambient,TP7,"P/R, molec",20210820
+AST-1041,ENDV,,9,Heat,TP7,"P/R, molec",20210820
+AST-1560,FW,,10,Ambient,TP7,"P/R, molec",20210820
+AST-2729,FW,,11,Heat,TP7,"P/R, molec",20210820
+AST-2302,FW,,12,Ambient,TP7,"P/R, molec",20210820
+AST-2211,ENDV,,15,Heat,TP7,"P/R, molec",20210820
+AST-1091,ENDV,,16,Ambient,TP7,"P/R, molec",20210820
+AST-2755,FW,,17,Heat,TP7,"P/R, molec",20210820
+AST-1739,ENDV,,18,Ambient,TP7,"P/R, molec",20210820
+FLD-0001,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0002,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0003,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0004,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0005,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0006,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0007,FW,,NA,Field,TP3,"P/R, molec",
+FLD-0008,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0009,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0010,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0011,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0012,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0013,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0014,FW,,NA,Field,TP4,"P/R, molec",
+FLD-0015,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0016,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0017,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0018,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0019,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0020,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0021,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0022,FW,,NA,Field,TP5,"P/R, molec",
+FLD-0023,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0024,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0025,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0026,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0027,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0028,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0029,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0030,FW,,NA,Field,TP6,"P/R, molec",
+FLD-0031,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0032,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0033,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0034,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0035,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0036,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0037,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0038,FW,,NA,Field,TP7,"P/R, molec",
+FLD-0039,FW,,NA,Field,TP8,"P/R, molec",
+FLD-0042,FW,,NA,Field,TP8,"P/R, molec",
+FLD-1237,FW,,NA,Field,TP2,"P/R, molec",
+FLD-1241,FW,,NA,Field,TP2,"P/R, molec",
+FLD-1655,FW,,NA,Field,TP2,"P/R, molec",
+FLD-1693,FW,,NA,Field,TP2,"P/R, molec",
+FLD-2024,FW,,NA,Field,TP2,"P/R, molec",
+FLD-2305,FW,,NA,Field,TP2,"P/R, molec",
+FLD-2550,FW,,NA,Field,TP2,"P/R, molec",
+AST-FLD-1,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD,FW,,NA,Field,TP2,Histology,20210411
+AST-FLD-1,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP3,Histology,20210501
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD-1,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD-2,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD-3,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD-4,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP4,Histology,20210604
+AST-FLD,FW,,NA,Field,TP5,Histology,20210604
+AST-FLD,FW,,NA,Field,TP6,Histology,20210604
+AST-FLD,FW,,NA,Field,TP7,Histology,20210604
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD-1,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD-2,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD-3,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP5,Histology,20210626
+AST-FLD,FW,,NA,Field,TP6,Histology,20210723
+AST-FLD,FW,,NA,Field,TP6,Histology,20210723
+AST-FLD,FW,,NA,Field,TP6,Histology,20210723
+AST-FLD,FW,,NA,Field,TP6,Histology,20210723
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+AST-FLD,FW,,NA,Field,TP7,Histology,20210902
+,,,,,,,
