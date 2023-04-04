@@ -712,6 +712,24 @@ plot <- grid.arrange(sub.plot, clip="off")
 ggsave("output/Physiology/PR/Sub_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
 ```
 
+## Stats 
+```{r}
+## Read in metadata to get site info 
+master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% 
+  filter(Metric == "P/R, molec") %>% 
+  select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
+
+head(all)
+
+## remove field corals for now 
+pr_exp <- all[!str_detect(all$Treatment, "Field"),]
+pr_exp <- pr_exp %>% 
+  dplyr::rename(PlugID = colony_id)
+
+
+# Merge w/ metadata 
+pr_exp <- left_join(pr_exp, master)
+```
 
 
 

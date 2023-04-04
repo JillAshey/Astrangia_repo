@@ -50,71 +50,16 @@ surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strin
 homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% select(PlugID, vol_mL) 
 master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% select(PlugID, Site, Treatment, Timepoint)
 
-metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "PlugID", type = "left")
-metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
-```
-
-Checking to see if any samples from the metadata file weren't done or any that were done that aren't on master 
-```{r}
-master_PlugID <- master %>% select(PlugID)
-AFDW_ID <- AFDW %>% select(PlugID) 
-
-# rows that appear in the AFDW spreadsheet but not in the master 
-  ## dplyr::setdiff(y, z)  : rows that appear in y but not in z
-# output is the corals that have a AFDW spreadsheet data point but were not in master ; output should be zero
-# any output is likely the plug ID written incorrectly during sample processing
-AFDW_mismatched <- setdiff(AFDW_ID, master_PlugID) 
-AFDW_mismatched
-
-# rows that appear in the master spreadsheet but not in the AFDW 
-  ## dplyr::setdiff(y, z)  : rows that appear in y but not in z
-# output is the corals that have a master spreadsheet data point but were not in AFDW ; output should be zero
-AFDW_mismatched2 <- setdiff(master_PlugID, AFDW_ID) 
-AFDW_mismatched2
-
-# Missing list: AST-2737, AST-1450, AST-1409, AST-2738, FLD-0040, AST-1492, AST-2580, FLD-1214
-# Corals we don't have AFDW for: about 44 corals (didn't have enough homogenate in some cases)
+#metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+#metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
 ```
 
 ## Calculate mass per mL 
-Check how Emma v. Danielle calculates this. 
 ```{r}
-# Different volumes for sym (5ml - just spun down) and host (4ml)
-sym <- 5
-host <- 4
 
-AFDW_calc <- metadata %>%
-  mutate(dry.pan.mass.g.ml = case_when(Fraction=="Host" ~ dry.pan.mass.g/sym, Fraction=="Symbiont" ~ dry.pan.mass.g/host),
-         burnt.pan.mass.g.ml = case_when(Fraction=="Host" ~ burnt.pan.mass.g/sym, Fraction=="Symbiont" ~ burnt.pan.mass.g/host))
-
-# Remove FLD-0042 and AST-1194 for now - blanks are in the homogenate vol for now 
-AFDW_calc <- subset(AFDW_calc, PlugID!=c("FLD-0042", "AST-1194"))
 ```
 
-## Calculating Tissue Biomass (AFDW)
-```{r}
-# Change vol_mL to numeric 
-typeof(AFDW_calc$vol_mL)
-AFDW_calc$vol_mL <- as.numeric(AFDW_calc$vol_mL)
 
-# Calculating Dry Weight and Ash-Free Dry Weight; standardizing by homogenate volume and surface area
-AFDW_calc <- AFDW_calc %>%
-  mutate(dry.biomass.g.ml = (dry.pan.mass.g.ml - burnt.pan.mass.g.ml),
-         dry.biomass.g = dry.pan.mass.g.ml * vol_mL,
-         burnt.biomass.g = burnt.pan.mass.g.ml * vol_mL,
-         DW.mg.cm2 = ((dry.biomass.g)*1000) / Area_cm,
-         AFDW.mg.cm2 = ((dry.biomass.g-burnt.biomass.g)*1000) / Area_cm)
-
-## Ratio calculation 
-```
-
-Plot
-```{r}
-plot <- ggplot(AFDW_calc, aes(x = Timepoint, y = AFDW.mg.cm2, color = Treatment)) +
-  geom_line() +
-  geom_point()
-plot
-```
 
 
 

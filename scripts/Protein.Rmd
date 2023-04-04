@@ -23,6 +23,42 @@ library(grid)
 library(ggplot2)
 library(lattice)
 library(Rmisc)
+library(lme4)
+library(lmerTest)
+
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("RColorBrewer")) install.packages("RColorBrewer")
+if (!require("lme4")) install.packages("lme4")
+if (!require("lmerTest")) install.packages("lmerTest")
+if (!require("car")) install.packages("car")
+if (!require("effects")) install.packages("effects")
+if (!require("ggfortify")) install.packages("ggfortify")
+if (!require("cowplot")) install.packages("cowplot")
+if (!require("vegan")) install.packages("vegan")
+if (!require("corrr")) install.packages("corrr")
+if (!require("ggcorrplot")) install.packages("ggcorrplot")
+if (!require("GGally")) install.packages("GGally")
+if (!require("broom")) install.packages("broom")
+if (!require("cowplot")) install.packages("cowplot")
+if (!require("directlabels")) install.packages("directlabels")
+# load packages
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer)
+library(lme4)
+library(lmerTest)
+library(car)
+library(effects)
+library(ggfortify)
+library(cowplot)
+library(vegan)
+library(corrr)
+library(ggcorrplot)
+library(GGally)
+library(broom)
+library(cowplot)
+library(directlabels)
 ```
 
 ## Import data 
@@ -224,7 +260,9 @@ surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strin
 
 homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% select(PlugID, vol_mL) 
 
-master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% select(PlugID, Site, Treatment, Timepoint)
+master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% 
+  filter(Metric == "P/R, molec") %>% 
+  select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
 
 # Merge dataframes
 metadata <- join_all(list(surface_area, homogenate_vol, master), by = "PlugID", type = "left")
@@ -269,5 +307,52 @@ plot
 ## Right now, I'm only summarizing and plotting by Timepoint and Treatment. At some point, I will include site as a random effect variable 
 ```
 
+## Stats 
+```{r}
+## Lets remove field data for now 
+prot_exp <- prot[!str_detect(prot$Treatment, "Field"),]
+
+## Summarize w/o field data
+mean.prot_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Treatment", "Timepoint"))
+mean.prot_site_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+
+# Build model - linear model (no random effects; fixed effects are timepoint, treatment and site)
+prot_exp_model <- lm(prot_mg.cm2 ~ Timepoint*Treatment*Site, na.action = na.exclude, data = prot_exp)
+qqPlot(residuals(prot_exp_model))
+hist(residuals(prot_exp_model))
+summary(prot_exp_model)
+
+## residuals appear to be normally distributed 
+
+# Generate type III Anova of model 
+prot.anova <- Anova(prot_exp_model, type = "II")
+
+## lm & post-hoc 
+prot.lm <- lm(prot_mg.cm2 ~ Timepoint*Treatment*Site, na.action = na.exclude, data = prot_exp)
+prot.aov <- aov(prot.lm)
+summary(prot.aov)
+
+tukey.test <- TukeyHSD(prot.aov)
+tukey.test
+plot(tukey.test)
+
+
+
+
+
+
+# Build model - mixed effects model (fixed effects are timepoint, treatment and site; random effects are tank)
+prot_exp_model_me <- lmer(prot_mg.cm2 ~ Timepoint*Treatment*Site + (1|ExperimentalTank), na.action = na.omit, data = prot)
+qqPlot(residuals(prot_exp_model_me))
+
+# Residuals are not normally distributed. Attempt with log transformation.      
+prot_exp_model_me <- lmer(log(prot_mg.cm2) ~ Timepoint*Treatment*Site + (1|ExperimentalTank), na.action = na.omit, data = prot)
+qqPlot(residuals(prot_exp_model_me)) # much better!
+
+# Generate type III anova of model 
+blah <- Anova(prot_exp_model_me, type = "III")
+summary(prot_exp_model_me)
+summary(blah)
+```
 
 
