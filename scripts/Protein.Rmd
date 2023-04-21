@@ -61,6 +61,7 @@ library(cowplot)
 library(directlabels)
 ```
 
+
 ## Import data 
 ```{r}
 ## There is definitely a better way to do this
@@ -247,7 +248,7 @@ p5.samples$Concentration <- predict(p5.standards.lm, newdata = p5.samples)
 p.all <- rbind(p1.samples, p2.samples, p3.samples, p4.samples, p5.samples)
 
 p.all <- p.all %>%
-  select(ID, Concentration) %>%
+  #select(ID, Concentration) %>%
   dplyr::rename(PlugID = ID) %>%
   na.omit() %>%
   dplyr::group_by(PlugID) %>%
@@ -301,58 +302,114 @@ plot <- ggplot(prot, aes(x = Timepoint, y = prot_mg.cm2, group = Treatment)) +
   geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
   geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  scale_color_manual(values = c("blue", "green", "red"))
+  scale_color_manual(values = c("blue", "gray", "red")) +
+  theme_classic()
 plot
 
 ## Right now, I'm only summarizing and plotting by Timepoint and Treatment. At some point, I will include site as a random effect variable 
+
+# Remove outliers 
+prot_sub <- prot %>%
+  filter(prot_mg.cm2 <= 10)
+
+ggplot(prot_sub, aes(x = Timepoint, y = prot_mg.cm2, group = Treatment)) +
+  geom_point(aes(color = Treatment), size = 2) +
+  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_color_manual(values = c("blue", "gray", "red")) +
+  theme_classic()
+
+ggplot(prot_sub, aes(x = Timepoint, y = prot_mg.cm2, fill = Treatment)) +
+  geom_boxplot() +
+  #geom_point(aes(color = Treatment), size = 2) +
+  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_fill_manual(values = c("blue", "gray", "red")) + 
+  #facet_wrap(~Timepoint) +
+  #ylab("Soluble protein (mg/cm²)") +
+  theme_classic()
+
+
+
+
+
+
+# Remove field data and outlier
+prot_exp <- prot %>%
+  filter(!Treatment == "Field") %>%
+  filter(prot_mg.cm2 <= 10) 
+
+# plot by exp only 
+plot_trt <- ggplot(prot_exp, aes(x = Timepoint, y = prot_mg.cm2, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  #geom_point(aes(color = Treatment), size = 2) +
+  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  ylab("Soluble protein (mg/cm²)") +
+  xlab("") +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+plot_trt
+
+ggsave("output/Physiology/SolubleProtein/SolubleProtein_Treatment.pdf", plot_trt, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/SolubleProtein/SolubleProtein_Treatment.png", plot_trt, width = 50, height = 25, units = "cm")
 ```
 
 ## Stats 
 ```{r}
-## Lets remove field data for now 
-prot_exp <- prot[!str_detect(prot$Treatment, "Field"),]
-
 ## Summarize w/o field data
 mean.prot_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Treatment", "Timepoint"))
 mean.prot_site_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
-
-# Build model - linear model (no random effects; fixed effects are timepoint, treatment and site)
-prot_exp_model <- lm(prot_mg.cm2 ~ Timepoint*Treatment*Site, na.action = na.exclude, data = prot_exp)
-qqPlot(residuals(prot_exp_model))
-hist(residuals(prot_exp_model))
-summary(prot_exp_model)
-
-## residuals appear to be normally distributed 
-
-# Generate type III Anova of model 
-prot.anova <- Anova(prot_exp_model, type = "II")
-
-## lm & post-hoc 
-prot.lm <- lm(prot_mg.cm2 ~ Timepoint*Treatment*Site, na.action = na.exclude, data = prot_exp)
-prot.aov <- aov(prot.lm)
-summary(prot.aov)
-
-tukey.test <- TukeyHSD(prot.aov)
-tukey.test
-plot(tukey.test)
-
-
-
-
-
-
-# Build model - mixed effects model (fixed effects are timepoint, treatment and site; random effects are tank)
-prot_exp_model_me <- lmer(prot_mg.cm2 ~ Timepoint*Treatment*Site + (1|ExperimentalTank), na.action = na.omit, data = prot)
-qqPlot(residuals(prot_exp_model_me))
-
-# Residuals are not normally distributed. Attempt with log transformation.      
-prot_exp_model_me <- lmer(log(prot_mg.cm2) ~ Timepoint*Treatment*Site + (1|ExperimentalTank), na.action = na.omit, data = prot)
-qqPlot(residuals(prot_exp_model_me)) # much better!
-
-# Generate type III anova of model 
-blah <- Anova(prot_exp_model_me, type = "III")
-summary(prot_exp_model_me)
-summary(blah)
 ```
 
+## Test for differences 
+For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
+```{r}
+## Compute two-way ANOVA test 
+model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot_exp)
+summary(model)
+
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+# Multiple comparisons using multcomp package
+
+# Pairwise test 
+pairwise.t.test(log(prot_exp$prot_mg.cm2), prot_exp$Timepoint, p.adjust.method = "bonf") # should I specify a p.adjust.method? 
+
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+# 1, 3, 88 may be outliers 
+
+# b. Levene's test 
+leveneTest(prot_mg.cm2 ~ Timepoint*Treatment, data = prot_exp)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) ## Similar to the other residual plot, looks like rows 17, 73, and 107 are outliers. May be good to remove 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+## p-value is not less than 0.05, so normality is all good 
+```
 

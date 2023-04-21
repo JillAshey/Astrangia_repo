@@ -39,6 +39,241 @@ library(corrplot)
 library(lmerTest)
 ```
 
+## Import data 
+```{r}
+## There is definitely a better way to do this
+
+# Plate 1
+p1_data <- read.csv("data/Physiology/Chlorophyll/20230118_plate1_data.csv")
+p1_platemap <- read.csv("data/Physiology/Chlorophyll/20230118_plate1_platemap.csv")
+p1 <- left_join(p1_data, p1_platemap)
+
+# Plate 2
+p2_data <- read.csv("data/Physiology/Chlorophyll/20230126_plate2_data.csv")
+p2_platemap <- read.csv("data/Physiology/Chlorophyll/20230126_plate2_platemap.csv")
+p2 <- left_join(p2_data, p2_platemap, by = "Well")
+
+# Plate 3
+p3_data <- read.csv("data/Physiology/Chlorophyll/20230210_plate3_data.csv")
+p3_platemap <- read.csv("data/Physiology/Chlorophyll/20230210_plate3_platemap.csv")
+p3 <- left_join(p3_data, p3_platemap)
+
+# Plate 4
+p4_data <- read.csv("data/Physiology/Chlorophyll/20230214_plate4_data.csv")
+p4_platemap <- read.csv("data/Physiology/Chlorophyll/20230214_plate4_platemap.csv")
+p4 <- left_join(p4_data, p4_platemap)
+
+# Plate 5
+p5_data <- read.csv("data/Physiology/Chlorophyll/20230216_plate5_data.csv")
+p5_platemap <- read.csv("data/Physiology/Chlorophyll/20230216_plate5_platemap.csv")
+p5 <- left_join(p5_data, p5_platemap)
+```
+
+## Calculate chlorophyll concentrations for each plate 
+```{r}
+# Group by run and sample ID
+p1 <- p1 %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750)) %>%
+  dplyr::mutate(adj630 = mean_A630 - mean_A750, # # Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+         adj663 = mean_A663 - mean_A750,
+         chla.ug.ml = (11.43 * adj663) - (0.64 * adj630), # Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+         chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663),
+         chla.ug.ml = chla.ug.ml*0.584, # path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+         chlc2.ug.ml = chlc2.ug.ml*0.584)
+  
+p2 <- p2 %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750)) %>%
+  dplyr::mutate(adj630 = mean_A630 - mean_A750, # # Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+         adj663 = mean_A663 - mean_A750,
+         chla.ug.ml = (11.43 * adj663) - (0.64 * adj630), # Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+         chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663),
+         chla.ug.ml = chla.ug.ml*0.584, # path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+         chlc2.ug.ml = chlc2.ug.ml*0.584)
+
+p3 <- p3 %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750)) %>%
+  dplyr::mutate(adj630 = mean_A630 - mean_A750, # # Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+         adj663 = mean_A663 - mean_A750,
+         chla.ug.ml = (11.43 * adj663) - (0.64 * adj630), # Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+         chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663),
+         chla.ug.ml = chla.ug.ml*0.584, # path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+         chlc2.ug.ml = chlc2.ug.ml*0.584)
+
+p4 <- p4 %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750)) %>%
+  dplyr::mutate(adj630 = mean_A630 - mean_A750, # # Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+         adj663 = mean_A663 - mean_A750,
+         chla.ug.ml = (11.43 * adj663) - (0.64 * adj630), # Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+         chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663),
+         chla.ug.ml = chla.ug.ml*0.584, # path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+         chlc2.ug.ml = chlc2.ug.ml*0.584)
+
+p5 <- p5 %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_A630 = mean(X630), # calculate means 
+            mean_A663 = mean(X663), 
+            mean_A750 = mean(X750)) %>%
+  dplyr::mutate(adj630 = mean_A630 - mean_A750, # # Get the acetone blank 750 absorbance for each file (ie plate) and subtract from 630 and 663 values for each sample 
+         adj663 = mean_A663 - mean_A750,
+         chla.ug.ml = (11.43 * adj663) - (0.64 * adj630), # Calculate chla and chlc values based on equations from Jeffery and Humphrey 1975
+         chlc2.ug.ml = (27.09 * adj630) - (3.63 * adj663),
+         chla.ug.ml = chla.ug.ml*0.584, # path length adjustments for chlorophyll in 96 well quartz plate (0.584 cm)
+         chlc2.ug.ml = chlc2.ug.ml*0.584)
+```
+
+## Bind all dfs together 
+```{r}
+all <- rbind(p1, p2, p3, p4, p5)
+
+# Remove blanks
+all <- all %>% 
+  filter(!ID == "Blank") %>%
+  dplyr::rename(PlugID = ID)
+```
+
+## Read in surface area, homogenate volume and metadata 
+```{r}
+surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
+
+homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
+
+master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>%
+  dplyr::filter(Metric == "P/R, molec") %>%
+  dplyr::select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
+
+# Merge dataframes
+metadata <- join_all(list(surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+#metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
+metadata$vol_mL <- as.numeric(metadata$vol_mL)
+```
+
+## Merge metadata and chl data and normalize data 
+```{r}
+chl <- left_join(metadata, all) %>%
+       mutate(chla.ug.cm2 = (chla.ug.ml * vol_mL) / Area_cm, # I need to calculate surface area squared?
+             chlc2.ug.cm2 = (chlc2.ug.ml * vol_mL) / Area_cm) %>%
+       na.omit() ## omitting NAs for now 
+```
+
+## Summarize 
+```{r}
+mean.chla <- summarySE(chl, measurevar = "chla.ug.cm2", groupvars = c("Treatment", "Timepoint"))
+mean.chlc2 <- summarySE(chl, measurevar = "chlc2.ug.cm2", groupvars = c("Treatment", "Timepoint"))
+
+mean.chla_site <- summarySE(chl, measurevar = "chla.ug.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+mean.chlc2_site <- summarySE(chl, measurevar = "chlc2.ug.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+# I did not equally sample across site, which was a mistake on my part. I need to figure out how to present the data with site 
+```
+
+## Plot 
+```{r}
+# Remove field data for now 
+chl_exp <- chl %>%
+  filter(!Treatment == "Field")
+
+# plot by exp only -- chl a
+plot_chla_trt <- ggplot(chl_exp, aes(x = Timepoint, y = chla.ug.cm2, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  #geom_point(aes(color = Treatment), size = 2) +
+  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  ylab("Chlorophyll-a (ug/cm²)") +
+  xlab("") +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+plot_chla_trt
+
+ggsave("output/Physiology/Chlorophyll/Chla_Treatment.pdf", plot_chla_trt, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/Chlorophyll/Chla_Treatment.png", plot_chla_trt, width = 50, height = 25, units = "cm")
+
+# plot by exp only -- chl c2
+plot_chlc2_trt <- ggplot(chl_exp, aes(x = Timepoint, y = chlc2.ug.cm2, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  #geom_point(aes(color = Treatment), size = 2) +
+  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
+  scale_fill_manual(values = c("blue", "red")) +
+  ylab("Chlorophyll-a (ug/cm²)") +
+  xlab("") +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+plot_chlc2_trt
+
+ggsave("output/Physiology/Chlorophyll/Chlc2_Treatment.pdf", plot_chlc2_trt, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/Chlorophyll/Chlc2_Treatment.png", plot_chlc2_trt, width = 50, height = 25, units = "cm")
+```
+
+## Stats 
+## Test for differences 
+For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
+```{r}
+## Compute two-way ANOVA test 
+model <- aov(log(chla.ug.cm2) ~ Treatment*Timepoint, data = chl_exp) 
+summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Read in dfs and merge into one large df
 ```{r}
 ## platemaps 

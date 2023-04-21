@@ -13,7 +13,27 @@ This script is modified from A. Huffmyer's original [script](https://github.com/
 
 ## Load libraries
 ```{r}
-library(dbplyr)
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("readr")) install.packages("readr")
+if (!require("stringr")) install.packages("stringr")
+if (!require("gridExtra")) install.packages("gridExtra")
+if (!require("grid")) install.packages("grid")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("lattice")) install.packages("lattice")
+if (!require("Rmisc")) install.packages("Rmisc")
+if (!require("ggpubr")) install.packages("ggpubr")
+if (!require("lsmeans")) install.packages("lsmeans")
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("car")) install.packages("car")
+if (!require("ggpubr")) install.packages("ggpubr")
+if (!require("kableExtra")) install.packages("kableExtra")
+if (!require("ggcorrplot")) install.packages("ggcorrplot")
+if (!require("corrr")) install.packages("corrr")
+if (!require("GGally")) install.packages("GGally")
+if (!require("cowplot")) install.packages("cowplot")
+if (!require("multcomp")) install.packages("multcomp")
+
+library(dplyr)
 library(readr)
 library(stringr)
 library(gridExtra)
@@ -24,6 +44,13 @@ library(Rmisc)
 library(ggpubr)
 library(lsmeans)
 library(tidyverse)
+library(car)
+library(kableExtra)
+library(ggcorrplot)
+library(corrr)
+library(GGally)
+library(cowplot)
+library(multcomp)
 ```
 
 ## Load data 
@@ -109,3 +136,320 @@ Carb.Plot.Ast <- Samples%>%
 ggsave("output/Physiology/Carbohydrates/Carbohydrates.pdf", Carb.Plot.Ast)
 ```
 
+
+
+
+
+
+
+20230420
+I now have processed most of my Astrangia 2021 samples for the host fraction
+
+## Load data 
+```{r}
+carbs_data <- read.csv("data/Physiology/Carbohydrates/Carb_Data.csv")
+carbs_meta <- read.csv("data/Physiology/Carbohydrates/Carb_Meta.csv")
+```
+
+## Separate by run? 
+```{r}
+# merge data and metadata
+carbs_data <- merge(carbs_meta, carbs_data, by = c("Well", "Run"))
+
+run1 <- carbs_data %>% 
+  filter(Run == "1")
+run2 <- carbs_data %>% 
+  filter(Run == "2")
+run3 <- carbs_data %>% 
+  filter(Run == "3")
+run4 <- carbs_data %>% 
+  filter(Run == "4")
+run5 <- carbs_data %>% 
+  filter(Run == "5")
+
+# Average blanks for each run and calculate blank correction
+blank1 <- run1 %>%
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+run1$abs.corr <- run1$X485 - blank1$blk.avg
+
+blank2 <- run2 %>%
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+run2$abs.corr <- run2$X485 - blank2$blk.avg
+
+blank3 <- run3 %>%
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+run3$abs.corr <- run3$X485 - blank3$blk.avg
+
+blank4 <- run4 %>%
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+run4$abs.corr <- run4$X485 - blank4$blk.avg
+
+blank5 <- run5 %>%
+  filter(Sample.Type == "Blank") %>%
+  summarise(blk.avg = mean(X485))
+run5$abs.corr <- run5$X485 - blank5$blk.avg
+```
+
+## Plot standard curve for each run 
+```{r}
+# run1
+standard1 <- run1 %>%
+  filter(Sample.Type =="Standard")
+  
+ggplot(data = standard1, aes(x=Concentration, y=abs.corr))+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+lmstandard1 <- lm(Concentration ~ abs.corr, data = standard1)
+summary(lmstandard1)
+
+# run2
+standard2 <- run2 %>%
+  filter(Sample.Type =="Standard")
+  
+ggplot(data = standard2, aes(x=Concentration, y=abs.corr))+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+lmstandard2 <- lm(Concentration ~ abs.corr, data = standard2)
+summary(lmstandard2)
+
+# run3
+standard3 <- run3 %>%
+  filter(Sample.Type =="Standard")
+  
+ggplot(data = standard3, aes(x=Concentration, y=abs.corr))+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+lmstandard3 <- lm(Concentration ~ abs.corr, data = standard3)
+summary(lmstandard3)
+
+# run4
+standard4 <- run4 %>%
+  filter(Sample.Type =="Standard")
+  
+ggplot(data = standard4, aes(x=Concentration, y=abs.corr))+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+lmstandard4 <- lm(Concentration ~ abs.corr, data = standard4)
+summary(lmstandard4)
+
+# run5
+standard5 <- run5 %>%
+  filter(Sample.Type =="Standard")
+  
+ggplot(data = standard5, aes(x=Concentration, y=abs.corr))+
+  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
+  geom_point()+
+  geom_smooth(method = "lm") +
+  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
+  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
+  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+lmstandard5 <- lm(Concentration ~ abs.corr, data = standard5)
+summary(lmstandard5)
+```
+
+## Calculate concentration values from standard curve 
+```{r}
+sample1 <- run1 %>%
+  filter(Sample.Type == "Sample") # subsetting samples 
+sample1$Concentration <- predict(lmstandard1, newdata = sample1) # using model to get concentration
+
+sample2 <- run2 %>%
+  filter(Sample.Type == "Sample") # subsetting samples 
+sample2$Concentration <- predict(lmstandard2, newdata = sample2) # using model to get concentration
+
+sample3 <- run3 %>%
+  filter(Sample.Type == "Sample") # subsetting samples 
+sample3$Concentration <- predict(lmstandard3, newdata = sample3) # using model to get concentration
+
+sample4 <- run4 %>%
+  filter(Sample.Type == "Sample") # subsetting samples 
+sample4$Concentration <- predict(lmstandard4, newdata = sample4) # using model to get concentration
+
+sample5 <- run5 %>%
+  filter(Sample.Type == "Sample") # subsetting samples 
+sample5$Concentration <- predict(lmstandard5, newdata = sample5) # using model to get concentration
+```
+
+Bind dfs together and average samples
+```{r}
+carb_all <- rbind(sample1, sample2, sample3, sample4, sample5)
+
+carb_all <- carb_all %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(mean_concentration = mean(Concentration))
+```
+
+## Read in metadata, surface area, and homogenate volume
+```{r}
+ 
+surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
+
+homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
+
+master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% 
+  dplyr::filter(Metric == "P/R, molec") %>% 
+  dplyr::select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
+
+metadata <- join_all(list(surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+metadata$vol_mL <- as.numeric(metadata$vol_mL)
+```
+
+## Merge carb data with metadata 
+```{r}
+#carb_all <- carb_all %>% 
+#  dplyr::rename(PlugID = ID)
+
+all <- merge(metadata, carb_all, by = "PlugID")
+```
+
+## Normalize to homogenate vol and surface area 
+```{r}
+# AH calculation (for larvae): Samples$Carb.mg <- (Samples$Concentration * (Samples$Resuspension_volume/1000) * (1000/Samples$Homo_vol))
+# KW calculation (for adults?): samples.carb.meta$Carb.mgcm2 <- (samples.carb.meta$Concentration * samples.carb.meta$Homogenate_Vol.mL * 10)/samples.carb.meta$Surface_Area_cm2 
+
+# Accounting for dilution factor (1000/10) and Normalizing to homogenate volume and surface area
+all$Carb.mg.cm2 <- (all$mean_concentration * all$vol_mL * 10)/all$Area_cm ## do I multiple by 100 (since I took 100 ul for the assay) or 10 (because I took 1/10th of the volume from the aliquotted homogenate)
+```
+
+## Plot 
+```{r}
+## Remove field data for now - also remove outliers 
+exp <- all %>%
+  filter(!Treatment == "Field") %>%
+  filter(Carb.mg.cm2 <= 15)
+
+## Summarize data w/o field 
+mean.carb_exp <- summarySE(exp, measurevar = "Carb.mg.cm2", groupvars = c("Treatment", "Timepoint"))
+mean.carb_site_exp <- summarySE(exp, measurevar = "Carb.mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+
+# Plot and save 
+carb_plot <- ggplot(exp, aes(x = Timepoint, y = Carb.mg.cm2, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  scale_fill_manual(values = c("blue", "red")) +
+  ylab("Carbohydrates (mg/cm²)") +
+  xlab("") +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+carb_plot
+ggsave("output/Physiology/Carbohydrates/Carbohydrates_Treatment.pdf", carb_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/Carbohydrates/Carbohydrates_Treatment.png", carb_plot, width = 50, height = 25, units = "cm")
+```
+
+## Test for differences 
+For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
+```{r}
+## Compute two-way ANOVA test 
+model <- aov(log(Carb.mg.cm2) ~ Treatment*Timepoint, data = exp) ### LOG TRANSFORMED
+summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+# Multiple comparisons using multcomp package
+# glht(model, linfct = mcp(Timepoint = "Tukey")) -- this code is not working at the moment. Giving me this error: Error in h(simpleError(msg, call)) : error in evaluating the argument 'object' in selecting a method for function 'summary': Variable(s) ‘Treatment’ of class ‘character’ is/are not contained as a factor in ‘model’.
+
+# Pairwise test 
+pairwise.t.test(exp$Carb.mg.cm2, exp$Timepoint, p.adjust.method = "bonf") # should I specify a p.adjust.method? 
+
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+## looks like rows 17, 73, and 107 are outliers. May be good to remove 
+
+# b. Levene's test 
+leveneTest(Carb.mg.cm2 ~ Timepoint*Treatment, data = exp)
+## p-value is not less than 0.05, so we can assume homogeneity in different treatment groups 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) ## Similar to the other residual plot, looks like rows 17, 73, and 107 are outliers. May be good to remove 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+## p-value is less than 0.05, so normality is violated. Let's see what the data looks like after I remove the outliers 
+
+
+
+
+
+
+
+
+## Remove outliers 
+exp_sub <- exp[-c(12, 17, 23, 24, 36, 62, 68, 73, 89, 99, 105, 107),]
+
+## Build new model
+model_sub <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = exp_sub)
+summary(model_sub)
+
+## Compute summary stats 
+model.tables(model_sub, type = "means", se = T)
+
+## Tukey's test
+TukeyHSD(model_sub, which = "Timepoint")
+
+## Normality 
+plot(model_sub, 2)
+aov_residuals <- residuals(object = model_sub)
+shapiro.test(x = aov_residuals) ## pvalue still less than 0.05...
+
+## Homogeneity of variance
+plot(model_sub, 1)
+leveneTest(Carb.mg.cm2 ~ Timepoint*Treatment, data = exp_sub)
+```
+
+I NEED TO FIGURE OUT HOW TO DO THE STATS 
