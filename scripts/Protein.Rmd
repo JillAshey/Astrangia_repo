@@ -257,13 +257,13 @@ p.all <- p.all %>%
 
 ## Read in surface area, homogenate volume and metadata 
 ```{r}
-surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% select(PlugID, Area_cm)
+surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
 
-homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% select(PlugID, vol_mL) 
+homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
 
 master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% 
-  filter(Metric == "P/R, molec") %>% 
-  select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
+  dplyr::filter(Metric == "P/R, molec") %>% 
+  dplyr::select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
 
 # Merge dataframes
 metadata <- join_all(list(surface_area, homogenate_vol, master), by = "PlugID", type = "left")
@@ -288,6 +288,11 @@ mean.prot <- summarySE(prot, measurevar = "prot_mg.cm2", groupvars = c("Treatmen
 
 mean.prot_site <- summarySE(prot, measurevar = "prot_mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
 # I did not equally sample across site, which was a mistake on my part. I need to figure out how to present the data with site 
+```
+
+## Save data 
+```{r}
+write.csv(prot, "output/Physiology/SolubleProtein/SolubleProtein.csv")
 ```
 
 ## Plot 
@@ -376,6 +381,13 @@ For now (as of 20230420), I'm using code based on this [tutorial](http://www.sth
 model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot_exp)
 summary(model)
 
+#                     Df Sum Sq Mean Sq F value   Pr(>F)    
+# Treatment            1   0.15  0.1522   0.314    0.577    
+# Timepoint            7  21.91  3.1294   6.464 5.36e-06 ***
+# Treatment:Timepoint  7   5.81  0.8300   1.714    0.118    
+# Residuals           77  37.28  0.4841                     
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ## Compute summary stats 
 model.tables(model, type = "means", se = T)
@@ -384,6 +396,7 @@ model.tables(model, type = "means", se = T)
 ## Multiple pairwise-comparisons between the means of groups 
 # Tukey HSD 
 TukeyHSD(model, which = "Timepoint")
+## TP6 differs from TP0, TP1, TP2, TP3, TP4, TP5, and TP7
 
 # Multiple comparisons using multcomp package
 

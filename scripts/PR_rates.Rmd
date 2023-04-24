@@ -712,23 +712,145 @@ plot <- grid.arrange(sub.plot, clip="off")
 ggsave("output/Physiology/PR/Sub_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
 ```
 
-## Stats 
+## Plot w/ similar format to other phys plots (for Benthics Ecology Meeting 2023)
 ```{r}
-## Read in metadata to get site info 
-master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% 
-  filter(Metric == "P/R, molec") %>% 
-  select(PlugID, Site, Treatment, Timepoint, ExperimentalTank)
+## using the sub data and no field data included
+sub <- all %>% 
+  filter(micromol.cm2.h <= 10) %>%
+  filter(micromol.cm2.h >= -5) %>%
+  filter(Treatment == c("Ambient", "Heat"))
 
-head(all)
+# Plot and save 
+pr_plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  scale_fill_manual(values = c("blue", "red")) +
+  #ylab("Carbohydrates (mg/cm²)") +
+  xlab("") +
+  #hjust(x = 0) +
+  facet_wrap(~Assay, ncol = 2) +
+  theme_bw() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+pr_plot
+ggsave("output/Physiology/PR/PR_Treatment_20230423.pdf", pr_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/PR/PR_Treatment_20230423.png", pr_plot, width = 50, height = 25, units = "cm")
+```
 
-## remove field corals for now 
-pr_exp <- all[!str_detect(all$Treatment, "Field"),]
-pr_exp <- pr_exp %>% 
-  dplyr::rename(PlugID = colony_id)
+In the P and Rd plots, there is positive values present in Rd. This should not be happening because the respiration was measured in the dark so no oxygen production should be occurring in the absence of light. I'm not sure how to reconcile this...
+
+I'm going to plot TP5, TP6 and TP7 without the earlier timepoints. I chose these specifically because TP5, TP6, and TP7 Rd values are all negative. Lets see how that plot looks
+```{r}
+# Subset by TP5, TP6 and TP7
+sub_lateTPs <- sub %>% 
+  filter(Timepoint == c("TP5", "TP6", "TP7"))
+
+# Plot and save 
+pr_plot <- ggplot(sub_lateTPs, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  scale_fill_manual(values = c("blue", "red")) +
+  #ylab("Carbohydrates (mg/cm²)") +
+  xlab("") +
+  #hjust(x = 0) +
+  facet_wrap(~Assay, ncol = 2) +
+  theme_bw() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+pr_plot
+ggsave("output/Physiology/PR/PR_Treatment_TP5-7_20230423.pdf", pr_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/PR/PR_Treatment_TP5-7_20230423.png", pr_plot, width = 50, height = 25, units = "cm")
+```
 
 
-# Merge w/ metadata 
-pr_exp <- left_join(pr_exp, master)
+
+
+
+
+
+## Test for differences 
+For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
+```{r}
+# Separate into P and Rd dfs 
+p_df <- sub %>%
+  filter(Assay == "P")
+rd_df <- sub %>%
+  filter(Assay == "Rd")
+
+################################# PHOTOSYNTHESIS ################################# 
+## Compute two-way ANOVA test 
+model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = p_df)
+summary(model)
+
+#                     Df Sum Sq Mean Sq F value  Pr(>F)   
+# Treatment            1  0.884  0.8840   2.178 0.15075   
+# Timepoint            6 10.495  1.7491   4.310 0.00317 **
+# Treatment:Timepoint  6  0.540  0.0901   0.222 0.96649   
+# Residuals           29 11.769  0.4058                   
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 5 observations deleted due to missingness
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+## TP6 differs from TP1 (only slightly), TP2, and TP3
+
+# Multiple comparisons using multcomp package
+
+# Pairwise test 
+pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint, p.adjust.method = "bonf") # should I specify a p.adjust.method? 
+## TP6 differs from TP1, TP2, and TP3
+
+
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(micromol.cm2.h ~ Timepoint*Treatment, data = sub)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is greater than 0.05 so normality is all good 
+
+
+
+
+
+
+
+################################# RESPIRATION ################################# 
+## Compute two-way ANOVA test 
+model <- aov(log(micromol.cm2.h) ~ Treatment*Timepoint, data = rd_df)
+summary(model)
 ```
 
 
