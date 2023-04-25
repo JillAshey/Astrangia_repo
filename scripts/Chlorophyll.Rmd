@@ -242,7 +242,7 @@ ggsave("output/Physiology/Chlorophyll/Chlc2_Treatment.png", plot_chlc2_trt, widt
 For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
 ```{r}
 ## Compute two-way ANOVA test 
-model <- aov(log(chla.ug.cm2) ~ Timepoint, data = chl_exp) 
+model <- aov(sqrt(chla.ug.cm2) ~ Timepoint*Treatment, data = chl_exp) 
 summary(model)
 
 ## Compute summary stats 
@@ -250,7 +250,26 @@ model.tables(model, type = "means", se = T)
 
 
 
-## EVALUATE HOMOGENEITY OF VARIANCE AND NORMALITY ASSUMPTIONS 
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+## Have some outliers 
+
+# b. Levene's test 
+leveneTest(chla.ug.cm2 ~ Timepoint*Treatment, data = chl_exp)
+## p-value is greater than 0.05, so variance is homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+## p-value is less than 0.05, so normality is violated
 ```
 
 

@@ -409,7 +409,6 @@ pairwise.t.test(log(prot_exp$prot_mg.cm2), prot_exp$Timepoint, p.adjust.method =
 # 1. Check homogeneity of variance assumption
 # a. Residuals vs fits plot
 plot(model, 1)
-# 1, 3, 88 may be outliers 
 
 # b. Levene's test 
 leveneTest(prot_mg.cm2 ~ Timepoint*Treatment, data = prot_exp)

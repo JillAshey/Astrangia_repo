@@ -718,7 +718,11 @@ ggsave("output/Physiology/PR/Sub_Timepoint.Treatment_PR.pdf", plot, width = 4, h
 sub <- all %>% 
   filter(micromol.cm2.h <= 10) %>%
   filter(micromol.cm2.h >= -5) %>%
-  filter(Treatment == c("Ambient", "Heat"))
+  filter(Treatment == c("Ambient", "Heat")) 
+
+# renaming P to Photosynthesis and Rd to Respiration 
+sub$Assay[sub$Assay == "P"] <- "Photosynthesis"
+sub$Assay[sub$Assay == "Rd"] <- "Respiration"
 
 # Plot and save 
 pr_plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
@@ -729,19 +733,21 @@ pr_plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment))
   #hjust(x = 0) +
   facet_wrap(~Assay, ncol = 2) +
   theme_bw() +
+  theme(strip.text.x = element_text(size = 18)) +
   theme(legend.title = element_text(size = 28),
           legend.text = element_text(size = 25),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
   theme(axis.text.x = element_text(size = 30,
                                    color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
+  theme(axis.text.y = element_text(size = 30,
                                    color = "black"),
         axis.title.y = element_text(size = 35,
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))) 
 pr_plot
-ggsave("output/Physiology/PR/PR_Treatment_20230423.pdf", pr_plot, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/PR/PR_Treatment_20230423.png", pr_plot, width = 50, height = 25, units = "cm")
+
+ggsave("output/Physiology/PR/PR_Treatment_20230424.pdf", pr_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/PR/PR_Treatment_20230424.png", pr_plot, width = 50, height = 25, units = "cm")
 ```
 
 In the P and Rd plots, there is positive values present in Rd. This should not be happening because the respiration was measured in the dark so no oxygen production should be occurring in the absence of light. I'm not sure how to reconcile this...
@@ -787,13 +793,59 @@ For now (as of 20230420), I'm using code based on this [tutorial](http://www.sth
 ```{r}
 # Separate into P and Rd dfs 
 p_df <- sub %>%
-  filter(Assay == "P")
+  filter(Assay == "Photosynthesis")
 rd_df <- sub %>%
-  filter(Assay == "Rd")
+  filter(Assay == "Respiration")
+
+## Plot P
+p_plot <- ggplot(p_df, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  scale_fill_manual(values = c("blue", "red")) +
+  #ylab("Carbohydrates (mg/cm²)") +
+  xlab("") +
+  #hjust(x = 0) +
+  #facet_wrap(~Assay, ncol = 2) +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+p_plot
+ggsave("output/Physiology/PR/P_Treatment_20230424.pdf", p_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/PR/P_Treatment_20230424.png", p_plot, width = 50, height = 25, units = "cm")
+
+## Plot R
+r_plot <- ggplot(rd_df, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
+  geom_boxplot(lwd = 1, color = "black") +
+  scale_fill_manual(values = c("blue", "red")) +
+  #ylab("Carbohydrates (mg/cm²)") +
+  xlab("") +
+  #hjust(x = 0) +
+  #facet_wrap(~Assay, ncol = 2) +
+  theme_classic() +
+  theme(legend.title = element_text(size = 28),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
+r_plot
+ggsave("output/Physiology/PR/R_Treatment_20230424.pdf", r_plot, width = 50, height = 25, units = "cm")
+ggsave("output/Physiology/PR/R_Treatment_20230424.png", r_plot, width = 50, height = 25, units = "cm")
 
 ################################# PHOTOSYNTHESIS ################################# 
 ## Compute two-way ANOVA test 
-model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = p_df)
+model <- aov(log(micromol.cm2.h) ~ Treatment*Timepoint, data = p_df)
 summary(model)
 
 #                     Df Sum Sq Mean Sq F value  Pr(>F)   
@@ -811,12 +863,12 @@ model.tables(model, type = "means", se = T)
 ## Multiple pairwise-comparisons between the means of groups 
 # Tukey HSD 
 TukeyHSD(model, which = "Timepoint")
-## TP6 differs from TP1 (only slightly), TP2, and TP3
+## TP1 differs from TP5, TP6, & TP7
 
 # Multiple comparisons using multcomp package
 
 # Pairwise test 
-pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint, p.adjust.method = "bonf") # should I specify a p.adjust.method? 
+pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint) # should I specify a p.adjust.method? 
 ## TP6 differs from TP1, TP2, and TP3
 
 
@@ -851,6 +903,20 @@ shapiro.test(x = aov_residuals)
 ## Compute two-way ANOVA test 
 model <- aov(log(micromol.cm2.h) ~ Treatment*Timepoint, data = rd_df)
 summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+## TP6 differs from TP1 (only slightly), TP2, and TP3
+
+# Multiple comparisons using multcomp package
+
+# Pairwise test 
+pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint) # should I specify a p.adjust.method? 
+## TP6 differs from TP1, TP2, and TP3
 ```
 
 
