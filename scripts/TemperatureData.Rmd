@@ -1,0 +1,114 @@
+---
+title: "TemperatureData"
+author: "jillashey"
+date: "2023-05-21"
+output: html_document
+---
+
+This script will plot my experimental temperature data and the Newport 2021 NOAA Buoy data on one plot. This is the [link](https://www.ndbc.noaa.gov/station_realtime.php?station=nwpr1) to the real time Newport NOAA data. 
+
+## Load libraries 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(tidyr)
+library(ggplot2)
+library(plotrix)
+library(tidyverse)
+library(dplyr)
+library(reshape2)
+library(gridExtra)
+library(FSA)
+library(naniar)
+```
+
+## Load my data 
+```{r}
+my.data <- read.csv("output/Environmental/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+colnames(my.data)[colnames(my.data) == 'Date'] <- 'Date.Time'
+my.data <- my.data[,c("Date.Time", 
+                      "Tank1_Temp", 
+                      "Tank2_Temp", 
+                      "Tank3_Temp",
+                      "Tank4_Temp",
+                      "Tank5_Temp", 
+                      "Tank6_Temp", 
+                      "Tank7_Temp",
+                      "Tank8_Temp",
+                      "Tank9_Temp",
+                      "Tank10_Temp", 
+                      "Tank11_Temp", 
+                      "Tank12_Temp", 
+                      "Tank15_Temp",
+                      "Tank16_Temp", 
+                      "Tank17_Temp", 
+                      "Tank18_Temp")]
+my.data <- na.omit(my.data) ### should I omit NAs????
+```
+
+## Parse dates and times 
+```{r}
+my.data$Date.Time <- parse_date_time(my.data$Date.Time, "ymdHMS", tz = "EST")
+my.data$Date.Time <- my.data$Date.Time + hours(5)
+
+my.data <- separate(my.data, col = Date.Time, into = c("Date", "Time"), sep = " ")
+my.data <- separate(my.data, col = Date, into = c("YYYY", "MM", "DD"), sep = "-")
+my.data <- separate(my.data, col = Time, into = c("hh", "mm", "ss"), sep = ":")
+my.data$Date <- paste0(my.data$MM, sep = "-", my.data$DD)
+my.data$Time <- paste0(my.data$hh, sep = ":", my.data$mm)
+my.data$Date.Time <- paste0(my.data$Date, sep=" ", my.data$Time)
+
+range(my.data$Tank1_Temp, na.rm=TRUE)
+my.data$Date.Time <- parse_date_time(my.data$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
+```
+
+## Calculate means for ambient and high temps 
+```{r}
+my.data$Temp_Amb <- rowMeans(my.data[,c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
+                                        "Tank8_Temp", "Tank10_Temp", "Tank12_Temp",
+                                        "Tank16_Temp", "Tank18_Temp")], na.rm=TRUE)
+my.data$Temp_Heat <- rowMeans(my.data[,c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp",
+                                        "Tank7_Temp", "Tank9_Temp", "Tank11_Temp",
+                                        "Tank15_Temp", "Tank17_Temp")], na.rm=TRUE)
+
+# subset 
+my.data_amb <- my.data %>% 
+  select(Date.Time, Temp_Amb, Date) %>%
+  rename("Temperature" = "Temp_Amb")
+my.data_amb$Treatment <- "Ambient"
+
+my.data_heat <- my.data %>% 
+  select(Date.Time, Temp_Heat, Date) %>%
+  rename("Temperature" = "Temp_Heat")
+my.data_heat$Treatment <- "High"
+
+all <- rbind(my.data_amb, my.data_heat)
+```
+
+## Calculate means by date 
+```{r}
+all_mean <- all %>%
+  group_by(Date, Treatment) %>%
+  summarise_at(vars(Temperature), list(name = mean))
+
+all_mean$Date <- parse_date_time(all_mean$Date, "%m!-%d!" , tz="EST")
+```
+
+
+## Plot my data only 
+```{r}
+ggplot(data = all, aes(x = Date.Time, y = Temperature, color = Treatment)) +
+  geom_line()
+
+ggplot(data = all_mean, aes(x = Date, y = name, color = Treatment)) +
+  geom_line()
+```
+
+
+
+
+
+
+
+
