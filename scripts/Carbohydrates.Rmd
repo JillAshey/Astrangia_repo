@@ -316,7 +316,6 @@ carb_all <- carb_all %>%
 
 ## Read in metadata, surface area, and homogenate volume
 ```{r}
- 
 surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
 
 homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
@@ -331,8 +330,8 @@ metadata$vol_mL <- as.numeric(metadata$vol_mL)
 
 ## Merge carb data with metadata 
 ```{r}
-#carb_all <- carb_all %>% 
-#  dplyr::rename(PlugID = ID)
+carb_all <- carb_all %>% 
+  dplyr::rename(PlugID = ID)
 
 all <- merge(metadata, carb_all, by = "PlugID")
 ```
@@ -383,7 +382,7 @@ ggsave("output/Physiology/Carbohydrates/Carbohydrates_Treatment.png", carb_plot,
 For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
 ```{r}
 ## Compute two-way ANOVA test 
-model <- aov(log(Carb.mg.cm2) ~ Treatment*Timepoint, data = exp) ### LOG TRANSFORMED
+model <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = exp) ### LOG TRANSFORMED
 summary(model)
 
 ## Compute summary stats 
@@ -406,7 +405,6 @@ pairwise.t.test(exp$Carb.mg.cm2, exp$Timepoint, p.adjust.method = "bonf") # shou
 # 1. Check homogeneity of variance assumption
 # a. Residuals vs fits plot
 plot(model, 1)
-## looks like rows 17, 73, and 107 are outliers. May be good to remove 
 
 # b. Levene's test 
 leveneTest(Carb.mg.cm2 ~ Timepoint*Treatment, data = exp)
