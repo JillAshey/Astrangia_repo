@@ -1,0 +1,194 @@
+---
+title: "glmmSeq - Astrangia mRNA"
+output: html_document
+date: "2023-10-02"
+---
+
+This script analyzses the raw mRNA count data using the glmmSeq package as described in the [vignette](https://cran.r-project.org/web/packages/glmmSeq/vignettes/glmmSeq.html) and [manual](https://cran.r-project.org/web/packages/glmmSeq/glmmSeq.pdf). This script is based on ZD's [script](https://github.com/imkristenbrown/Heron-Pdam-gene-expression/blob/master/BioInf/scripts/glmmSeq/Slope_Base/glmmSeq.Rmd).
+
+## Set up
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+sessionInfo() 
+# R version 4.3.1 (2023-06-16)
+# Platform: x86_64-apple-darwin20 (64-bit)
+# Running under: macOS Ventura 13.5.1
+```
+
+Install and load packages 
+```{r install packages, eval=FALSE}
+BiocManager::install("qvalue", force = TRUE)
+install.packages("rlang")
+install.packages("glmmSeq") #from CRAN
+devtools::install_github("myles-lewis/glmmSeq") # from github
+install.packages("plotly")
+BiocManager::install("genefilter")
+BiocManager::install("DESeq2")
+
+library(lme4)
+library(glmmSeq)
+library(dplyr) #load dplyr, which is required to run this tutorial but not included in the vignette
+library(kableExtra) #load kableExtra, which is also required to run this tutorial but not included in the vignette
+library(plotly) #library plotly to make interactive plots
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+
+sessionInfo()
+```
+
+
+## Load and clean data 
+
+Read in raw count data for mRNA 
+```{r}
+raw_counts <- read.csv("../data/Molecular/mRNA/Apoc_gene_count_matrix.csv")
+rownames(raw_counts) <- raw_counts[,1] #set first column that contains gene names as rownames
+raw_counts <- raw_counts[,-1] #remove the column with gene names
+```
+
+Remove extraneous info from sample name (eg trimmed.AST.1065_R1_001.fastq.gz.bam.gtf should be AST-1065)
+```{r}
+colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_001.fastq.gz.bam.gtf"
+colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_R1"
+colnames(raw_counts)<-gsub("trimmed.", "",colnames(raw_counts)) #get rid of "trimmed."
+colnames(raw_counts)<-gsub("AST.", "AST-",colnames(raw_counts)) # replace "AST." with "AST-"
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/mRNA/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in descending order 
+
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+```
+
+Data sanity checks!
+```{r}
+all(rownames(meta$ID)) %in% colnames(raw_counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. Says FALSE right now, but a visual inspection shows me that all of them are there...
+all(rownames(meta$ID) == colnames(raw_counts)) #are they the same in the same order? Should be TRUE
+```
+
+## Filter dataset 
+
+Use filtered data instead of raw counts as input
+```{r}
+filt_outrm <- raw_counts[rowSums(!as.matrix(raw_counts)) < ncol(raw_counts), ] #here we remove all genes that were not expressed in any of our samples- we are left with 41,393 genes.
+```
+
+Use pOverA filtering to reduce the dataset 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+filt_outrm_poa <- genefilter((filt_outrm), ffun) #apply filter
+sum(filt_outrm_poa) #count number of genes left
+
+filt_outrm_poa <- filt_outrm[filt_outrm_poa,] #keep only rows that passed filter
+```
+
+After pOverA filtering, we now have 23,236 genes in the dataset. 
+
+Data sanity checks!
+```{r}
+all(rownames(meta$ID)) %in% colnames(filt_outrm_poa) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. Says FALSE right now, but a visual inspection shows me that all of them are there...
+all(rownames(meta$ID) == colnames(filt_outrm_poa)) #are they the same in the same order? Should be TRUE
+```
+
+## Calculate dispersion 
+
+"Using negative binomial models requires gene dispersion estimates to be made. This can be achieved in a number of ways. A common way to calculate this for gene i is to use the equation:
+
+Dispersioni = (variancei - meani)/meani2
+
+Starting with raw counts, so using [DESeq2](http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), but could also import a normalized gene count matrix (i.e. transcripts per million) and calculate disperson manually as in the [vignette](https://cran.r-project.org/web/packages/glmmSeq/vignettes/glmmSeq.html).
+
+```{r}
+dds_filt_outrm <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
+                              colData = meta,
+                              design = ~1) # CHECK IF DESIGN SHOULD BE ~1
+
+dds_filt_outrm <- DESeq(dds_filt_outrm) #apply DEseq dispersion calculation
+
+dispersions_filt_outrm <- setNames(dispersions(dds_filt_outrm), rownames(filt_outrm_poa)) #save dispersions as vector for each gene
+
+dds_norm_counts <- as.data.frame(counts(dds_filt_outrm, normalized=TRUE)) #save normalized counts from DEseq object for downstream use
+
+vst <- vst(dds_filt_outrm)
+```
+
+Using vst object, make a heatmap and PCA plot of samples
+```{r}
+# Plot heat-map of sample-to-sample distances
+sampleDists <- dist(t(assay(vst))) # calculate distance matrix
+sampleDistMatrix <- as.matrix(sampleDists) # create distance matrix
+rownames(sampleDistMatrix) <- colnames(vst) # assign row names
+colnames(sampleDistMatrix) <- NULL # assign col names 
+heatmap <- pheatmap(sampleDistMatrix, # plot matrix
+         clustering_distance_rows = sampleDists, # cluster rows
+         clustering_distance_cols = sampleDists) # cluster cols
+
+# Plot PCAs of all samples 
+vst_PCAdata <- plotPCA(vst, intgroup = c("Treatment", "Timepoint"), returnData=TRUE) # create PCA loadings 
+percentVar <- round(100*attr(vst_PCAdata, "percentVar")) #plot PCA of samples with all data
+PCAplot <- ggplot(vst_PCAdata, aes(PC1, PC2, color=Treatment, shape = Timepoint)) + 
+   geom_point(size=3) +
+   geom_text(aes(label=name),hjust=0, vjust=0) +
+   xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+   ylab(paste0("PC2: ",percentVar[2],"% variance")) +
+   #scale_color_manual(values = c(control="cadetblue3", mid="palevioletred", high="darkgreen", unknown="black")) +
+   coord_fixed() +
+   #ggtitle("P. lobata - all genes") +
+   theme_bw() + #Set background color
+   theme(panel.border = element_blank(), # Set border
+         #panel.grid.major = element_blank(), #Set major gridlines
+         #panel.grid.minor = element_blank(), #Set minor gridlines
+         axis.line = element_line(colour = "black"), #Set axes color
+         plot.background=element_blank()) #Set the plot background
+PCAplot 
+
+# Looks like we have 2 outliers, but most of the samples are clustering around one another
+```
+
+Save vst object for downstream analysis 
+```{r}
+vst <- assay(vst) # call only the transformed counts
+vst <- as.data.frame(vst)
+vst <- tibble::rownames_to_column(vst, var = "Gene")
+
+write.csv(vst, "../output/vst_mRNA.csv") #save this as csv for downstream analysis
+```
+
+There is also an option to include size factors for each gene.
+```{r, eval=FALSE}
+sizeFactors_filt <- estimateSizeFactorsForMatrix(filt_outrm_poa)
+
+## look into why there is such a range of size factors for each sample 
+```
+
+## Fit models 
+
+We want to use the timepoint and treatment as fixed effect and site as the random effect: gene expression ~ Treatment * Timepoint + (1|Site). Is there a way to run it without a random effect because all of the samples came from the same site?
+
+To fit this model for all genes we can use the glmmSeq function.
+```{r, eval=FALSE}
+results <- glmmSeq(~ Treatment * Timepoint,
+                   countdata = filt_outrm_poa,
+                   metadata = meta,
+                   dispersion = dispersions_filt_outrm,
+                   progress = TRUE)
+
+#this fitting takes a while, so I save it as an RDS and load this in when needed instead of re-running everytime (unless something upstream of here changes)
+
+saveRDS(results, file = "glmmSeq.rds")  #save RDS
+```
+
+Won't let me fit a model without specifying a random effect. May not be able to use glmmSeq 
+
+
+
+
+
+
