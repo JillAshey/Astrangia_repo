@@ -14,6 +14,7 @@ library(DESeq2)
 library(pheatmap)
 library(lme4)
 library(tidyverse)
+library(apeglm)
 ```
 
 ## Load and clean data 
@@ -31,11 +32,15 @@ colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_001
 colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_R1"
 colnames(raw_counts)<-gsub("trimmed.", "",colnames(raw_counts)) #get rid of "trimmed."
 colnames(raw_counts)<-gsub("AST.", "AST-",colnames(raw_counts)) # replace "AST." with "AST-"
+colnames(raw_counts)<-gsub(" ", "", colnames(raw_counts))
+
+# rename columns all together? if they are not matching with the meta$ID 
+colnames(raw_counts) <- c("AST-1065", "AST-1105", "AST-1147", "AST-1412", "AST-1560", "AST-1567", "AST-1617", "AST-1722", "AST-2000", "AST-2007", "AST-2302", "AST-2360", "AST-2398", "AST-2404", "AST-2412", "AST-2512", "AST-2523", "AST-2563", "AST-2729", "AST-2755")
 ```
 
 Read in metadata 
 ```{r}
-meta <- read.csv("../data/Molecular/mRNA/RNA_metadata.csv")
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
 meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in descending order 
 #meta$ID <- gsub("AST-", "AST.", meta$ID)
 
@@ -46,7 +51,7 @@ meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
 
 Data sanity checks!
 ```{r}
-all(rownames(meta$ID)) %in% colnames(raw_counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. Says FALSE right now, but a visual inspection shows me that all of them are there...
+meta$ID %in% colnames(raw_counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
 all(rownames(meta$ID) == colnames(raw_counts)) #are they the same in the same order? Should be TRUE
 ```
 
@@ -58,7 +63,7 @@ sum(filt_outrm_poa) #count number of genes left
 
 filt_outrm_poa <- raw_counts[filt_outrm_poa,] #keep only rows that passed filter
 
-all(rownames(meta) %in% colnames(filt_outrm_poa)) # must come out TRUE
+all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
 ```
 
 ## Calculte dispersions 
@@ -124,5 +129,80 @@ vst <- tibble::rownames_to_column(vst, var = "Gene")
 
 write.csv(vst, "../output/vst_mRNA.csv") #save this as csv for downstream analysis
 ```
+
+
+
+
+20231003
+```{r}
+dds_filt_outrm <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
+                              colData = meta,
+                              design = ~Treatment+Timepoint+Treatment:Timepoint)
+
+dds_filt_outrm <- DESeq(dds_filt_outrm) #apply DEseq dispersion calculation
+res <- results(dds_filt_outrm)
+resultsNames(dds_filt_outrm)
+
+# [1] "Intercept"                  "Treatment_Heat_vs_Ambient"  "Timepoint_TP5_vs_TP0"       "Timepoint_TP7_vs_TP0"       "TreatmentHeat.TimepointTP5" "TreatmentHeat.TimepointTP7"
+## This doesn't really make sense to me. 
+```
+
+Trying something that the DESeq2 manual recommended based on the interactions
+```{r}
+dds_filt_outrm$group <- factor(paste0(dds_filt_outrm$Timepoint, dds_filt_outrm$Treatment))
+design(dds_filt_outrm) <- ~group
+dds <- DESeq(dds_filt_outrm)
+resultsNames(dds)
+results(dds)
+colData(dds)
+
+# multifactor design
+design(dds) <- formula(~ Treatment + Timepoint)
+ddsMF <- DESeq(dds)
+resMF <- results(ddsMF)
+head(resMF)
+resMFtype <- results(ddsMF, contrast = c("Treatment", "Ambient", "Heat"))
+head(resMFtype)
+```
+
+Trying to the quick start 
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
+                              colData = meta,
+                              design = ~Timepoint + Treatment + Timepoint:Treatment)
+dds <- DESeq(dds)
+resultsNames(dds)
+
+#result <- results(dds, contrast = list("TreatmentAmbient.TimepointTP5", "TreatmentHeat.TimepointTP7"))
+result <- results(dds)
+sum(result$padj<0.05, na.rm = T)
+sum(result$log2FoldChange>2, na.rm = T)
+
+plotDispEsts(dds)
+```
+
+```{r}
+meta$trt_time <- factor(paste0(meta$Treatment, "-", meta$Timepoint))
+
+dds <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
+                              colData = meta,
+                              design = ~trt_time)
+dds <- DESeq(dds)
+resultsNames(dds)
+
+result <- results(dds, contrast = list("trt_time_Ambient.TP5_vs_Ambient.TP0", "trt_time_Ambient.TP7_vs_Ambient.TP0"))
+sum(result$padj<0.1, na.rm = T)
+
+result <- results(dds, contrast = list("trt_time_Ambient.TP5_vs_Ambient.TP0", "trt_time_Heat.TP0_vs_Ambient.TP0"))
+sum(result$padj<0.1, na.rm = T)
+sum(result$log2FoldChange>5, na.rm = T)
+
+```
+
+I am confused. When I run the DESeq code with the design set to treatment + timepoint + treatment:timepoint, the results names are this: "Intercept", "Timepoint_TP5_vs_TP0", "Timepoint_TP7_vs_TP0", "Treatment_Heat_vs_Ambient",  "TimepointTP5.TreatmentHeat", "TimepointTP7.TreatmentHeat". This is not all of the comparisons between the two factors. The comparisons should be: Ambient v Heat, TP0 v TP5, TP0 v TP7, TP5 v TP7, Amb TP0 v Heat TP0, Amb TP0 v Heat TP5, 
+
+
+
+
 
 

@@ -59,7 +59,7 @@ colnames(raw_counts)<-gsub("AST.", "AST-",colnames(raw_counts)) # replace "AST."
 
 Read in metadata 
 ```{r}
-meta <- read.csv("../data/Molecular/mRNA/RNA_metadata.csv")
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
 meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in descending order 
 
 # Set variables as factors 
@@ -174,7 +174,7 @@ We want to use the timepoint and treatment as fixed effect and site as the rando
 
 To fit this model for all genes we can use the glmmSeq function.
 ```{r, eval=FALSE}
-results <- glmmSeq(~ Treatment * Timepoint,
+results <- glmmSeq(~ Treatment + Timepoint +1,
                    countdata = filt_outrm_poa,
                    metadata = meta,
                    dispersion = dispersions_filt_outrm,
