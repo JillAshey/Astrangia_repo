@@ -14,7 +14,7 @@ library(DESeq2)
 library(pheatmap)
 library(lme4)
 library(tidyverse)
-library(apeglm)
+#library(apeglm)
 ```
 
 ## Load and clean data 
@@ -46,7 +46,7 @@ meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in desce
 
 # Set variables as factors 
 meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
-meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "Heat"))
 ```
 
 Data sanity checks!
@@ -57,7 +57,7 @@ all(rownames(meta$ID) == colnames(raw_counts)) #are they the same in the same or
 
 ## Filter reads by proportion of samples containing cutoff value 
 ```{r}
-ffun<-filterfun(pOverA(0.85,5))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.75,5))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((raw_counts), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
@@ -77,13 +77,59 @@ Starting with raw counts, so using [DESeq2](http://bioconductor.org/packages/dev
 ```{r}
 dds_filt_outrm <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
                               colData = meta,
-                              design = ~Treatment*Timepoint)
+                              design = ~Timepoint*Treatment)
 
 dds_filt_outrm <- DESeq(dds_filt_outrm) #apply DEseq dispersion calculation
 dispersions_filt_outrm <- setNames(dispersions(dds_filt_outrm), rownames(filt_outrm_poa)) #save dispersions as vector for each gene
 
 dds_norm_counts <- as.data.frame(counts(dds_filt_outrm, normalized=TRUE)) #save normalized counts from DEseq object for downstream use
+
+
 ```
+
+
+20231221
+Error in checkFullRank(modelMatrix) :
+the model matrix is not full rank, so the model cannot be fit as specified.
+One or more variables or interaction terms in the design formula are linear
+combinations of the others and must be removed.
+
+Please read the vignette section 'Model matrix not full rank':
+
+vignette('DESeq2')
+
+Went to the DESeq2 manual and read about model matrix not full rank: "There are two main reasons for this problem: either one or more columns in the model matrix are linear combinations of other columns, or there are levels of factors or combinations of levels of multiple factors which are missing samples." I think in my case, it is an issue of linear combos. Let's see what deseq2 recommends us to do... 
+
+An example: 
+
+```{r}
+coldata <- DataFrame(grp=factor(rep(c("X","Y"),each=6)),
+                     ind=factor(rep(1:6,each=2)),
+                     cnd=factor(rep(c("A","B"),6)))
+coldata
+as.data.frame(coldata)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Do variance stabilizing transformation 
 
@@ -118,7 +164,7 @@ PCAplot <- ggplot(vst_PCAdata, aes(PC1, PC2, color=Treatment, shape =Timepoint))
          #panel.grid.minor = element_blank(), #Set minor gridlines
          axis.line = element_line(colour = "black"), #Set axes color
          plot.background=element_blank()) #Set the plot background
-PCAplot # there is no clear grouping of Days, so I will not be moving forward with Treatment only as an independent variable in my analysis 
+PCAplot 
 ```
 
 Save vst object for downstream analysis 
@@ -137,14 +183,14 @@ write.csv(vst, "../output/vst_mRNA.csv") #save this as csv for downstream analys
 ```{r}
 dds_filt_outrm <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
                               colData = meta,
-                              design = ~Treatment+Timepoint+Treatment:Timepoint)
+                              design = ~Treatment + Timepoint + Treatment*Timepoint)
 
 dds_filt_outrm <- DESeq(dds_filt_outrm) #apply DEseq dispersion calculation
 res <- results(dds_filt_outrm)
 resultsNames(dds_filt_outrm)
 
 # [1] "Intercept"                  "Treatment_Heat_vs_Ambient"  "Timepoint_TP5_vs_TP0"       "Timepoint_TP7_vs_TP0"       "TreatmentHeat.TimepointTP5" "TreatmentHeat.TimepointTP7"
-## This doesn't really make sense to me. 
+## This doesn't really make sense to me. Why are not all of the pairwise comparisons present?
 ```
 
 Trying something that the DESeq2 manual recommended based on the interactions
@@ -155,6 +201,7 @@ dds <- DESeq(dds_filt_outrm)
 resultsNames(dds)
 results(dds)
 colData(dds)
+# Does not have all the interactions that I want...
 
 # multifactor design
 design(dds) <- formula(~ Treatment + Timepoint)
@@ -162,27 +209,45 @@ ddsMF <- DESeq(dds)
 resMF <- results(ddsMF)
 head(resMF)
 resMFtype <- results(ddsMF, contrast = c("Treatment", "Ambient", "Heat"))
-head(resMFtype)
+summary(resMFtype)
 ```
 
 Trying to the quick start 
 ```{r}
+design <- formula(~Timepoint + Treatment + Timepoint:Treatment)
+
 dds <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
                               colData = meta,
-                              design = ~Timepoint + Treatment + Timepoint:Treatment)
+                              design = design)
 dds <- DESeq(dds)
 resultsNames(dds)
 
-#result <- results(dds, contrast = list("TreatmentAmbient.TimepointTP5", "TreatmentHeat.TimepointTP7"))
-result <- results(dds)
-sum(result$padj<0.05, na.rm = T)
-sum(result$log2FoldChange>2, na.rm = T)
+trt <- results(dds, contrast = c("Treatment", "Ambient", "Heat"))
+summary(trt)
+sum(trt$padj<0.05, na.rm = T)
 
-plotDispEsts(dds)
+tp_1 <- results(dds, contrast = c("Timepoint", "TP0", "TP5"))
+summary(tp_1)
+sum(tp_1$padj<0.05, na.rm = T)
+
+tp_2 <- results(dds, contrast = c("Timepoint", "TP0", "TP7"))
+summary(tp_2)
+sum(tp_2$padj<0.05, na.rm = T)
+
+tp_3 <- results(dds, contrast = c("Timepoint", "TP5", "TP7"))
+summary(tp_3)
+sum(tp_3$padj<0.05, na.rm = T)
+
+blah <- results(dds, contrast = c("Ambient", "TP0"))
+summary(blah)
+sum(tp_3$padj<0.05, na.rm = T)
+
+# But I can't contrast timepoint and treatment at the same time 
 ```
 
+Trying to suggestion where I combine both variables into one and run it that way
 ```{r}
-meta$trt_time <- factor(paste0(meta$Treatment, "-", meta$Timepoint))
+meta$trt_time <- factor(paste0(meta$Treatment, "_", meta$Timepoint))
 
 dds <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
                               colData = meta,
@@ -190,16 +255,133 @@ dds <- DESeqDataSetFromMatrix(countData = filt_outrm_poa,
 dds <- DESeq(dds)
 resultsNames(dds)
 
-result <- results(dds, contrast = list("trt_time_Ambient.TP5_vs_Ambient.TP0", "trt_time_Ambient.TP7_vs_Ambient.TP0"))
-sum(result$padj<0.1, na.rm = T)
+test1 <- results(dds, contrast = c("trt_time", "Ambient_TP0", "Heat_TP0"))
+summary(test1)
+sum(test1$padj<0.05, na.rm = T) 
 
-result <- results(dds, contrast = list("trt_time_Ambient.TP5_vs_Ambient.TP0", "trt_time_Heat.TP0_vs_Ambient.TP0"))
-sum(result$padj<0.1, na.rm = T)
-sum(result$log2FoldChange>5, na.rm = T)
+test2 <- results(dds, contrast = c("trt_time", "Ambient_TP5", "Heat_TP5"))
+summary(test2)
+sum(test2$padj<0.05, na.rm = T)
+plotMA(test2)
 
+test3 <- results(dds, contrast = c("trt_time", "Ambient_TP7", "Heat_TP7"))
+summary(test3)
+sum(test3$padj<0.05, na.rm = T)
+plotMA(test3)
+
+test4 <- results(dds, contrast = c("trt_time", "Ambient_TP0", "Ambient_TP5"))
+summary(test4)
+sum(test4$padj<0.05, na.rm = T)
+plotMA(test4)
+
+test5 <- results(dds, contrast = c("trt_time", "Ambient_TP5", "Ambient_TP7"))
+summary(test5)
+sum(test5$padj<0.05, na.rm = T)
+plotMA(test5)
+
+## Could continue with pairwise comparisons. I still want to figure out if I can just do the design as ~Treatment + Timepoint + Treatment:Timepoint instead of having to combine them into one group. Though the combining of them into a group is one of the recommendations from the manual.
 ```
 
-I am confused. When I run the DESeq code with the design set to treatment + timepoint + treatment:timepoint, the results names are this: "Intercept", "Timepoint_TP5_vs_TP0", "Timepoint_TP7_vs_TP0", "Treatment_Heat_vs_Ambient",  "TimepointTP5.TreatmentHeat", "TimepointTP7.TreatmentHeat". This is not all of the comparisons between the two factors. The comparisons should be: Ambient v Heat, TP0 v TP5, TP0 v TP7, TP5 v TP7, Amb TP0 v Heat TP0, Amb TP0 v Heat TP5, 
+Lots of my adjusted p-values are set to NAs. This is the explanation from the DESeq manual that best describes thats going on: "If a row is filtered by automatic independent filtering, for having a low mean normalized count, then only the adjusted p value will be set to NA. Description and customization of independent filtering is described below."
+
+So a lot of my data is not passing the independent filtering threshold that DESeq is setting. Notes on independent filtering of results from the manual: "The results function of the DESeq2 package performs independent filtering by default using the mean of normalized counts as a filter statistic. A threshold on the filter statistic is found which optimizes the number of adjusted p values lower than a significance level alpha (we use the standard variable name for significance level, though it is unrelated to the dispersion parameter α
+). The theory behind independent filtering is discussed in greater detail below. The adjusted p values for the genes which do not pass the filter threshold are set to NA."
+
+```{r}
+metadata(test2)$alpha
+
+metadata(test2)$filterThreshold # what does the filter threshold mean? That 81% of my genes do not pass the threshold? 
+
+plot(metadata(test2)$filterNumRej, 
+     type="b", ylab="number of rejections",
+     xlab="quantiles of filter")
+lines(metadata(test2)$lo.fit, col="red")
+abline(v=metadata(test2)$filterTheta)
+```
+
+
+What if we removed TP0??
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+20231221
+Step 1 - create deseq dataset 
+```{r}
+# Ensure column names in count data match the IDs in the metadata
+colnames(filt_outrm_poa) <- meta$ID
+
+# Create DESeqDataSet
+dds <- DESeqDataSetFromMatrix(
+    countData = filt_outrm_poa,
+    colData = meta,
+    design = ~ Timepoint + Treatment
+)
+```
+
+Still running into this 'Model matrix not full rank'
+
+Check levels in variables 
+```{r}
+table(meta$Timepoint)
+table(meta$Treatment)
+# they have more than 1 level each 
+```
+
+Check for perfect correlation - Inspect if there is a perfect correlation between Timepoint and Treatment. If every level of Timepoint always goes with the same level of Treatment (or vice versa), they cannot both be used in the model.
+
+
+Maybe remove TP0 in this case? 
+```{r}
+meta_sub <- subset(meta, Timepoint != "TP0")
+
+filt_outrm_poa_sub <- filt_outrm_poa[, meta_sub$ID]
+
+# Create DESeqDataSet
+dds_sub <- DESeqDataSetFromMatrix(
+    countData = filt_outrm_poa_sub,
+    colData = meta_sub,
+    design = ~ Treatment
+)
+
+# Run deseq
+dds_sub <- DESeq(dds_sub)
+
+# look at results 
+resultsNames(dds_sub)
+
+# comparing treatments within a specific timepoint 
+res <- results(dds_sub, contrast=list("Treatment_Heat_vs_Ambient"))
+res$log2FoldChange
+
+res <- results(dds_sub, contrast=list("Timepoint_TP7_vs_TP5", "Treatment_Heat"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

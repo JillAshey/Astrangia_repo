@@ -33,8 +33,8 @@ library(gridExtra)
 #data/Hobo/temp_light_logger/20210206
 
 # Read in temp data 
-Tank1 <- read.csv("data/Hobo/temp_light_logger/20210206/20210206_Tank1_21002975.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
-Tank2 <- read.csv("data/Hobo/temp_light_logger/20210206/20210206_Tank2_21002981.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank1 <- read.csv("../data/Environmental/Hobo/temp_light_logger/20210206/20210206_Tank1_21002975.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
+Tank2 <- read.csv("../data/Environmental/Hobo/temp_light_logger/20210206/20210206_Tank2_21002981.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
 Tank2 <- Tank2[1:nrow(Tank1),]
 Tank3 <- read.csv("data/Hobo/temp_light_logger/20210206/20210206_Tank3_21002972.csv", sep=",", skip=c(2), header=FALSE, na.strings = "NA")[ ,2:4]
 Tank3 <- Tank3[1:nrow(Tank1),]

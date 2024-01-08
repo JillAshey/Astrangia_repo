@@ -47,6 +47,9 @@ library(ggpubr)
 library(lubridate)
 library(cowplot)
 #library(dplyr)
+library(car)
+library(emmeans)
+library(lsmeans)
 
 ## libraries for parallel processing
 library(future)
@@ -64,17 +67,17 @@ library(furrr)
 
 ## Import data
 ```{r}
-path.p <- "data/Physiology/PR/raw" #the location of all your respirometry files 
+path.p <- "../data/Physiology/PR/raw" #the location of all your respirometry files 
 
 # List data files
 file.names <- list.files(path = path.p, pattern = "csv$")  # list all csv file names in the folder
 file.names <- file.names[!grepl("metadata", file.names)]   # omit metadata from files to be read in as data
 
 # Load PI curve sample metadata (i.e., which corals were in which runs)
-sample.info <- read_csv("data/Physiology/PR/PR_sample_metadata.csv")
+sample.info <- read_csv("../data/Physiology/PR/PR_sample_metadata.csv")
 
 # Load PI curve run metadata (i.e., light levels and interval times for each run)
-run.info <- read_csv(file = "data/Physiology/PR/PR_run_metadata.csv")
+run.info <- read_csv(file = "../data/Physiology/PR/PR_run_metadata.csv")
 
 # Join all coral and run metadata
 metadata <- full_join(sample.info, run.info) %>%
@@ -161,7 +164,7 @@ cowplot::plot_grid(df$data_plot[[1]], df$thin_data_plot[[1]], nrow = 2,
 #### The full or thinned data plot for any sample can be accessed like this:
 ```{r}
 df %>%
-  filter(colony_id == "AST-1109") %>%
+  filter(colony_id == "AST-3002") %>%
   pull(thin_data_plot)
 ```
 
@@ -238,11 +241,36 @@ pr <- pr %>%
 ```
 
 # Plot rates vs. irradiance for each sample
+Now that we processed pr data, let's look at the data by timepoint 
+
+## TP0 
 ```{r, fig.height=2, fig.width = 8}
-ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+tp0_pr <- pr %>% 
+  filter(Date == "2021-02-04")
+
+tp0_plot <- ggplot(tp0_pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
   geom_point() +
-  facet_wrap(~colony_id*Light_Value, ncol = 9)
+  facet_wrap(~colony_id*Light_Value); tp0_plot
+
+ggsave("../output/Physiology/PR/TP0_PR.pdf", tp0_plot, width = 6, height = 10, units = c("in"))
 ```
+
+## TP1
+```{r, fig.height=2, fig.width = 8}
+tp1_pr <- pr %>% 
+  filter(Date == "2021-03-04")
+
+tp1_plot <- ggplot(tp1_pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
+  geom_point() +
+  facet_wrap(~colony_id*Light_Value); tp1_plot
+
+ggsave("../output/Physiology/PR/TP1_PR.pdf", tp1_plot, width = 6, height = 10, units = c("in"))
+```
+
+
+
+
+
 
 # Write to output file
 ```{r}
@@ -250,15 +278,11 @@ ggplot(pr, aes(x = as.numeric(Light_Value), y = micromol.cm2.h)) +
 pr.out <- pr %>% select(colony_id, Light_Value, Run,Treatment, micromol.cm2.s, micromol.cm2.h, Date)
 
 # Write to output file
-write.csv(pr.out, "output/Physiology/PR/PR_rates.csv")
+write.csv(pr.out, "../output/Physiology/PR/PR_rates.csv")
 ```
 
 ```{r}
 pr.save <- pr.out %>% select(colony_id, Light_Value, Run, Treatment, micromol.cm2.s, micromol.cm2.h, Date)
-
-gd <- pr.save %>% group_by(Light_Value) %>% 
-        summarise(avg = mean(micromol.cm2.h),
-          sem = sd(micromol.cm2.h))
 
 pr.save <- pr.save %>% 
   mutate(Timepoint = case_when(
@@ -306,8 +330,7 @@ trt.plot <- ggplot(pr.save, aes(x = Timepoint, y = micromol.cm2.h, group=Treatme
         legend.text = element_text(size=4))+
   theme(text = element_text(size=15),
         axis.text.x = element_text(angle=90, hjust=1)) +
-  guides(color = guide_legend(override.aes = list(size = 1)))
-trt.plot
+  guides(color = guide_legend(override.aes = list(size = 1))); trt.plot
 
 plot <- grid.arrange(trt.plot, clip="off")
 ggsave("output/Physiology/PR/Timepoint.Treatment_PR.pdf", plot, width = 6, height = 5, units = c("in"))
@@ -592,8 +615,8 @@ ggsave("output/Physiology/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", pl
 
 ### Import data 
 ```{r}
-exp <- read_csv(file = "output/Physiology/PR/PR_rates.csv")
-field <- read_csv(file = "output/Physiology/PR/PR_field_rates.csv")
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+field <- read_csv(file = "../output/Physiology/PR/PR_field_rates.csv")
 field$Treatment <- "Field"
 
 
@@ -920,5 +943,289 @@ pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint) # should I specify a p.adju
 ```
 
 
+
+
+
+### 20240108 
+
+Going to remove outliers, plot everything and do stats 
+
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+field <- read_csv(file = "../output/Physiology/PR/PR_field_rates.csv")
+field$Treatment <- "Field"
+
+
+all <- full_join(exp, field) %>%
+  as_tibble()
+  
+all <- all %>% 
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-10" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-04-30" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-02" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-06-25" ~ "TP5", 
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-07-23" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7",
+    Date == "2021-09-01" ~ "TP7")) 
+
+all <- all %>% 
+  mutate(Month = case_when(
+    Date == "2021-02-04" ~ "Febuary", # TP0
+    Date == "2021-03-04" ~ "March", # TP1
+    Date == "2021-04-01" ~ "Early April", # TP2
+    Date == "2021-04-10" ~ "Early April", # TP2
+    Date == "2021-04-29" ~ "Late April", # TP3
+    Date == "2021-04-30" ~ "Late April", # TP3
+    Date == "2021-05-27" ~ "May", # TP4
+    Date == "2021-06-02" ~ "May", # TP4
+    Date == "2021-06-24" ~ "June", # TP5
+    Date == "2021-06-25" ~ "June", # TP5
+    Date == "2021-07-22" ~ "July", # TP6
+    Date == "2021-07-23" ~ "July", # TP6
+    Date == "2021-08-19" ~ "August", # TP7
+    Date == "2021-09-01" ~ "August")) # TP7
+  
+all <- all %>% 
+  mutate(Assay = case_when(
+    Light_Value == "0" ~ "Rd",
+    Light_Value == "320" ~ "P",
+    Light_Value == "337" ~ "P",
+    Light_Value == "340" ~ "P",
+    Light_Value == "350" ~ "P",
+    Light_Value == "355" ~ "P",
+    Light_Value == "368" ~ "P",
+    Light_Value == "392" ~ "P",
+    Light_Value == "321" ~ "P",
+    Light_Value == "361" ~ "P",
+    Light_Value == "319" ~ "P", 
+    Light_Value == "334" ~ "P",
+    Light_Value == "366" ~ "P",
+    Light_Value == "358" ~ "P",
+    Light_Value == "342" ~ "P"))
+
+# all <- all %>% 
+#   mutate(Assay = case_when(
+#     Treatment == "Ambient" ~ "Ambient",
+#     Treatment == "Heat" ~ "Heat",
+#     Treatment == "Field-TP2" ~ "Field",
+#     Treatment == "Field-TP3" ~ "Field",
+#     Treatment == "Field-TP4" ~ "Field"))
+
+```  
+
+Remove P assay because most colonies were aposymbiotic 
+```{r}
+all_rd <- all %>%
+  filter(Assay == "Rd")
+```
+
+Remove any values that were greater than 0, as positive values should not have occurred during the dark respiration run, as well as the acclimatization period (TP0) and field data.
+```{r}
+all_rd <- all_rd %>%
+  filter(!micromol.cm2.h > 0) %>%
+  filter(!micromol.cm2.h < -10) %>%
+  filter(!Treatment == "Acclimatization") %>%
+  filter(!Treatment == "Field")
+```
+
+Set levels for plotting by month 
+```{r}
+all_rd$Month <- factor(all_rd$Month, levels = c("March", "Early April", "Late April", "May", "June", "July", "August"))
+```
+
+Plot
+```{r}
+plot <- ggplot(all_rd, aes(x = Month, y = micromol.cm2.h, colour = Treatment)) +
+  geom_boxplot(aes(colour=Treatment), lwd=1) +
+  geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
+  geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_colour_manual(values = c("blue", "red")) +
+  xlab("") +
+  #hjust(x = 0) +
+  #facet_wrap(~Assay, ncol = 2) +
+  theme_classic() +
+  theme(
+      legend.position="right",
+      axis.title=element_text(face="bold", size=14),
+      axis.text=element_text(size=12, color="black"), 
+      legend.title=element_text(face="bold", size=14), 
+      legend.text=element_text(size=12), 
+      axis.text.x=element_text(angle=45, hjust=1)
+      ); plot
+
+## Likely have to remove May, as there are only 2 points for Heat trt 
+
+ggsave("../output/Physiology/PR/R_Treatment_20240108.pdf", plot, width = 10, height = 8)
+ggsave("../output/Physiology/PR/R_Treatment_20240108.png", plot, width = 10, height = 8)
+```
+
+Summarize data 
+```{r}
+summary <- all_rd %>% 
+  group_by(Timepoint, Treatment) %>%
+  select(micromol.cm2.h) %>%
+  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary
+
+summary_tp <- all_rd %>% 
+  group_by(Timepoint) %>%
+  select(micromol.cm2.h) %>%
+  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary_tp
+```
+
+
+Stats!
+```{r}
+## Need to remove May, as there are only two points there after filtering 
+all_rd <- all_rd %>% 
+  filter(!Month == "May")
+
+## Change all values to positive (aka inverse)
+all_rd <- all_rd %>%
+  mutate(micromol.cm2.h_inverse = micromol.cm2.h*(-1))
+
+## Compute two-way ANOVA test 
+model <- aov(micromol.cm2.h_inverse ~ Treatment*Timepoint, data = all_rd)
+summary(model)
+
+## Slight significance by time point 
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is less than 0.05, normality is violated
+
+
+
+
+## Data transformation using log 
+## Compute two-way ANOVA test 
+model <- aov(log(micromol.cm2.h_inverse) ~ Treatment*Timepoint, data = all_rd)
+summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test -- cant run with log, produces an error
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is greater than 0.05, normality attained
+
+
+
+
+
+## Data transformation using sqrt
+## Compute two-way ANOVA test 
+model <- aov(sqrt(micromol.cm2.h_inverse) ~ Treatment*Timepoint, data = all_rd)
+summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test -- cant run with sqrt, produces an error
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is greater than 0.05, normality attained
+
+
+
+
+
+## Data transformation using square 
+## Compute two-way ANOVA test 
+model <- aov((micromol.cm2.h_inverse)^2 ~ Treatment*Timepoint, data = all_rd)
+summary(model)
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test -- cant run with sqrt, produces an error
+#leveneTest(sqrt(micromol.cm2.h) ~ Timepoint*Treatment, data = all_rd)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is less than 0.05, normality violated
+```
+
+Log and sqrt both seem like good potential transformations for this data
 
 

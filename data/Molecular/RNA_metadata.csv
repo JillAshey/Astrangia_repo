@@ -1,8 +1,8 @@
 ID,Site,Timepoint,Treatment 
-AST-1722,FW,TP0,Ambient
-AST-1147,FW,TP0,Ambient
-AST-2398,FW,TP0,Heat
-AST-1567,FW,TP0,Heat
+AST-1722,FW,TP0,Acclimation
+AST-1147,FW,TP0,Acclimation
+AST-2398,FW,TP0,Acclimation
+AST-1567,FW,TP0,Acclimation
 AST-2000,FW,TP5,Ambient
 AST-1617,FW,TP5,Ambient
 AST-1412,FW,TP5,Ambient

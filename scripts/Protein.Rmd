@@ -59,6 +59,7 @@ library(GGally)
 library(broom)
 library(cowplot)
 library(directlabels)
+library(multcomp)
 ```
 
 
@@ -425,3 +426,167 @@ shapiro.test(x = aov_residuals)
 ## p-value is not less than 0.05, so normality is all good 
 ```
 
+
+
+### 20240108
+
+Going to remove outliers, plot everything and do stats 
+
+```{r}
+prot <- read_csv("../output/Physiology/SolubleProtein/SolubleProtein.csv")
+```
+
+Assign Month to TPs
+```{r}
+prot <- prot %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) # TP7
+```
+
+Remove acclimatization (TP0) and field data 
+```{r}
+prot <- prot %>%
+  filter(!Timepoint == "TP0") %>%
+  filter(!Treatment == "Field")
+```
+
+Set levels for plotting by month 
+```{r}
+prot$Month <- factor(prot$Month, levels = c("March", "Early April", "Late April", "May", "June", "July", "August"))
+```
+
+Plot 
+```{r}
+plot <- ggplot(prot, aes(x = Month, y = prot_mg.cm2, colour = Treatment)) +
+  geom_boxplot(aes(colour=Treatment), lwd=1) +
+  geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_colour_manual(values = c("blue", "red")) +
+  xlab("") +
+  #hjust(x = 0) +
+  #facet_wrap(~Assay, ncol = 2) +
+  theme_classic() +
+  theme(
+      legend.position="right",
+      axis.title=element_text(face="bold", size=14),
+      axis.text=element_text(size=12, color="black"), 
+      legend.title=element_text(face="bold", size=14), 
+      legend.text=element_text(size=12), 
+      axis.text.x=element_text(angle=45, hjust=1)
+      ); plot
+
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240108.pdf", plot, width = 10, height = 8)
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240108.png", plot, width = 10, height = 8)
+```
+
+Summarize data 
+```{r}
+summary <- prot %>% 
+  group_by(Timepoint, Treatment) %>%
+  select(prot_mg.cm2) %>%
+  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary
+
+summary_tp <- prot %>% 
+  group_by(Timepoint) %>%
+  select(prot_mg.cm2) %>%
+  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary_tp
+```
+
+Stats!
+```{r}
+## Compute two-way ANOVA test 
+model <- aov(prot_mg.cm2 ~ Treatment*Timepoint, data = prot)
+summary(model)
+
+## TP significant, Trt:TP different significant
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+emm = emmeans(model, ~ Treatment*Timepoint)
+cld(emm, Letters=c(LETTERS)) #letter display
+pairs(emm)
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = prot)
+## p-value is  less than 0.05, so variance is not homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is less than 0.05, normality is violated
+
+
+
+
+
+## Data transformation using log 
+## Compute two-way ANOVA test 
+model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot)
+summary(model)
+
+## TP significant, Trt:TP different significant
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+
+emm = emmeans(model, ~ Treatment*Timepoint)
+cld(emm, Letters=c(LETTERS)) #letter display
+pairs(emm)
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = prot)
+## p-value is  greater than 0.05, so variance is  homogenous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is greater than 0.05, normality is not violated
+```
+
+
+
+
+
+
+
+
+
+I also need to go back and see which AST samples I still need to run for carb and protein in the lab
