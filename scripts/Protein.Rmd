@@ -581,7 +581,20 @@ shapiro.test(x = aov_residuals)
 # pvalue is greater than 0.05, normality is not violated
 ```
 
+Remove outliers 
+```{r}
+#set quantile values
+q <- c(0.25, 0.75)
 
+# calculate quantile values by Temperature and Treatment groups
+Quants <- prot %>%
+  group_by(Treatment, Timepoint) %>%
+  summarize(quant25 = quantile(prot, probs = q[1]),
+            quant75 = quantile(prot, probs = q[2]),
+            IQRbyGroup=IQR(prot))
+
+## getting errors...
+```
 
 
 

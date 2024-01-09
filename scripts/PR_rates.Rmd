@@ -1228,4 +1228,15 @@ shapiro.test(x = aov_residuals)
 
 Log and sqrt both seem like good potential transformations for this data
 
+Remove outliers 
+```{r}
+#set quantile values
+q <- c(0.25, 0.75)
 
+# calculate quantile values by Temperature and Treatment groups
+Quants <- all_rd %>%
+  group_by(Treatment, Timepoint) %>%
+  summarize(quant25 = quantile(all_rd, probs = q[1]),
+            quant75 = quantile(all_rd, probs = q[2]),
+            IQRbyGroup=IQR(all_rd))
+```
