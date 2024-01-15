@@ -1,0 +1,353 @@
+---
+title: "DESeq2 compare"
+author: "Jill Ashey"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+I used bowtie2 and hisat2 as aligners for my data. Now I want to compare the gene count matrices that each aligner produced. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
+library(tidyverse)
+library(car)
+```
+
+Read in data
+```{r}
+bowtie_matrix <- read_csv("data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.csv")
+hisat2_matrix <- read_csv("data/Molecular/mRNA/Apoc_gene_count_matrix_hisat2.csv")
+
+head(bowtie_matrix)
+head(hisat2_matrix)
+```
+
+Invesigate data. First, compare row sums for each alignment method.
+```{r}
+row_sums <- rowSums(select(bowtie_matrix, -gene_id))
+bowtie_matrix$sum_across_rows_bowtie <- row_sums
+last_column_bowtie <- bowtie_matrix[, ncol(bowtie_matrix)]
+
+row_sums <- rowSums(select(hisat2_matrix, -gene_id))
+hisat2_matrix$sum_across_rows_hisat2 <- row_sums
+last_column_hisat2 <- hisat2_matrix[, ncol(hisat2_matrix)]
+
+merge <- merge(bowtie_matrix, hisat2_matrix, by = "gene_id")
+
+summary <- merge %>%
+  select(gene_id, sum_across_rows_bowtie, sum_across_rows_hisat2) %>%
+  mutate(difference = sum_across_rows_bowtie - sum_across_rows_hisat2) %>%
+  summarize(
+    positive_count = sum(difference > 0),
+    negative_count = sum(difference < 0),
+    zero_count = sum(difference == 0))
+
+print(summary)
+```
+
+For ~37000 genes, bowtie2 generated more counts than hisat2. 
+
+Compare column sums for each alignment method.
+```{r}
+col_sums_bowtie <- colSums(select(bowtie_matrix, -gene_id))
+
+col_sums_hisat2 <- colSums(select(hisat2_matrix, -gene_id))
+
+col_sums <- rbind(col_sums_bowtie, col_sums_hisat2)
+col_sums <- as.data.frame(col_sums)
+```
+
+For all samples, there are more reads aligned with bowtie than with hisat2. 
+
+
+
+
+Let's try to run some DESeq2 with the bowtie data. Read in counts. 
+```{r}
+bowtie_matrix <- read_csv("data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.csv")
+bowtie_matrix <- as.data.frame(bowtie_matrix)
+rownames(bowtie_matrix) <- bowtie_matrix[,1] #set first column that contains gene names as rownames
+bowtie_matrix <- bowtie_matrix[,-1] # remove column w/ gene names 
+```
+
+Remove extraneous info from sample names. 
+```{r}
+colnames(bowtie_matrix) <- sub("align.trimmed.", "", colnames(bowtie_matrix))
+colnames(bowtie_matrix) <- sub("_R1_001.fastq.gz.bam.gtf", "", colnames(bowtie_matrix))
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in descending order 
+
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "Heat"))
+```
+
+Data sanity checks!
+```{r}
+meta$ID %in% colnames(bowtie_matrix) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta$ID) == colnames(bowtie_matrix)) #are they the same in the same order? Should be TRUE
+```
+
+Filter reads by proportion of samples containing cutoff value 
+```{r}
+ffun<-filterfun(pOverA(0.75,5))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+filt_outrm_poa <- genefilter((bowtie_matrix), ffun) #apply filter
+sum(filt_outrm_poa) #count number of genes left
+
+filt_outrm_poa <- bowtie_matrix[filt_outrm_poa,] #keep only rows that passed filter
+
+all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
+```
+
+Remove AST-1105 from the data, as it did not have good mapping and has basically no counts. 
+```{r}
+# Remove column from gene count matrix 
+filt_outrm_poa <- filt_outrm_poa %>%
+  select(-"AST-1105")
+  
+# Remove row from metadata
+meta <- meta %>% 
+  filter(ID != "AST-1105")
+
+all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
+```
+
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = ~Timepoint)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+# [1] "Intercept"            "Timepoint_TP5_vs_TP0" "Timepoint_TP7_vs_TP0"
+blah <- results(dds, contrast=c("Timepoint", "TP5", "TP7"))
+results(dds, contrast=c("Timepoint", "TP0", "TP5"))
+results(dds, contrast=c("Timepoint", "TP0", "TP7"))
+
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = ~Treatment)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+# [1] "Intercept"                        "Treatment_Ambient_vs_Acclimation" "Treatment_Heat_vs_Acclimation"   
+```
+
+Why is it not giving me all of the comparisons?
+
+Let's look at timepoint first 
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = ~Timepoint)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+# [1] "Intercept"            "Timepoint_TP5_vs_TP0" "Timepoint_TP7_vs_TP0" -- not giving me all the comparisons
+
+## TP7 vs 5
+TP7_v_5 <- results(dds, contrast=c("Timepoint", "TP7", "TP5"))
+head(TP7_v_5)
+plotMA(TP7_v_5, ylim=c(-7,6))
+sum(TP7_v_5$padj <0.05, na.rm=T)
+TP7_v_5.sig <- subset(TP7_v_5, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP7_v_5.sig$log2FoldChange <0, na.rm=T)
+sum(TP7_v_5.sig$log2FoldChange >0, na.rm=T)
+TP7v5.sig.list <- data[which(rownames(dds) %in% rownames(TP7_v_5.sig)),] #subset list of sig transcripts from original count data
+#write.csv(counts(SpawnCon.sig.list), file="Output/Spawn_compare_DEG.csv")
+TP7v5.rsig <- rlog(TP7v5.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+plotPCA(TP7v5.rsig, intgroup = c("Treatment", "Timepoint")) #Plot PCA of all samples for DEG only
+mat <- assay(TP7v5.rsig) #make an expression object
+col.order <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398", # Acclimation
+              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
+              "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
+              "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
+              "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
+mat <- mat[,col.order]
+df <- as.data.frame(colData(TP7v5.rsig)[,c("Treatment", "Timepoint")]) #make dataframe
+df <- df[order(df$Timepoint),]
+
+pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
+                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
+                         show_colnames =TRUE) #plot heatmap of all DEG by group
+
+
+## TP5 vs 0
+TP5_v_0 <- results(dds, contrast=c("Timepoint", "TP5", "TP0"))
+head(TP5_v_0)
+plotMA(TP5_v_0, ylim=c(-7,6))
+sum(TP5_v_0$padj <0.05, na.rm=T)
+TP5_v_0.sig <- subset(TP5_v_0, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP5_v_0.sig$log2FoldChange <0, na.rm=T)
+sum(TP5_v_0.sig$log2FoldChange >0, na.rm=T)
+TP5v0.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_0.sig)),] #subset list of sig transcripts from original count data
+#write.csv(counts(SpawnCon.sig.list), file="Output/Spawn_compare_DEG.csv")
+TP5v0.rsig <- rlog(TP5v0.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+plotPCA(TP5v0.rsig, intgroup = c("Treatment", "Timepoint")) #Plot PCA of all samples for DEG only
+mat <- assay(TP5v0.rsig) #make an expression object
+col.order <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398", # Acclimation
+              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
+              "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
+              "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
+              "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
+mat <- mat[,col.order]
+df <- as.data.frame(colData(TP5v0.rsig)[,c("Treatment", "Timepoint")]) #make dataframe
+df <- df[order(df$Timepoint),]
+
+pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
+                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
+                         show_colnames =TRUE) #plot heatmap of all DEG by group
+
+
+## TP7 vs 0
+TP7_v_0 <- results(dds, contrast=c("Timepoint", "TP7", "TP0"))
+head(TP7_v_0)
+plotMA(TP7_v_0, ylim=c(-7,6))
+sum(TP7_v_0$padj <0.05, na.rm=T)
+TP7_v_0.sig <- subset(TP7_v_0, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP7_v_0.sig$log2FoldChange <0, na.rm=T)
+sum(TP7_v_0.sig$log2FoldChange >0, na.rm=T)
+```
+
+Let's look at timepoint first 
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = ~Treatment)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+# [1] "Intercept"                        "Treatment_Ambient_vs_Acclimation" "Treatment_Heat_vs_Acclimation"   
+
+## Acclimation vs Ambient
+Acc_v_Amb <- results(dds, contrast=c("Treatment", "Ambient", "Acclimation"))
+head(Acc_v_Amb)
+plotMA(Acc_v_Amb, ylim=c(-7,6))
+sum(Acc_v_Amb$padj <0.05, na.rm=T)
+Acc_v_Amb.sig <- subset(Acc_v_Amb, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(Acc_v_Amb.sig$log2FoldChange <0, na.rm=T)
+sum(Acc_v_Amb.sig$log2FoldChange >0, na.rm=T)
+
+## Acclimation vs Heat
+Acc_v_Heat <- results(dds, contrast=c("Treatment", "Heat", "Acclimation"))
+head(Acc_v_Heat)
+plotMA(Acc_v_Heat, ylim=c(-7,6))
+sum(Acc_v_Heat$padj <0.05, na.rm=T)
+Acc_v_Heat.sig <- subset(Acc_v_Heat, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(Acc_v_Heat.sig$log2FoldChange <0, na.rm=T)
+sum(Acc_v_Heat.sig$log2FoldChange >0, na.rm=T)
+
+## Ambient vs Heat
+Amb_v_Heat <- results(dds, contrast=c("Treatment", "Heat", "Ambient"))
+head(Amb_v_Heat)
+plotMA(Amb_v_Heat, ylim=c(-7,6))
+sum(Amb_v_Heat$padj <0.05, na.rm=T)
+Amb_v_Heat.sig <- subset(Amb_v_Heat, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(Amb_v_Heat.sig$log2FoldChange <0, na.rm=T)
+sum(Amb_v_Heat.sig$log2FoldChange >0, na.rm=T)
+```
+
+Now let's try combining Timepoint and Treatment in the design formula 
+```{r}
+# Assuming you want to include the main effects and interaction term for Timepoint and Treatment
+design_formula <- ~ Timepoint+Treatment+Timepoint:Treatment
+
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = design_formula)
+
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa, colData = meta, design = ~Timepoint*Treatment)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+```
+
+Still not working. Saying that my model matrix is not full rank. Let's troubleshoot. 
+
+Check for perfect collinearity. 
+```{r}
+# Assuming 'meta' is your metadata dataframe
+design_matrix <- model.matrix(~ Timepoint + Treatment + Timepoint:Treatment, data = meta)
+
+# Check for collinearity using VIF
+vif_results <- vif(design_matrix)
+print(vif_results)
+
+## this is giving me errors. 
+```
+
+Check factor levels
+```{r}
+## Check unique levels 
+unique_levels_timepoint <- unique(meta$Timepoint)
+unique_levels_treatment <- unique(meta$Treatment)
+
+print(unique_levels_timepoint)
+print(unique_levels_treatment)
+
+## Check freq of levels
+table_timepoint <- table(meta$Timepoint)
+table_treatment <- table(meta$Treatment)
+
+print(table_timepoint)
+print(table_treatment)
+
+barplot(table_timepoint, main = "Distribution of Timepoint Levels")
+barplot(table_treatment, main = "Distribution of Treatment Levels")
+```
+
+I bet I know what's wrong...acclimation and TP0 are the same. What if I removed the TP0 samples? The TP0 samples are AST-1147, AST-1567, AST-1722, and AST-2398. 
+```{r}
+# Remove rows from metadata
+meta_subset <- meta %>% 
+  filter(Treatment != "Acclimation")
+
+# Remove column from gene count matrix 
+filt_outrm_poa_subset <- filt_outrm_poa %>%
+  select(-c("AST-1147", "AST-1567", "AST-1722", "AST-2398"))
+
+all(rownames(meta_subset$ID) %in% colnames(filt_outrm_poa_subset)) # must come out TRUE
+```
+
+Now run DESeq2
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa_subset, colData = meta_subset, design = ~Timepoint + Treatment + Timepoint:Treatment)
+dds <- DESeq(data) #apply DEseq dispersion calculation
+resultsNames(dds)
+# [1] "Intercept"                  "Timepoint_TP7_vs_TP5"       "Treatment_Heat_vs_Ambient"  "TimepointTP7.TreatmentHeat" -- still not giving all of the comparisons...
+
+## TP7 vs 5
+TP7v5 <- results(dds, contrast=c("Timepoint", "TP7", "TP5"))
+head(TP7v5)
+plotMA(TP7v5)
+sum(TP7v5$padj <0.05, na.rm=T) 
+TP7v5.sig <- subset(TP7v5, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP7v5.sig$log2FoldChange <0, na.rm=T)
+sum(TP7v5.sig$log2FoldChange >0, na.rm=T)
+TP7v5.sig.list <- data[which(rownames(dds) %in% rownames(TP7v5.sig)),] #subset list of sig transcripts from original count data
+#write.csv
+TP7v5.rsig <- rlog(TP7v5.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+plotPCA(TP7v5.rsig, intgroup = c("Treatment", "Timepoint")) #Plot PCA of all samples for DEG only
+mat <- assay(TP7v5.rsig) #make an expression object
+col.order <- c( "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
+              "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
+              "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
+              "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
+mat <- mat[,col.order]
+df <- as.data.frame(colData(TP7v5.rsig)[,c("Treatment", "Timepoint")]) #make dataframe
+df <- df[order(df$Timepoint),]
+
+pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
+                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
+                         show_colnames =TRUE) #plot heatmap of all DEG by group
+
+
+
+
+## Heat vs Ambient
+```
+
+
+
+
+What if I mutated the metadata file so that Acclimation was Ambient? Or would that still run into the same problem?
+
+I feel like I made progress today! I am still very confused about how to interpret my data and why the comparisons are not all showing up. I need to sit down with Hollie, Zoe or Danielle and talk through this with them. My main questions
+
+- Why are the results different when I set the design to ~Treatment or ~Timepoint vs ~Timepoint + Treatment + Timepoint:Treatment?
+- 
+
