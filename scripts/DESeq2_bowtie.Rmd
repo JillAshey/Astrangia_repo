@@ -470,15 +470,15 @@ TP0 v TP5 Ambient
 ```{r}
 TP0_v_5_amb <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP5_Ambient"))
 head(TP0_v_5_amb)
-plotMA(TP0_v_5_amb)
-sum(TP0_v_5_amb$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP0_v_5_amb); ma_plot
+sum(TP0_v_5_amb$padj <0.05, na.rm=T) # 541 genes with significant p-values
 TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T)
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # 432 genes are downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # 109 genes are upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP0_v_5_amb.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
 TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_5_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP0_v_5_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -488,23 +488,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP0_v_5_amb.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_amb_DEG.pdf", heatmap, width = 8, height = 10)
 ```
+
 TP0 v TP7 Ambient
 ```{r}
 TP0_v_7_amb <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP7_Ambient"))
 head(TP0_v_7_amb)
-plotMA(TP0_v_7_amb)
-sum(TP0_v_7_amb$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP0_v_7_amb); ma_plot
+sum(TP0_v_7_amb$padj <0.05, na.rm=T) # 599 genes with significant p-values
 TP0_v_7_amb.sig <- subset(TP0_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T)
+sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # 424 genes are downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # 175 genes are upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP0_v_7_amb.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
 TP0_v_7_amb.rsig <- rlog(TP0_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_7_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP0_v_7_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -514,24 +518,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP0_v_7_amb.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_amb_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP5 v TP7 Ambient 
 ```{r}
 TP5_v_7_amb <- results(dds, contrast=c("Condition", "TP5_Ambient" , "TP7_Ambient"))
 head(TP5_v_7_amb)
-plotMA(TP5_v_7_amb)
-sum(TP5_v_7_amb$padj <0.05, na.rm=T) 
+ma_plot<- plotMA(TP5_v_7_amb); ma_plot
+sum(TP5_v_7_amb$padj <0.05, na.rm=T) # 61 genes with significant p-values
 TP5_v_7_amb.sig <- subset(TP5_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_v_7_amb.sig$log2FoldChange >0, na.rm=T)
+sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T) # 29 genes are downregulated in TP7 ambient relative to TP5 ambient
+sum(TP5_v_7_amb.sig$log2FoldChange >0, na.rm=T) # 32 genes are upregulated in TP7 ambient relative to TP5 ambient
 TP5_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP5_v_7_amb.sig.list), file = "../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
 TP5_v_7_amb.rsig <- rlog(TP5_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_v_7_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP5_v_7_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_v_7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -541,24 +548,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP5_v_7_amb.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP7_amb_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP0 v TP5 Heat
 ```{r}
 TP0_v_5_heat <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP5_Heat"))
 head(TP0_v_5_heat)
-plotMA(TP0_v_5_heat)
-sum(TP0_v_5_heat$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP0_v_5_heat); ma_plot
+sum(TP0_v_5_heat$padj <0.05, na.rm=T) # 540 genes with significant p-values
 TP0_v_5_heat.sig <- subset(TP0_v_5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T)
+sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # 376 genes are downregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # 164 genes are upregulated in TP5 heat relative to TP0 ambient
 TP0_v_5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP0_v_5_heat.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")
 TP0_v_5_heat.rsig <- rlog(TP0_v_5_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_5_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP0_v_5_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -568,24 +578,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP0_v_5_heat.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_heat_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP0 v TP7 Heat
 ```{r}
 TP0_v_7_heat <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP7_Heat"))
 head(TP0_v_7_heat)
-plotMA(TP0_v_7_heat)
-sum(TP0_v_7_heat$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP0_v_7_heat); ma_plot
+sum(TP0_v_7_heat$padj <0.05, na.rm=T) # 863 genes with significant p-values
 TP0_v_7_heat.sig <- subset(TP0_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_7_heat.sig$log2FoldChange >0, na.rm=T)
+sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 549 genes are downregulated in TP7 heat relative to TP0 ambient
+sum(TP0_v_7_heat.sig$log2FoldChange >0, na.rm=T) # 314 genes are upregulated in TP7 heat relative to TP0 ambient
 TP0_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP0_v_7_heat.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
 TP0_v_7_heat.rsig <- rlog(TP0_v_7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_7_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP0_v_7_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -595,24 +608,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP0_v_7_heat.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_heat_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP5 Heat v TP7 Heat
 ```{r}
 TP5_heat_v_7_heat <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Heat"))
 head(TP5_heat_v_7_heat)
-plotMA(TP5_heat_v_7_heat)
-sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
+sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # 9 genes with significant p-values
 TP5_heat_v_7_heat.sig <- subset(TP5_heat_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T)
+sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 5 genes are downregulated in TP7 heat relative to TP5 heat
+sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T) # 4 genes are upregulated in TP7 heat relative to TP5 heat
 TP5_heat_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_7_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP5_heat_v_7_heat.sig.list), file = "../output/Molecular/mRNA/TP5_heat_v_TP7_heat_DEG.csv")
 TP5_heat_v_7_heat.rsig <- rlog(TP5_heat_v_7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_heat_v_7_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP5_heat_v_7_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_heat_v_7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -622,24 +638,27 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP5_heat_v_7_heat.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_heat_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP5 Amb v TP5 Heat
 ```{r}
 TP5_amb_v_TP5_heat <- results(dds, contrast=c("Condition", "TP5_Ambient" , "TP5_Heat"))
 head(TP5_amb_v_TP5_heat)
-plotMA(TP5_amb_v_TP5_heat)
-sum(TP5_amb_v_TP5_heat$padj <0.05, na.rm=T) 
+ma_plot <- plotMA(TP5_amb_v_TP5_heat)
+sum(TP5_amb_v_TP5_heat$padj <0.05, na.rm=T) # 9 genes with significant p-values
 TP5_amb_v_TP5_heat.sig <- subset(TP5_amb_v_TP5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_amb_v_TP5_heat.sig$log2FoldChange >0, na.rm=T)
+sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T) # 16 genes are downregulated in TP5 heat relative to TP5 amb
+sum(TP5_amb_v_TP5_heat.sig$log2FoldChange >0, na.rm=T) # 29 genes are upregulated in TP5 heat relative to TP5 amb
 TP5_amb_v_TP5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_amb_v_TP5_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP5_amb_v_TP5_heat.sig.list), file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
 TP5_amb_v_TP5_heat.rsig <- rlog(TP5_amb_v_TP5_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_amb_v_TP5_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+pca_plot <- plotPCA(TP5_amb_v_TP5_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_amb_v_TP5_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
@@ -649,9 +668,12 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
 mat <- mat[,col.order]
 df <- as.data.frame(colData(TP5_amb_v_TP5_heat.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP5_heat_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
 TP7 Amb v TP7 Heat
@@ -664,7 +686,7 @@ TP7_amb_v_TP7_heat.sig <- subset(TP7_amb_v_TP7_heat, padj<0.05,) #identify signf
 sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T)
 sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T)
 TP7_amb_v_TP7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP7_amb_v_TP7_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
+write.csv(counts(TP7_amb_v_TP7_heat.sig.list), file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")
 TP7_amb_v_TP7_heat.rsig <- rlog(TP7_amb_v_TP7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
 
 ##### the rlog() step isn't working. Giving me this error: Error in estimateSizeFactorsForMatrix(counts(object), locfunc = locfunc, : every gene contains at least one zero, cannot compute log geometric means
