@@ -1,0 +1,40 @@
+---
+title: "Comparing miRDeep2 output"
+author: "Jill Ashey"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=T}
+knitr::opts_chunk$set(echo = F)
+
+library(tidyverse)
+```
+
+I am running mirdeep2 on each of my samples individually. Now I am going to look at the output (known and novel miRNAs) from those scripts. 
+
+AST-1065
+```{r}
+AST_1065_novel <- read.csv("../data/Molecular/smRNA/mirdeep2/AST-1065-30bp_novel.csv")
+length(unique(AST_1065_novel$provisional.id)) # 316 unique genomic locations
+length(unique(AST_1065_novel$consensus.mature.sequence)) # 280 unique mature novel miRNA sequences 
+```
+
+AST-1147
+```{r}
+AST_1147_novel <- read.csv("../data/Molecular/smRNA/mirdeep2/AST-1147-30bp_novel.csv")
+length(unique(AST_1147_novel$provisional.id)) # 1316 unique genomic locations
+length(unique(AST_1147_novel$consensus.mature.sequence)) # 970 unique mature novel miRNA sequences 
+```
+
+Merge to see how many seqs they share 
+```{r}
+test <- full_join(AST_1065_novel, AST_1147_novel, by = "consensus.mature.sequence") %>%
+  filter(miRDeep2.score.x > 10) %>%
+  filter(miRDeep2.score.y > 10) %>%
+  filter(significant.randfold.p.value.x == "yes") %>%
+  filter(significant.randfold.p.value.y == "yes") %>%
+  na.omit()
+length(unique(test$consensus.mature.sequence)) # 24 seqs shared 
+```
+
