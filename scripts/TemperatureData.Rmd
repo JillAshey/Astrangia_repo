@@ -25,7 +25,7 @@ library(naniar)
 
 ## Load my data 
 ```{r}
-my.data <- read.csv("output/Environmental/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
+my.data <- read.csv("../output/Environmental/Hobo/temp_light_logger/All_Tank_HoboTempLight_data.csv", header = T)
 colnames(my.data)[colnames(my.data) == 'Date'] <- 'Date.Time'
 my.data <- my.data[,c("Date.Time", 
                       "Tank1_Temp", 
@@ -47,68 +47,290 @@ my.data <- my.data[,c("Date.Time",
 my.data <- na.omit(my.data) ### should I omit NAs????
 ```
 
-## Parse dates and times 
+
+I am filtering out the random temp data points (ie when the logger was removed from the water to be read) that do not fit the specific temp window that was set at a specific time. 
+
+AMBIENT
 ```{r}
-my.data$Date.Time <- parse_date_time(my.data$Date.Time, "ymdHMS", tz = "EST")
-my.data$Date.Time <- my.data$Date.Time + hours(5)
+# Parse data and time 
+my.data$Date.Time <- as.POSIXct(my.data$Date.Time, "%Y-%m-%d %H:%M:%OS", tz = "EST")
 
-my.data <- separate(my.data, col = Date.Time, into = c("Date", "Time"), sep = " ")
-my.data <- separate(my.data, col = Date, into = c("YYYY", "MM", "DD"), sep = "-")
-my.data <- separate(my.data, col = Time, into = c("hh", "mm", "ss"), sep = ":")
-my.data$Date <- paste0(my.data$MM, sep = "-", my.data$DD)
-my.data$Time <- paste0(my.data$hh, sep = ":", my.data$mm)
-my.data$Date.Time <- paste0(my.data$Date, sep=" ", my.data$Time)
-
-range(my.data$Tank1_Temp, na.rm=TRUE)
-my.data$Date.Time <- parse_date_time(my.data$Date.Time, "%m!-%d! %H!:%M!" , tz="EST")
-```
-
-## Calculate means for ambient and high temps 
-```{r}
-my.data$Temp_Amb <- rowMeans(my.data[,c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
+# Replace values outside specified ranges with NAs -- ambient 
+test <- my.data %>%
+  mutate(across(c(Tank1_Temp, Tank2_Temp, Tank5_Temp, Tank8_Temp, Tank10_Temp, Tank12_Temp, Tank16_Temp, Tank18_Temp),
+                ~ case_when(
+                   # Date range: 02/17 to 03/17
+                  Date.Time >= as.Date.POSIXct("2021-02-07 01:00:00", tz = "EST") & Date.Time <= as.Date.POSIXct("2021-03-17 01:00:00", tz = "EST") & (.x < 4.4 | .x > 5.7) ~ NA_real_,
+                  # Date range: 03/18 to 03/29
+                  Date.Time >= as.Date("2021-03-17 01:10:00", tz = "EST") & Date.Time <= as.Date("2021-03-29 01:00:00", tz = "EST") & (.x > 6.3 | .x < 6) ~ NA_real_,
+                  # Date range: 03/30 to 04/05
+                  Date.Time >= as.Date("2021-03-30 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-05 01:00:00", tz = "EST") & (.x > 6.9 | .x < 6.5) ~ NA_real_,
+                  # Date range: 04/06 to 04/12
+                  Date.Time >= as.Date("2021-04-06 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-12 01:00:00", tz = "EST") & (.x > 8.1 | .x < 7) ~ NA_real_,
+                  # Date range: 04/13 to 04/19
+                  Date.Time >= as.Date("2021-04-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-19 01:00:00", tz = "EST") & (.x > 9.2 | .x < 8.2) ~ NA_real_,
+                  # Date range: 04/20 to 04/23
+                  Date.Time >= as.Date("2021-04-20 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-23 01:00:00", tz = "EST") & (.x > 9.8 | .x < 9.3) ~ NA_real_,
+                  # Date range: 04/24 to 05/03
+                  Date.Time >= as.Date("2021-04-24 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-03 01:00:00", tz = "EST") & (.x > 10.7 | .x < 10) ~ NA_real_,
+                  # Date range: 05/04 to 05/12
+                  Date.Time >= as.Date("2021-05-04 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-12 01:00:00", tz = "EST") & (.x > 11.4 | .x < 10.8) ~ NA_real_,
+                  # Date range: 05/13 to 05/20
+                  Date.Time >= as.Date("2021-05-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-20 01:00:00", tz = "EST") & (.x > 12.7 | .x < 11.6) ~ NA_real_,
+                  # Date range: 05/21 to 05/29
+                  Date.Time >= as.Date("2021-05-21 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-29 01:00:00", tz = "EST") & (.x > 14.5 | .x < 13.3) ~ NA_real_,
+                  # Date range: 05/30 to 06/09
+                  Date.Time >= as.Date("2021-05-30 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-09 01:00:00", tz = "EST") & (.x > 15.5 | .x < 14.6) ~ NA_real_,
+                  # Date range: 06/10 to 06/17
+                  Date.Time >= as.Date("2021-06-10 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-17 01:00:00", tz = "EST") & (.x > 16.4 | .x < 16) ~ NA_real_,
+                  # Date range: 06/18 to 06/25
+                  Date.Time >= as.Date("2021-06-18 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-25 01:00:00", tz = "EST") & (.x > 16.9 | .x < 16.5) ~ NA_real_,
+                  # Date range: 06/26 to 07/01
+                  Date.Time >= as.Date("2021-06-26 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-01 01:00:00", tz = "EST") & (.x > 17.7 | .x < 17) ~ NA_real_,
+                  # Date range: 07/02 to 07/12
+                  Date.Time >= as.Date("2021-07-02 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-12 01:00:00", tz = "EST") & (.x > 18.3 | .x < 17.8) ~ NA_real_,
+                  # Date range: 07/13 to 07/17
+                  Date.Time >= as.Date("2021-07-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-17 01:00:00", tz = "EST") & (.x > 18.9 | .x < 18.4) ~ NA_real_,
+                  # Date range: 07/18 to 07/22
+                  Date.Time >= as.Date("2021-07-18 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-22 01:00:00", tz = "EST") & (.x > 19.9 | .x < 19) ~ NA_real_,
+                  # Date range: 07/23 to 08/20
+                  Date.Time >= as.Date("2021-07-23 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-08-20 01:00:00", tz = "EST") & (.x > 23 | .x < 20) ~ NA_real_,
+                  TRUE ~ .x
+                )))
+                  
+# Calculate mean of each row
+test$Temp_Amb <- rowMeans(test[,c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
                                         "Tank8_Temp", "Tank10_Temp", "Tank12_Temp",
                                         "Tank16_Temp", "Tank18_Temp")], na.rm=TRUE)
-my.data$Temp_Heat <- rowMeans(my.data[,c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp",
+
+# Calculate standard deviation of each row
+test$Temp_Amb_StdDev <- apply(test[, c("Tank1_Temp", "Tank2_Temp", "Tank5_Temp",
+                                        "Tank8_Temp", "Tank10_Temp", "Tank12_Temp",
+                                        "Tank16_Temp", "Tank18_Temp")], 
+                               1,   # 1 indicates row-wise operation
+                               function(x) sd(x, na.rm = TRUE))
+
+# Calculate upper and lower std deviations from the mean
+test <- test %>%
+  mutate(upper = Temp_Amb+Temp_Amb_StdDev,
+         lower = Temp_Amb-Temp_Amb_StdDev)
+
+# Select specific columns 
+my.data_amb <- test %>% 
+  select(Date.Time, Temp_Amb, Temp_Amb_StdDev, upper, lower) %>%
+  rename("Temperature" = "Temp_Amb") %>%
+  rename("sd" = "Temp_Amb_StdDev") %>%
+  #separate(col = Date.Time, into = c("Date", "Time"), sep = " ") %>%
+  na.omit()
+my.data_amb$Treatment <- "Ambient"
+
+ggplot(data = my.data_amb, aes(x = Date.Time, y = Temperature, color = Treatment)) +
+  geom_line()
+
+ggplot(data = my.data_amb, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE)
+```
+
+HEAT
+```{r}
+# Parse data and time 
+#my.data$Date.Time <- as.POSIXct(my.data$Date.Time, "%Y-%m-%d %H:%M:%OS", tz = "EST")
+
+# Replace values outside specified ranges with NAs -- ambient 
+test2 <- my.data %>%
+  mutate(across(c(Tank3_Temp, Tank4_Temp, Tank6_Temp, Tank7_Temp, Tank9_Temp, Tank11_Temp, Tank15_Temp, Tank17_Temp),
+                ~ case_when(
+                   # Date range: 02/17 to 03/17
+                  Date.Time >= as.Date.POSIXct("2021-02-07 01:00:00", tz = "EST") & Date.Time <= as.Date.POSIXct("2021-03-17 01:00:00", tz = "EST") & (.x < 7.5 | .x > 9.2) ~ NA_real_,
+                  # Date range: 03/18 to 03/29
+                  Date.Time >= as.Date("2021-03-17 01:10:00", tz = "EST") & Date.Time <= as.Date("2021-03-29 01:00:00", tz = "EST") & (.x > 9.8 | .x < 9.3) ~ NA_real_,
+                  # Date range: 03/30 to 04/05
+                  Date.Time >= as.Date("2021-03-30 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-05 01:00:00", tz = "EST") & (.x > 10.2 | .x < 9.9) ~ NA_real_,
+                  # Date range: 04/06 to 04/12
+                  Date.Time >= as.Date("2021-04-06 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-12 01:00:00", tz = "EST") & (.x > 11.5 | .x < 10.3) ~ NA_real_,
+                  # Date range: 04/13 to 04/19
+                  Date.Time >= as.Date("2021-04-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-19 01:00:00", tz = "EST") & (.x > 12.2 | .x < 11.6) ~ NA_real_,
+                  # Date range: 04/20 to 04/23
+                  Date.Time >= as.Date("2021-04-20 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-04-23 01:00:00", tz = "EST") & (.x > 12.9 | .x < 12.3) ~ NA_real_,
+                  # Date range: 04/24 to 05/03
+                  Date.Time >= as.Date("2021-04-24 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-03 01:00:00", tz = "EST") & (.x > 13.7 | .x < 13) ~ NA_real_,
+                  # Date range: 05/04 to 05/12
+                  Date.Time >= as.Date("2021-05-04 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-12 01:00:00", tz = "EST") & (.x > 14.6 | .x < 13.8) ~ NA_real_,
+                  # Date range: 05/13 to 05/20
+                  Date.Time >= as.Date("2021-05-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-20 01:00:00", tz = "EST") & (.x > 16 | .x < 14.7) ~ NA_real_,
+                  # Date range: 05/21 to 05/29
+                  Date.Time >= as.Date("2021-05-21 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-05-29 01:00:00", tz = "EST") & (.x > 17.5 | .x < 16.1) ~ NA_real_,
+                  # Date range: 05/30 to 06/09
+                  Date.Time >= as.Date("2021-05-30 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-09 01:00:00", tz = "EST") & (.x > 18.5 | .x < 17.6) ~ NA_real_,
+                  # Date range: 06/10 to 06/17
+                  Date.Time >= as.Date("2021-06-10 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-17 01:00:00", tz = "EST") & (.x > 19.6 | .x < 18.6) ~ NA_real_,
+                  # Date range: 06/18 to 06/25
+                  Date.Time >= as.Date("2021-06-18 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-06-25 01:00:00", tz = "EST") & (.x > 20.4 | .x < 19.7) ~ NA_real_,
+                  # Date range: 06/26 to 07/01
+                  Date.Time >= as.Date("2021-06-26 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-01 01:00:00", tz = "EST") & (.x > 21 | .x < 20.2) ~ NA_real_,
+                  # Date range: 07/02 to 07/12
+                  Date.Time >= as.Date("2021-07-02 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-12 01:00:00", tz = "EST") & (.x > 22.6 | .x < 21.1) ~ NA_real_,
+                  # Date range: 07/13 to 07/17
+                  Date.Time >= as.Date("2021-07-13 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-17 01:00:00", tz = "EST") & (.x > 23.6 | .x < 22.7) ~ NA_real_,
+                  # Date range: 07/18 to 07/22
+                  Date.Time >= as.Date("2021-07-18 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-07-22 01:00:00", tz = "EST") & (.x > 24.4 | .x < 23.4) ~ NA_real_,
+                  # Date range: 07/23 to 08/20
+                  Date.Time >= as.Date("2021-07-23 01:00:00", tz = "EST") & Date.Time <= as.Date("2021-08-20 01:00:00", tz = "EST") & (.x > 26 | .x < 23) ~ NA_real_,
+                  TRUE ~ .x
+                )))
+                  
+# Calculate mean of each row
+test2$Temp_Heat <- rowMeans(test2[,c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp",
                                         "Tank7_Temp", "Tank9_Temp", "Tank11_Temp",
                                         "Tank15_Temp", "Tank17_Temp")], na.rm=TRUE)
 
-# subset 
-my.data_amb <- my.data %>% 
-  select(Date.Time, Temp_Amb, Date) %>%
-  rename("Temperature" = "Temp_Amb")
-my.data_amb$Treatment <- "Ambient"
+# Calculate standard deviation of each row
+test2$Temp_Heat_StdDev <- apply(test2[, c("Tank3_Temp", "Tank4_Temp", "Tank6_Temp",
+                                        "Tank7_Temp", "Tank9_Temp", "Tank11_Temp",
+                                        "Tank15_Temp", "Tank17_Temp")], 
+                               1,   # 1 indicates row-wise operation
+                               function(x) sd(x, na.rm = TRUE))
 
-my.data_heat <- my.data %>% 
-  select(Date.Time, Temp_Heat, Date) %>%
-  rename("Temperature" = "Temp_Heat")
-my.data_heat$Treatment <- "High"
+# Calculate upper and lower std deviations from the mean
+test2 <- test2 %>%
+  mutate(upper = Temp_Heat+Temp_Heat_StdDev,
+         lower = Temp_Heat-Temp_Heat_StdDev)
 
-all <- rbind(my.data_amb, my.data_heat)
+# Select specific columns 
+my.data_heat <- test2 %>% 
+  select(Date.Time, Temp_Heat, Temp_Heat_StdDev, upper, lower) %>%
+  rename("Temperature" = "Temp_Heat") %>%
+  rename("sd" = "Temp_Heat_StdDev") %>%
+  #separate(col = Date.Time, into = c("Date", "Time"), sep = " ") %>%
+  na.omit()
+my.data_heat$Treatment <- "Heat"
+
+ggplot(data = my.data_heat, aes(x = Date.Time, y = Temperature, color = Treatment)) +
+  geom_line()
+
+ggplot(data = my.data_heat, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE)
 ```
 
-## Calculate means by date 
+Bind ambient and heat dfs and plot 
 ```{r}
-all_mean <- all %>%
-  group_by(Date, Treatment) %>%
-  summarise_at(vars(Temperature), list(name = mean))
+all <- bind_rows(my.data_amb, my.data_heat)
 
-all_mean$Date <- parse_date_time(all_mean$Date, "%m!-%d!" , tz="EST")
-```
-
-
-## Plot my data only 
-```{r}
 ggplot(data = all, aes(x = Date.Time, y = Temperature, color = Treatment)) +
   geom_line()
 
-ggplot(data = all_mean, aes(x = Date, y = name, color = Treatment)) +
-  geom_line()
+temp_plot <- ggplot(data = all, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE) +
+  geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP2
+  geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP3
+  geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP4
+  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP5 
+  geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP6
+  geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP7
+  #ylim(26, 30)+
+  ylab("Temperature (°C)")+
+  #xlab("Date")+
+  scale_colour_manual(values=c("blue", "red"), name="Temperature")+
+  scale_fill_manual(values=c("blue", "red"), name="Temperature")+
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_classic()+
+  theme(
+    axis.text=element_text(color="black", size=11),
+    axis.title=element_text(color="black", size=14),
+    legend.position="right"
+  ); temp_plot
 ```
 
+I still need to make the plots pretty and get rid of the some of the ouliers but I'm happy with how this turned out. 
 
+Read in NOAA data 
+```{r}
+# Get a list of all text files in the folder
+file_list <- list.files("../data/Environmental/NOAA_temp/blah/", pattern = "\\.txt$", full.names = TRUE)
 
+# Read and process each file
+data_list <- lapply(file_list, function(file) {
+  # Read the file
+  data <- read.csv(file, sep = "\t", skip = 0, header = TRUE, na.strings = "NA")[, c(1:5, 15)]
+  
+  # Create Date.Time column
+  #data$Date.Time <- as.POSIXct(paste(data$MM, data$DD, sep = "-"), format = "%m-%d")
+  data$Date <- (paste(data$MM, data$DD, sep = "-"))
 
+  # Replace specific values in WTMP column with NA
+  data <- data %>% replace_with_na(replace = list(WTMP = c("MM", "9   9.", ".0 999", "999", "0 999.")))
+  
+  # Convert WTMP to numeric
+  data$WTMP <- as.numeric(data$WTMP)
+  
+  return(data)
+})
 
+# Combine the data frames into a single data frame
+combined_data <- bind_rows(data_list)
+```
 
+Add fake year of 2021 so I can plot it and the plot will not hate me. Calculate mean, sd, upper and lower thresholds
+```{r}
+combined_data$fake.year <- "2021"
+combined_data$Date.Time <- as.POSIXct(paste(combined_data$fake.year, combined_data$Date, sep = "-"), format = "%Y-%m-%d")
+
+noaa_data <- combined_data %>%
+  group_by(Date.Time) %>%
+  summarize(
+    Temperature = mean(WTMP, na.rm = TRUE),
+    sd = sd(WTMP, na.rm = TRUE)) %>%
+  mutate(upper = Temperature+sd,
+         lower = Temperature-sd, 
+         Treatment = "NOAA")
+```
+
+Remove unneeded columns
+```{r}
+noaa_data <- noaa_data %>%
+  select(Date.Time, Temperature, sd, upper, lower, Treatment)
+```
+
+Bind dfs together 
+```{r}
+test <- rbind(all, noaa_data)
+```
+
+Plot
+```{r}
+temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE) +
+  geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP2
+  geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP3
+  geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP4
+  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP5 
+  geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP6
+  geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP7
+  #ylim(26, 30)+
+  ylab("Temperature (°C)")+
+  #xlab("Date")+
+  scale_colour_manual(values=c("blue", "red", "black"), name="Temperature")+
+  scale_fill_manual(values=c("blue", "red", "black"), name="Temperature")+
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_classic()+
+  theme(
+    axis.text=element_text(color="black", size=11),
+    axis.title=element_text(color="black", size=14),
+    legend.position="right"
+  ); temp_plot
+
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.png", temp_plot, width=6, height=4)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.pdf", temp_plot, width=6, height=4)
+```
+
+BEAUTIFUL!!!!!!!!! Still need to QC my temp data to get rid of the weird spikes. 
 
 
