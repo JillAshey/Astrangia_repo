@@ -1,0 +1,294 @@
+miRDeep2 score	novel miRNAs reported by miRDeep2	novel miRNAs, estimated false positives	novel miRNAs, estimated true positives	known miRNAs in species	known miRNAs in data	known miRNAs detected by miRDeep2	estimated signal-to-noise	excision gearing
+10	53	3 +/- 2	50 +/- 2 (95 +/- 3%)	49415	120	0 (0%)	20.7	1
+9	57	3 +/- 2	54 +/- 2 (95 +/- 3%)	49415	120	0 (0%)	21.6	1
+8	62	3 +/- 2	59 +/- 2 (96 +/- 3%)	49415	120	2 (2%)	23.4	1
+7	64	3 +/- 2	61 +/- 2 (96 +/- 3%)	49415	120	2 (2%)	23	1
+6	66	3 +/- 2	63 +/- 2 (96 +/- 3%)	49415	120	2 (2%)	22.6	1
+5	68	3 +/- 2	65 +/- 2 (96 +/- 3%)	49415	120	2 (2%)	22.3	1
+4	75	3 +/- 2	72 +/- 2 (96 +/- 3%)	49415	120	2 (2%)	23.2	1
+3	84	4 +/- 2	80 +/- 2 (96 +/- 2%)	49415	120	2 (2%)	23.2	1
+2	150	5 +/- 2	145 +/- 2 (97 +/- 2%)	49415	120	89 (74%)	29.4	1
+1	213	13 +/- 4	200 +/- 4 (94 +/- 2%)	49415	120	103 (86%)	16.1	1
+0	253	45 +/- 6	208 +/- 6 (82 +/- 2%)	49415	120	107 (89%)	5.7	1
+-1	295	94 +/- 8	201 +/- 8 (68 +/- 3%)	49415	120	107 (89%)	3.2	1
+-2	359	147 +/- 10	212 +/- 10 (59 +/- 3%)	49415	120	107 (89%)	2.5	1
+-3	530	213 +/- 13	317 +/- 13 (60 +/- 3%)	49415	120	107 (89%)	2.5	1
+-4	755	328 +/- 18	427 +/- 18 (57 +/- 2%)	49415	120	107 (89%)	2.3	1
+-5	874	597 +/- 23	277 +/- 23 (32 +/- 3%)	49415	120	107 (89%)	1.5	1
+-6	999	1020 +/- 30	4 +/- 12 (0 +/- 1%)	49415	120	107 (89%)	1	1
+-7	1089	1465 +/- 34	0 +/- 0 (0 +/- 0%)	49415	120	107 (89%)	0.7	1
+-8	1337	1878 +/- 37	0 +/- 0 (0 +/- 0%)	49415	120	107 (89%)	0.7	1
+-9	1663	2235 +/- 38	0 +/- 0 (0 +/- 0%)	49415	120	107 (89%)	0.7	1
+-10	1988	2530 +/- 40	0 +/- 0 (0 +/- 0%)	49415	120	107 (89%)	0.8	1
+
+
+
+novel miRNAs predicted by miRDeep2
+provisional id	miRDeep2 score	estimated probability that the miRNA candidate is a true positive	rfam alert	total read count	mature read count	loop read count	star read count	significant randfold p-value	miRBase miRNA	example miRBase miRNA with the same seed	UCSC browser	NCBI blastn	consensus mature sequence	consensus star sequence	consensus precursor sequence	precursor coordinate
+chromosome_10_36402	793.9	95 +/- 3%	-	1556	1545	0	11	yes	-	-	-	-	ucuaggcugguuacuuuacagu	uuguaaacuaagcagcuuaaacc	ucuaggcugguuacuuuacaguuauuaucauuguaaacuaagcagcuuaaacc	chromosome_10:30943333..30943386:+
+chromosome_10_36406	793.9	95 +/- 3%	-	1556	1545	0	11	yes	-	-	-	-	ucuaggcugguuacuuuacagu	uuguaaacuaagcagcuuaaacc	ucuaggcugguuacuuuacaguuauuaucauuguaaacuaagcagcuuaaacc	chromosome_10:30952333..30952386:+
+chromosome_10_36388	793.7	95 +/- 3%	-	1556	1545	0	11	yes	-	-	-	-	ucuaggcugguuacuuuacagu	uuguaaacuaagcagcuuaaacc	ucuaggcugguuacuuuacaguuauuaucauuguaaacuaagcagcuuaaacc	chromosome_10:30762030..30762083:+
+chromosome_14_77141	661.5	95 +/- 3%	-	1294	1193	0	101	yes	-	-	-	-	uuaaagacggaucugcacccuuu	gggugcagauccgucuuugaau	uuaaagacggaucugcacccuuuuuuaagagggugcagauccgucuuugaau	chromosome_14:53448667..53448719:-
+chromosome_14_67376	606.5	95 +/- 3%	-	1196	1192	0	4	no	-	-	-	-	gauaacccucaaccguccggaccuc	gucaaguugguggaagaggggauuag	gucaaguugguggaagaggggauuagguaagagauugcucucuuugcaacuuucaacgagauaacccucaaccguccggaccuc	chromosome_14:6301098..6301182:-
+chromosome_10_37464	537.5	95 +/- 3%	-	1052	1029	0	23	yes	-	-	-	-	uaagaaguacaagugguaggg	cugccacuuguauuuucuucca	cugccacuuguauuuucuuccacguucaucgauguaagaaguacaagugguaggg	chromosome_10:11981322..11981377:-
+chromosome_7_23723	363.7	95 +/- 3%	-	713	622	0	91	yes	-	-	-	-	ugugcuuaaucuuggacuugaau	uucaagagcugagauuaagucgcc	ugugcuuaaucuuggacuugaauauuuaauauucaagagcugagauuaagucgcc	chromosome_7:4792667..4792722:-
+chromosome_5_15909	234.9	95 +/- 3%	-	460	450	0	10	yes	-	-	-	-	uuugcaaguagauagucacagcc	ugucacuaucuacuugaauuga	uuugcaaguagauagucacagccuuuaacccugucacuaucuacuugaauuga	chromosome_5:13785888..13785941:-
+chromosome_5_15907	234.8	95 +/- 3%	-	460	450	0	10	yes	-	-	-	-	uuugcaaguagauagucacagcc	ugucacuaucuacuugaauuga	uuugcaaguagauagucacagccuuuaacccugucacuaucuacuugaauuga	chromosome_5:13785736..13785789:-
+chromosome_10_34942	166.1	95 +/- 3%	-	324	320	0	4	yes	-	-	-	-	uuaucgaauacuuugaugcagug	guguaucaauuuguucgacaaua	uuaucgaauacuuugaugcaguguuuacaguguaucaauuuguucgacaaua	chromosome_10:12463653..12463705:+
+chromosome_13_56068	137.2	95 +/- 3%	-	270	253	0	17	yes	-	-	-	-	ucagaaagagaaugaacaccagag	ugguguccaucuucuaucuaac	ugguguccaucuucuaucuaacuguuguugucagaaagagaaugaacaccagag	chromosome_13:39611469..39611523:-
+chromosome_13_55018	124.6	95 +/- 3%	-	242	228	0	14	yes	-	-	-	-	ucagucgcugcaauuucauuacg	uagugaaauuguagcggcuuaua	uagugaaauuguagcggcuuauauugacuaucagucgcugcaauuucauuacg	chromosome_13:25927757..25927810:-
+chromosome_13_51890	108.2	95 +/- 3%	-	213	211	0	2	yes	-	-	-	-	cguaaugaaauugcagcgacuga	agccgcuacaauuucacua	cguaaugaaauugcagcgacugauagucaauauaagccgcuacaauuucacua	chromosome_13:25927757..25927810:+
+chromosome_5_15911	100.9	95 +/- 3%	-	196	194	0	2	yes	-	-	-	-	auuucaaguagauaguucacagcc	ugucacuaucuauuugaauugaaa	auuucaaguagauaguucacagccuuuaacccugucacuaucuauuugaauugaaa	chromosome_5:13786039..13786095:-
+chromosome_4_12577	93.8	95 +/- 3%	-	181	107	0	74	yes	-	-	-	-	uggcuuggaguucuagugauuga	auucacugaacuccaaaccuga	uggcuuggaguucuagugauugauucacugauucacugaacuccaaaccuga	chromosome_4:21652226..21652278:-
+chromosome_4_12557	93.8	95 +/- 3%	-	181	107	0	74	yes	-	-	-	-	uggcuuggaguucuagugauuga	auucacugaacuccaaaccuga	uggcuuggaguucuagugauugauucacugauucacugaacuccaaaccuga	chromosome_4:21643421..21643473:-
+chromosome_13_50737	83	95 +/- 3%	-	161	160	0	1	yes	-	-	-	-	acaaacaugacuguacaucgaau	acacuguacagucauguuacuac	acacuguacagucauguuacuacauuauguacaaacaugacuguacaucgaau	chromosome_13:9868555..9868608:+
+chromosome_5_15905	77.9	95 +/- 3%	-	152	142	0	10	yes	-	-	-	-	auuucaaguagauaguccacagc	ugucacuaucuacuugaauuga	auuucaaguagauaguccacagccuuuaacccugucacuaucuacuugaauuga	chromosome_5:13785428..13785482:-
+chromosome_10_34939	53.6	95 +/- 3%	-	105	88	0	17	yes	-	-	-	-	uacauaugauauagaauuccaca	uggauuucuuuacuauaugugcaa	uggauuucuuuacuauaugugcaauuuaauuuuacauaugauauagaauuccaca	chromosome_10:12450165..12450220:+
+chromosome_5_14550	47.8	95 +/- 3%	-	92	88	0	4	yes	-	-	-	-	cuacugacuuaggaauuguacacu	ucuacaauaccuaaguuauguacgu	cuacugacuuaggaauuguacacuuuaaaagucuacaauaccuaaguuauguacgu	chromosome_5:23799236..23799292:+
+chromosome_4_10548	45	95 +/- 3%	-	86	76	0	10	yes	-	-	-	-	aagucaaucgucuucuguuccauu	ggaacagagaacaauugaccuga	aagucaaucgucuucuguuccauuucaaauggaacagagaacaauugaccuga	chromosome_4:21660775..21660828:+
+chromosome_5_16512	43.3	95 +/- 3%	-	83	82	0	1	yes	-	-	-	-	aguguacaauuccuaagucaguag	acauaacuuagguauuguaga	acauaacuuagguauuguagacuuuuaaaguguacaauuccuaagucaguag	chromosome_5:23799236..23799288:-
+chromosome_6_17537	43.2	95 +/- 3%	-	81	78	0	3	yes	-	-	-	-	uuuggguguucuagacgugaucg	auuacgucuagaacacugaaaga	auuacgucuagaacacugaaagauucaaucuuuggguguucuagacgugaucg	chromosome_6:9195246..9195299:+
+chromosome_4_12581	43	95 +/- 3%	-	84	74	0	10	yes	-	-	-	-	auucacugaacuccaaaccuga	uuguuuggaguucuauugauuua	uuguuuggaguucuauugauuuauucacuaauucacugaacuccaaaccuga	chromosome_4:21652977..21653029:-
+chromosome_4_12561	43	95 +/- 3%	-	84	74	0	10	yes	-	-	-	-	auucacugaacuccaaaccuga	uuguuuggaguucuauugauuua	uuguuuggaguucuauugauuuauucacuaauucacugaacuccaaaccuga	chromosome_4:21644167..21644219:-
+chromosome_8_25445	42.5	95 +/- 3%	-	90	88	0	2	yes	-	-	-	-	uugucuuuuuccaucguucucu	uggacaauggcaaaguacaauu	uggacaauggcaaaguacaauuuuaaauugucuuuuuccaucguucucu	chromosome_8:223835..223884:+
+chromosome_10_36346	38.8	95 +/- 3%	rRNA/tRNA	73	61	0	12	yes	-	-	-	-	gauagcucagucgguagag	aggucguggguucaaaucc	gauagcucagucgguagagcguccguagaucuaauccggaggucguggguucaaaucc	chromosome_10:30065987..30066045:+
+chromosome_14_77431	37.6	95 +/- 3%	-	75	74	0	1	yes	-	-	-	-	uagaacaacagaaucaugaugau	ugucaugauuuuuuuguuucguu	uagaacaacagaaucaugaugauuauaauuacugucaugauuuuuuuguuucguu	chromosome_14:58025790..58025845:-
+chromosome_4_10426	36.5	95 +/- 3%	-	69	58	0	11	yes	-	-	-	-	cagaacggaaguugguuuagaga	uacaccaagauccguuca	cagaacggaaguugguuuagagauuauuccucuacaccaagauccguuca	chromosome_4:20896669..20896719:+
+chromosome_4_12482	34.2	95 +/- 3%	-	65	58	0	7	yes	-	-	-	-	ucucuaaaccaacuuccguucug	ugaacggaucuugguguag	ugaacggaucuugguguagaggaauaaucucuaaaccaacuuccguucug	chromosome_4:20896669..20896719:-
+chromosome_6_16900	33.9	95 +/- 3%	-	64	60	0	4	yes	-	-	-	-	uaugggucgauugagucugggg	ucagacucacucaacccaaaaaca	uaugggucgauugagucugggguuuaaccucagacucacucaacccaaaaaca	chromosome_6:197508..197561:+
+chromosome_6_19122	31.5	95 +/- 3%	-	59	58	0	1	yes	-	-	-	-	ccccagacucaaucgacccaua	uggguugagugagucuga	uggguugagugagucugagguuaaaccccagacucaaucgacccaua	chromosome_6:197508..197555:-
+chromosome_14_66844	30.7	95 +/- 3%	-	56	40	0	16	yes	-	-	-	-	acucguagcucaguugguuagag	ucuaaccagcugagcuacaa	ucuaaccagcugagcuacaagugacucguugugagcugggccauuuacucguagcucaguugguuagag	chromosome_14:57072817..57072886:+
+chromosome_4_12432	27.3	95 +/- 3%	-	50	49	0	1	yes	-	-	-	-	uauacagcgcugucuuuacaaa	uguaaggacaguacugua	uguaaggacaguacuguauuuuaauauacagcgcugucuuuacaaa	chromosome_4:19958513..19958559:-
+chromosome_5_16701	24.3	95 +/- 3%	-	46	30	0	16	yes	-	-	-	-	ucaacaaauuguagucauccaca	ugaugucccaaauuuguugaaau	ucaacaaauuguagucauccacagauuuaucugugaugucccaaauuuguugaaau	chromosome_5:26744889..26744945:-
+chromosome_7_25093	24.3	95 +/- 3%	-	48	29	0	19	yes	-	-	-	-	aggaauagcaaugguagaccacg	ucauccaccacuccuauucccacu	aggaauagcaaugguagaccacgugauuaucaugucauccaccacuccuauucccacu	chromosome_7:26379873..26379931:-
+chromosome_6_19777	23.1	95 +/- 3%	-	42	38	0	4	yes	-	-	-	-	uugcacuggcagauguucgauu	ucggaacaucugccagugcaau	uugcacuggcagauguucgauuuuuaaaaucggaacaucugccagugcaau	chromosome_6:9302218..9302269:-
+chromosome_7_21520	22.9	95 +/- 3%	-	43	40	0	3	yes	-	-	-	-	acuuggaugaaaagugaauacgcu	uguauucacuuucaucuagucc	acuuggaugaaaagugaauacgcuauuucguguauucacuuucaucuagucc	chromosome_7:1865379..1865431:+
+chromosome_12_44286	21.6	95 +/- 3%	-	39	26	0	13	yes	-	-	-	-	auaucccgcugucacuuguau	caagugccuugugggauauucc	auaucccgcugucacuuguauuuucuugguacaagugccuugugggauauucc	chromosome_12:9275039..9275092:+
+chromosome_6_19796	20.1	95 +/- 3%	-	37	34	0	3	yes	-	-	-	-	uacuguuaggagauuagugaaua	uuuacuaaucuuccagcaguaua	uuuacuaaucuuccagcaguauauucacuauacuguuaggagauuagugaaua	chromosome_6:9744612..9744665:-
+chromosome_12_45180	20.1	95 +/- 3%	-	37	30	0	7	yes	-	-	-	-	aguguucauggcuguguaauaau	uauuucucagccaugaaaacug	aguguucauggcuguguaauaauuuuuaauuauuucucagccaugaaaacug	chromosome_12:23068728..23068780:+
+chromosome_6_19790	20	95 +/- 3%	-	37	34	0	3	yes	-	-	-	-	uacuguuaggagauuagugaaua	uuuacuaaucuuccagcaguaua	uuuacuaaucuuccagcaguauauucacuauacuguuaggagauuagugaaua	chromosome_6:9688477..9688530:-
+chromosome_6_17566	16.5	95 +/- 3%	-	33	32	0	1	yes	-	-	-	-	uauucacuaaucuccuaacagua	acugcuggaagauuaguaaa	uauucacuaaucuccuaacaguauagugaauauacugcuggaagauuaguaaa	chromosome_6:9744612..9744665:+
+chromosome_2_4057	16.3	95 +/- 3%	-	29	28	0	1	yes	-	-	-	-	aacaguagucauucccacagg	ugugggaauugcuuacagacu	ugugggaauugcuuacagacuuccuuaauggaacaguagucauucccacagg	chromosome_2:17773529..17773581:+
+chromosome_6_19334	16.1	95 +/- 3%	-	29	27	0	2	yes	-	-	-	-	aaaaaucuacggcauuacaugu	auuaaugccauagauuuucuuu	auuaaugccauagauuuucuuuuuaaaaaaaaucuacggcauuacaugu	chromosome_6:2652580..2652629:-
+chromosome_6_17564	15.9	95 +/- 3%	-	33	32	0	1	yes	-	-	-	-	uauucacuaaucuccuaacagua	acugcuggaagauuaguaaa	uauucacuaaucuccuaacaguauagugaauauacugcuggaagauuaguaaa	chromosome_6:9688477..9688530:+
+chromosome_1_1607	13.9	95 +/- 3%	-	24	18	0	6	yes	-	-	-	-	uuuccaacacucccucguacucg	aguacgaggguguguucgaaaug	aguacgaggguguguucgaaauguuaaacauuuccaacacucccucguacucg	chromosome_1:5763338..5763391:-
+chromosome_3_7069	13.6	95 +/- 3%	-	25	15	4	6	yes	-	-	-	-	uauguagggcuauguacgg	uauguagggcuauguaggg	uauguagggcuauguagggcuguguacggcgauguagggcuauguagggcuacguagggcuguguacggcuauguagggcuauguacgg	chromosome_3:19433555..19433644:+
+chromosome_1_162	13	95 +/- 3%	-	22	19	0	3	yes	-	-	-	-	uaauaguaagugcacgcuuguu	caagggugcacuugcuguaug	uaauaguaagugcacgcuuguuuuuagaacaagggugcacuugcuguaug	chromosome_1:2984918..2984968:+
+chromosome_14_65951	12.8	95 +/- 3%	-	24	18	0	6	yes	-	-	-	-	cgauauugugugagacgaguuu	acucgucugauucaauaucuuu	acucgucugauucaauaucuuuauuauaacgauauugugugagacgaguuu	chromosome_14:44009496..44009547:+
+chromosome_14_65467	12.8	95 +/- 3%	-	23	18	0	5	yes	-	-	-	-	guauuaggaaucaugcucugcu	agcacgauuuaugauacucaua	agcacgauuuaugauacucauaucaguauuaggaaucaugcucugcu	chromosome_14:38347609..38347656:+
+chromosome_9_31941	12.7	95 +/- 3%	-	24	23	0	1	yes	-	-	-	-	uaacaguacaggaucggauuuac	uaccccauccuauacuguuacc	uaacaguacaggaucggauuuacuuaguguaccccauccuauacuguuacc	chromosome_9:2865528..2865579:-
+chromosome_14_65433	10.6	95 +/- 3%	-	18	14	0	4	yes	-	-	-	-	cuaaauacugacaucucugaaau	uugagagaugacaguauuagca	uugagagaugacaguauuagcaauugauugcuaaauacugacaucucugaaau	chromosome_14:37723289..37723342:+
+chromosome_5_15968	9.7	95 +/- 3%	-	28	17	0	11	yes	-	-	-	-	ucuguugauuguaauacuaagga	aggaguauuauaaugaacacaca	aggaguauuauaaugaacacacauuuauuuucuguugauuguaauacuaagga	chromosome_5:14755223..14755276:-
+chromosome_12_46358	9.6	95 +/- 3%	-	15	13	0	2	yes	-	-	-	-	ugucguagaguggaacaaauggg	uuguguuccacucuacgac	ugucguagaguggaacaaauggggugaccccuuguguuccacucuacgac	chromosome_12:36071388..36071438:+
+chromosome_12_49690	9.1	95 +/- 3%	-	14	12	0	2	yes	-	-	-	-	cccauuuguuccacucuacgaca	gucguagaguggaacacaa	gucguagaguggaacacaaggggucaccccauuuguuccacucuacgaca	chromosome_12:36071388..36071438:-
+chromosome_12_45297	9	95 +/- 3%	-	14	9	0	5	yes	-	-	-	-	aaaacauauuuacgccggca	cgggcguaaacauguuuuuggc	cgggcguaaacauguuuuuggcguuucucauuugagucgggccaaaaacauauuuacgccggca	chromosome_12:24369223..24369287:+
+chromosome_4_12569	8.8	96 +/- 3%	-	14	11	0	3	yes	-	-	-	-	auuuuguuuggaguuccagugu	acugaacuccaaacaugauu	auuuuguuuggaguuccaguguuuuaugcacugaacuccaaacaugauu	chromosome_4:21646992..21647041:-
+chromosome_14_76280	8.7	96 +/- 3%	-	15	8	0	7	yes	-	-	-	-	ggguacauguuccuguagaaacu	uggcuacaagaacauguccuucau	uggcuacaagaacauguccuucauuuaaugggguacauguuccuguagaaacu	chromosome_14:41093474..41093527:-
+chromosome_13_55978	8.5	96 +/- 3%	-	15	12	0	3	yes	-	-	-	-	guugaucgucaaauauguugu	aaaauauuugacgauaaacuu	aaaauauuugacgauaaacuuuuuaaaaguugaucgucaaauauguugu	chromosome_13:38827816..38827865:-
+chromosome_11_41395	8.3	96 +/- 3%	-	13	11	0	2	yes	-	-	-	-	agguaguaggaaaacuugcaauc	uugcaaguuuuccuaguaucu	agguaguaggaaaacuugcaaucuuugaauugcaaguuuuccuaguaucu	chromosome_11:404865..404915:-
+chromosome_10_37089	8	96 +/- 3%	-	12	7	0	5	yes	-	-	-	-	ucacgcaaaaucaaaacccucu	aggguuuagaguuugugugacu	ucacgcaaaaucaaaacccucuuucaaagaggguuuagaguuugugugacu	chromosome_10:5278801..5278852:-
+chromosome_9_33843	7.8	96 +/- 3%	-	13	12	0	1	yes	-	-	-	-	uacaagugaaaacaagaaugcgu	cagucuuguuuucuuuuguaau	cagucuuguuuucuuuuguaauuuuaaguuacaagugaaaacaagaaugcgu	chromosome_9:29810421..29810473:-
+chromosome_12_48196	7.2	96 +/- 3%	-	12	4	0	8	yes	-	-	-	-	ugcaagagcaaccauuaugaua	ugcauaaucguugaucuugua	ugcauaaucguugaucuuguaacuuucauguugcaagagcaaccauuaugaua	chromosome_12:19739360..19739413:-
+chromosome_13_55351	6.5	96 +/- 3%	-	10	6	0	4	yes	-	-	-	-	acauguaacaguaaaucagaggu	ccucugacuuacuguugcaugua	ccucugacuuacuguugcauguacuucauauacauguaacaguaaaucagaggu	chromosome_13:30863783..30863837:-
+chromosome_9_29804	6.2	96 +/- 3%	-	10	9	0	1	yes	-	-	-	-	ggcguguaacauugacuacugacu	cauaguucaauauuacacgcgaca	ggcguguaacauugacuacugacuuugauucauaguucaauauuacacgcgaca	chromosome_9:4184707..4184761:+
+chromosome_12_45895	5.6	96 +/- 3%	-	8	5	0	3	yes	-	-	-	-	agguagagccugcuuuucuuuug	caagaaaagugggcucuggaugg	agguagagccugcuuuucuuuuggucagcacaagaaaagugggcucuggaugg	chromosome_12:30058225..30058278:+
+chromosome_5_15514	5	96 +/- 3%	-	10	6	0	4	yes	-	-	-	-	ucuuagagcaauaaggaucaga	uggucuuuaucacucuaaaauug	uggucuuuaucacucuaaaauugauuaccaaucuuagagcaauaaggaucaga	chromosome_5:8149587..8149640:-
+chromosome_9_32136	4.6	96 +/- 3%	-	4	1	0	3	yes	-	-	-	-	aggccaaaguuucuguuau	gcagaaacugaggccuuga	aggccaaaguuucuguuaucugccgaagccgaaggcugaggcggauagcagaaacugaggccuuga	chromosome_9:5655802..5655868:-
+chromosome_4_9649	4.6	96 +/- 3%	-	8	6	0	2	yes	-	-	-	-	uccaacaggcgcuucgcugaua	cagcaaagagcacugugagaaa	cagcaaagagcacugugagaaauuuuuuuccaacaggcgcuucgcugaua	chromosome_4:10352222..10352272:+
+chromosome_6_18014	4.3	96 +/- 3%	-	6	5	0	1	yes	-	-	-	-	agugugacaccuuguuaauggg	uaauaacaggguugccacc	agugugacaccuuguuaauggggucagccuaauaacaggguugccacc	chromosome_6:14467682..14467730:+
+chromosome_6_18008	4.3	96 +/- 3%	-	6	5	0	1	yes	-	-	-	-	agugugacaccuuguuaauggg	uaauaacaggguugccacc	agugugacaccuuguuaauggggucagccuaauaacaggguugccacc	chromosome_6:14465247..14465295:+
+chromosome_6_18012	4.3	96 +/- 3%	-	6	5	0	1	yes	-	-	-	-	agugugacaccuuguuaauggg	uaauaacaggguugccacc	agugugacaccuuguuaauggggucagccuaauaacaggguugccacc	chromosome_6:14466950..14466998:+
+chromosome_6_18010	4.3	96 +/- 3%	-	6	5	0	1	yes	-	-	-	-	agugugacaccuuguuaauggg	uaauaacaggguugccacc	agugugacaccuuguuaauggggucagccuaauaacaggguugccacc	chromosome_6:14465986..14466034:+
+chromosome_5_14511	4.2	96 +/- 3%	-	22	21	0	1	no	-	-	-	-	agugugacggauuucgaaagu	uugugaaaaccaggcuuu	uugugaaaaccaggcuuuacgcgguauuguagcacaaaacagugugacggauuucgaaagu	chromosome_5:22994468..22994529:+
+chromosome_6_19915	3.9	96 +/- 2%	-	10	9	0	1	yes	-	-	-	-	uuuccauuccuaucaaaaacuau	cuuuuuguuagggagggaaugu	uuuccauuccuaucaaaaacuauauuuuuuacuuuuuguuagggagggaaugu	chromosome_6:11028854..11028907:-
+chromosome_10_37169	3.7	96 +/- 2%	-	15	15	0	0	yes	-	-	-	-	gaugcauuuccggcugucg	acagccagaaaugcgucug	gaugcauuuccggcugucgcuucucuccgccaaaaauguuuuugguggagagaagugacagccagaaaugcgucug	chromosome_10:7062848..7062924:-
+chromosome_13_53437	3.4	96 +/- 2%	-	15	15	0	0	yes	-	-	-	-	gaugcauuuccggcugucgc	gacagccggaaaugcgucug	gaugcauuuccggcugucgcuucucuccgcccaaaaaaagagaagcgacagccggaaaugcgucug	chromosome_13:3090346..3090412:-
+chromosome_6_19920	3.4	96 +/- 2%	-	4	2	0	2	yes	-	-	-	-	uguuuucaaucacgugcccuuua	gagggccacgugacuaaaaaagaaa	gagggccacgugacuaaaaaagaaauuauuuguuuucaaucacgugcccuuua	chromosome_6:11067973..11068026:-
+chromosome_14_65705	3.3	96 +/- 2%	-	8	7	0	1	yes	-	-	-	-	cagcuaauaauacaaacauugac	ugcuguuugcauuauuagcaaugaaac	ugcuguuugcauuauuagcaaugaaacuuuggcuuucagcuaauaauacaaacauugac	chromosome_14:40646882..40646941:+
+chromosome_13_51059	3.2	96 +/- 2%	-	4	3	0	1	yes	-	-	-	-	aucaaaacacaaaauacugacu	ucaguaucuuguguguuguugau	ucaguaucuuguguguuguugauuaucucaucaaaacacaaaauacugacu	chromosome_13:14325109..14325160:+
+chromosome_14_75009	3.2	96 +/- 2%	-	29	14	0	15	yes	-	-	-	-	acacagucguucuuaggggcga	ucgccccuaagaacgacugugu	acacagucguucuuaggggcgauuugguucacucguggggaggaguguaacgugaucgccccuaagaacgacugugu	chromosome_14:32482792..32482869:-
+chromosome_5_13557	3.1	96 +/- 2%	-	28	28	0	0	yes	-	-	-	-	ggucaaggccucggucug	gaccucggccuugaugua	gaccucggccuugauguauugaccucgcugucgcucggucaaggccucggucug	chromosome_5:8920261..8920315:+
+chromosome_5_15946	3	96 +/- 2%	-	4	3	0	1	yes	-	-	-	-	ugcauagugcagcaaauuccaucc	gggaauugcugcaaugugcuau	ugcauagugcagcaaauuccauccuuaugggggaauugcugcaaugugcuau	chromosome_5:14605295..14605347:-
+chromosome_4_9282	2.9	97 +/- 2%	-	11	7	3	1	yes	-	-	-	-	ugacuguuucucuacaaaag	cuuuguagagaaacagucaa	cuuuguagagaaacagucaaaucaaaacggggccauagccgccuauggccccguuuugauuugacuguuucucuacaaaag	chromosome_4:4529657..4529738:+
+chromosome_11_41684	2.8	97 +/- 2%	-	11	6	0	5	yes	-	-	-	-	uacucgagacucgauccucg	ugaggaucgagucucgagu	uacucgagacucgauccucgagacucgaacauuucgaguuuugagucuugaggaucgagucucgagu	chromosome_11:4579152..4579219:-
+chromosome_9_29613	2.7	97 +/- 2%	-	382	312	0	70	yes	-	-	-	-	agccucacgucuuugauaauucu	agaauuaugaaagacgugaggcc	agaauuaugaaagacgugaggccguaacagccucacgucuuugauaauucu	chromosome_9:1210859..1210910:+
+chromosome_12_46360	2.7	97 +/- 2%	-	13	13	0	0	yes	-	-	-	-	ugucguagaguggaacaaauggg	cuuguguuccacuguacgacaga	ugucguagaguggaacaaauggggugaccccuuguguuccacuguacgacaga	chromosome_12:36076994..36077047:+
+chromosome_9_31835	2.7	97 +/- 2%	-	402	347	0	55	yes	-	-	-	-	agaauuaucaaagacgugaggcu	ggccucacgucuuucauaauucu	agaauuaucaaagacgugaggcuguuacggccucacgucuuucauaauucu	chromosome_9:1210859..1210910:-
+chromosome_13_54984	2.7	97 +/- 2%	-	62	40	0	22	yes	-	-	-	-	guacuugaagucgauugacaug	gaugucaaucgucuucaaguac	gaugucaaucgucuucaaguacauguaacauguacuugaagucgauugacaug	chromosome_13:25495292..25495345:-
+chromosome_12_45264	2.7	97 +/- 2%	-	39	39	0	0	yes	-	-	-	-	uaggauguauuggaacuuucaau	ugaaaguuccaaucauccuaag	uaggauguauuggaacuuucaauaauuauuauugaaaguuccaaucauccuaag	chromosome_12:23771275..23771329:+
+chromosome_13_52530	2.6	97 +/- 2%	-	22	22	0	0	yes	-	-	-	-	aagaaagcccugaccaccuuc	gggugguaggggguuucuuug	aagaaagcccugaccaccuucucuuaaugugagggugguaggggguuucuuug	chromosome_13:36030297..36030350:+
+chromosome_12_48524	2.6	97 +/- 2%	-	36	36	0	0	yes	-	-	-	-	auugaaaguuccaauacauccua	ggaugauuggaacuuucaauaa	ggaugauuggaacuuucaauaauaauuauugaaaguuccaauacauccua	chromosome_12:23771275..23771325:-
+chromosome_14_66906	2.6	97 +/- 2%	-	193	113	0	80	yes	-	-	-	-	gcauuacaaaagaacuggucu	agaccaguucuuuuguaaugc	gcauuacaaaagaacuggucuucuugugagagaccaguucuuuuguaaugc	chromosome_14:57806489..57806540:+
+chromosome_12_49692	2.6	97 +/- 2%	-	12	12	0	0	yes	-	-	-	-	cccauuuguuccacucuacgaca	ucguacaguggaacacaaggggu	ucguacaguggaacacaaggggucaccccauuuguuccacucuacgaca	chromosome_12:36076994..36077043:-
+chromosome_1_3	2.6	97 +/- 2%	-	497	497	0	0	yes	-	-	-	-	uaagacucugaggauggaau	uccuucuucaaggucuuaca	uccuucuucaaggucuuacauuuuuuguaagacucugaggauggaau	chromosome_1:70466..70513:+
+chromosome_7_23367	2.5	97 +/- 2%	-	187	186	0	1	yes	-	-	-	-	auaguccuuuucgaguuguuuuu	aaagacaacuugaaaaggacuau	aaagacaacuugaaaaggacuauuaaauaguccuuuucgaguuguuuuu	chromosome_7:30370286..30370335:+
+chromosome_14_77421	2.5	97 +/- 2%	-	174	88	0	86	yes	-	-	-	-	gcauuacaaaagaacuggucu	agaccaguucuuuuguaaugc	gcauuacaaaagaacuggucucucacaagaagaccaguucuuuuguaaugc	chromosome_14:57806489..57806540:-
+chromosome_10_36869	2.5	97 +/- 2%	-	2	1	0	1	yes	-	-	-	-	ugaggcgucguuacagucguggg	cacuacugucacaaugccucucu	ugaggcgucguuacagucguggguuuucucacuacugucacaaugccucucu	chromosome_10:2241417..2241469:-
+chromosome_10_36213	2.5	97 +/- 2%	-	35	35	0	0	yes	-	-	-	-	uuacuuccgcucaaguucacg	gcaaccugagcggaagucuuc	gcaaccugagcggaagucuucuucaagauuacuuccgcucaaguucacg	chromosome_10:27379402..27379451:+
+chromosome_6_17551	2.5	97 +/- 2%	-	36	36	0	0	yes	-	-	-	-	aaucgaacaucugccagugcaa	gcacuggcagauguuccgauuuu	gcacuggcagauguuccgauuuuaaaaaucgaacaucugccagugcaa	chromosome_6:9302221..9302269:+
+chromosome_11_39513	2.5	97 +/- 2%	-	2	1	0	1	yes	-	-	-	-	uauguaaucgccauauuugauga	caucaaaguggcaauuca	caucaaaguggcaauucauagauuuaguuuauguaaucgccauauuugauga	chromosome_11:5267137..5267189:+
+chromosome_2_3273	2.5	97 +/- 2%	-	64	64	0	0	yes	-	-	-	-	uugucaaaacgaacugugcuucc	guugcauaguuuuuauugacaacu	guugcauaguuuuuauugacaacuuuaaguguugucaaaacgaacugugcuucc	chromosome_2:5314217..5314271:+
+chromosome_9_31172	2.5	97 +/- 2%	-	3	2	0	1	yes	-	-	-	-	uccaugccuuuucacuaguugc	caacuaguagaaagacagagacc	uccaugccuuuucacuaguugcuuuuaagcaacuaguagaaagacagagacc	chromosome_9:23592497..23592549:+
+chromosome_7_22793	2.5	97 +/- 2%	-	6037	6029	0	8	yes	-	-	-	-	cacaaguucggaucuacggguu	gaccauggagccgaacuugu	gaccauggagccgaacuuguggagaaaaaucccacaaguucggaucuacggguu	chromosome_7:21599197..21599251:+
+chromosome_10_38759	2.4	97 +/- 2%	-	29	29	0	0	yes	-	-	-	-	cgugaacuugagcggaaguaa	acuuccgcucagguugccgaa	cgugaacuugagcggaaguaaucuugaagaagacuuccgcucagguugccgaa	chromosome_10:27379398..27379451:-
+chromosome_12_46464	2.4	97 +/- 2%	-	14	14	0	0	yes	-	-	-	-	auaagcagauacguuccuuuugu	aaaaggaacauaucugcuuguaa	auaagcagauacguuccuuuuguuauuaaauaauaaaaggaacauaucugcuuguaa	chromosome_12:37491165..37491222:+
+chromosome_7_22808	2.4	97 +/- 2%	-	18	18	0	0	yes	-	-	-	-	uaguugggaaagaaaugaaagaga	ucuuucauuuauuucccaacuuau	uaguugggaaagaaaugaaagagaauuauucucuuucauuuauuucccaacuuau	chromosome_7:21849256..21849311:+
+chromosome_9_31988	2.4	97 +/- 2%	-	29	29	0	0	yes	-	-	-	-	uggcucaaucagacauugcuaau	uagcaaugucugauugggccauu	uagcaaugucugauugggccauuaaauggcucaaucagacauugcuaau	chromosome_9:3523900..3523949:-
+chromosome_12_45202	2.4	97 +/- 2%	-	45	45	0	0	yes	-	-	-	-	ucacauucaaugaguuuucagaa	cugaaauuucuuuggauguguuu	ucacauucaaugaguuuucagaauaguaaaauuauucugaaauuucuuuggauguguuu	chromosome_12:23234442..23234501:+
+chromosome_14_65604	2.4	97 +/- 2%	-	30	30	0	0	yes	-	-	-	-	uuacuuguugguagagcauucc	aauguacuaccagcaaguuaau	uuacuuguugguagagcauuccauuuaauggaauguacuaccagcaaguuaau	chromosome_14:40086361..40086414:+
+chromosome_14_67207	2.4	97 +/- 2%	-	12	12	0	0	yes	-	-	-	-	gcaaaguuguuaugguuucauau	auguaaccauaacaaccugcaa	gcaaaguuguuaugguuucauauuacuuuaaaguaagauguaaccauaacaaccugcaa	chromosome_14:4027904..4027963:-
+chromosome_1_1710	2.4	97 +/- 2%	-	45	22	0	23	yes	-	-	-	-	uaauaagcuuaaguuuuggaua	uauccaaaacuuaagcuuauua	uauccaaaacuuaagcuuauuaaccuugucuuaauaagcuuaaguuuuggaua	chromosome_1:7941836..7941889:-
+chromosome_3_7793	2.4	97 +/- 2%	-	576	576	0	0	yes	-	-	-	-	uaacuugauacugcauagcu	cugugccugucgaguuaug	cugugccugucgaguuaugacacuugcagccuaacuugauacugcauagcu	chromosome_3:4941281..4941332:-
+chromosome_1_423	2.4	97 +/- 2%	-	45	25	0	20	yes	-	-	-	-	uaauaagcuuaaguuuuggaua	uauccaaaacuuaagcuuauua	uauccaaaacuuaagcuuauuaagacaagguuaauaagcuuaaguuuuggaua	chromosome_1:7941836..7941889:+
+chromosome_6_18427	2.3	97 +/- 2%	-	12	12	0	0	yes	-	-	-	-	uagaaaccugcgaaaaauucuug	agaguuuuuugcaggcuucuaua	agaguuuuuugcaggcuucuauauuuauuuuuuagaaaccugcgaaaaauucuug	chromosome_6:20409344..20409399:+
+chromosome_9_33962	2.3	97 +/- 2%	-	21	21	0	0	yes	-	-	-	-	cuggucuagcuggaguuaaaaug	auuuaacuucagcuagaccacaa	auuuaacuucagcuagaccacaaaacuggucuagcuggaguuaaaaug	chromosome_9:30792245..30792293:-
+chromosome_7_24840	2.3	97 +/- 2%	-	17	17	0	0	yes	-	-	-	-	ucucuuucauuucuuucccaacua	guugggaaauaaaugaaagagaau	guugggaaauaaaugaaagagaauaauucucuuucauuucuuucccaacua	chromosome_7:21849256..21849307:-
+chromosome_9_29764	2.3	97 +/- 2%	-	33	33	0	0	yes	-	-	-	-	uuagcaaugucugauugagcca	gcccaaucagacauugcuaauu	uuagcaaugucugauugagccauuuaauggcccaaucagacauugcuaauu	chromosome_9:3523901..3523952:+
+chromosome_12_45170	2.3	97 +/- 2%	-	32	32	0	0	yes	-	-	-	-	guggucgaugggaaacug	auuucccauggaccacaa	guggucgaugggaaacuguuuuucaauaauaauuauugcaaaacuauuucccauggaccacaa	chromosome_12:22867619..22867682:+
+chromosome_13_55736	2.3	97 +/- 2%	-	19	19	0	0	yes	-	-	-	-	gaagguggucagggcuuucuuu	agaaacccccuaccacccuc	agaaacccccuaccacccucacauuaagagaagguggucagggcuuucuuu	chromosome_13:36030296..36030347:-
+chromosome_12_43774	2.3	97 +/- 2%	-	15	15	0	0	yes	-	-	-	-	gaugcauuuccggcugucgc	cuucgccgaaauacgucug	gaugcauuuccggcugucgcuucucuucgccgaaauacgucug	chromosome_12:1598481..1598524:+
+chromosome_12_49790	2.3	97 +/- 2%	-	17	17	0	0	yes	-	-	-	-	acaaaaggaacguaucugcuuau	aagcagauauguuccuuuuauua	aagcagauauguuccuuuuauuauuuaauaacaaaaggaacguaucugcuuau	chromosome_12:37491165..37491218:-
+chromosome_12_45174	2.2	97 +/- 2%	-	32	32	0	0	yes	-	-	-	-	guggucgaugggaaacug	auuucccauggaccacaa	guggucgaugggaaacuguuuuucaauaauaauuauugcaaaacuauuucccauggaccacaa	chromosome_12:22869522..22869585:+
+chromosome_3_6234	2.2	97 +/- 2%	-	1387	1387	0	0	yes	-	-	-	-	ugaucuuguagguuccaucuuau	uggaugggaccuauaaguucaca	ugaucuuguagguuccaucuuauuuaauuggaugggaccuauaaguucaca	chromosome_3:3503369..3503420:+
+chromosome_6_20746	2.2	97 +/- 2%	-	12	12	0	0	yes	-	-	-	-	uucagcuauuuuggguguucuu	gaacacucaacauagcugaaga	gaacacucaacauagcugaagaaaauucagcuauuuuggguguucuu	chromosome_6:21902755..21902802:-
+chromosome_11_41722	2.2	97 +/- 2%	-	2	1	0	1	yes	-	-	-	-	ucaucaaauauggcgauuacaua	ugaauugccacuuugaug	ucaucaaauauggcgauuacauaaacuaaaucuaugaauugccacuuugaug	chromosome_11:5267137..5267189:-
+chromosome_14_56681	2.2	97 +/- 2%	-	15	15	0	0	yes	-	-	-	-	auaugaaaccauaacaacuuugc	agguuguuaugguuacaucuua	agguuguuaugguuacaucuuacuuuaaaguaauaugaaaccauaacaacuuugc	chromosome_14:4027908..4027963:+
+chromosome_9_29733	2.2	97 +/- 2%	-	21	21	0	0	yes	-	-	-	-	guaaauccgauccuguacuguua	acaguauaggaugggguacac	acaguauaggaugggguacacuaaguaaauccgauccuguacuguua	chromosome_9:2865532..2865579:+
+chromosome_14_77139	2.2	97 +/- 2%	-	1441	1193	0	248	yes	-	-	-	-	uuaaagacggaucugcacccuuu	cgaugcagauccgucuuugaau	uuaaagacggaucugcacccuuuuuuaagacgaugcagauccgucuuugaau	chromosome_14:53439652..53439704:-
+chromosome_7_25419	2.2	97 +/- 2%	-	213	212	0	1	yes	-	-	-	-	aaaaacaacucgaaaaggacuau	auaguccuuuucaaguugucuuu	aaaaacaacucgaaaaggacuauuuaauaguccuuuucaaguugucuuu	chromosome_7:30370286..30370335:-
+chromosome_12_48206	2.2	97 +/- 2%	-	151	151	0	0	yes	-	-	-	-	ggaacaagccgaaacauug	auguuucggcuugcaccca	auguuucggcuugcacccaagaacgggaacaagccgaaacauug	chromosome_12:19826692..19826736:-
+chromosome_14_66635	2.2	97 +/- 2%	-	1115	1092	0	23	yes	-	-	-	-	aaagggugcagauccgucuuuaa	ucaaagacggaucugcacccuc	ucaaagacggaucugcacccucuuaaaaaagggugcagauccgucuuuaa	chromosome_14:53448669..53448719:+
+chromosome_6_19759	2.2	97 +/- 2%	-	71	71	0	0	yes	-	-	-	-	cgaucacgucuagaacacccaaa	ucaguguucuagacguaaucgca	cgaucacgucuagaacacccaaagauugaaucuuucaguguucuagacguaaucgca	chromosome_6:9195242..9195299:-
+chromosome_4_10519	2.1	97 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21645476..21645518:+
+chromosome_12_49115	2.1	97 +/- 2%	-	89	89	0	0	yes	-	-	-	-	acugagcaauuguuacagguaga	uauuuguaacaauuauucaauuu	acugagcaauuguuacagguagaauaauacauucuauuuguaacaauuauucaauuu	chromosome_12:29194483..29194540:-
+chromosome_4_10505	2.1	97 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21642655..21642697:+
+chromosome_9_29731	2.1	97 +/- 2%	-	21	21	0	0	yes	-	-	-	-	guaaauccgauccuguacuguua	acaguauaggauggggguacau	acaguauaggauggggguacauuaaguaaauccgauccuguacuguua	chromosome_9:2864917..2864965:+
+chromosome_4_10529	2.1	97 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21651460..21651502:+
+chromosome_11_41231	2.1	97 +/- 2%	-	181	181	0	0	yes	-	-	-	-	accaguguuaucguuuggacaaa	uauccaaaugauaacauuggcau	uauccaaaugauaacauuggcauaauaccaguguuaucguuuggacaaa	chromosome_11:30949737..30949786:+
+chromosome_11_43483	2.1	97 +/- 2%	-	202	202	0	0	yes	-	-	-	-	uuuguccaaacgauaacacuggu	caauguuaucauuuggauaaagg	uuuguccaaacgauaacacugguauuaugccaauguuaucauuuggauaaagg	chromosome_11:30949733..30949786:-
+chromosome_4_9647	2.1	97 +/- 2%	-	17	17	0	0	yes	-	-	-	-	acaggucaguaaauaucuucaaaa	uuggaauauuuauugaccuuucu	uuggaauauuuauugaccuuucuuuuaaagacaggucaguaaauaucuucaaaa	chromosome_4:10324793..10324847:+
+chromosome_10_35772	2.1	97 +/- 2%	-	11	11	0	0	yes	-	-	-	-	ugggaugaacauuaaacgacu	ucguuucauguacauuccauc	ugggaugaacauuaaacgacuaauuauuagucguuucauguacauuccauc	chromosome_10:21809804..21809855:+
+chromosome_4_10543	2.1	97 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21654285..21654327:+
+chromosome_14_76166	2.1	97 +/- 2%	-	28	28	0	0	yes	-	-	-	-	ggaaugcucuaccaacaaguaa	acuugcugguaguacauuccau	acuugcugguaguacauuccauuaaauggaaugcucuaccaacaaguaa	chromosome_14:40086361..40086410:-
+chromosome_12_48468	2.1	97 +/- 2%	-	49	49	0	0	yes	-	-	-	-	uucugaaaacucauugaauguga	acauccaaagaaauuucagaaua	acauccaaagaaauuucagaauaauuuuacuauucugaaaacucauugaauguga	chromosome_12:23234442..23234497:-
+chromosome_5_13911	2	97 +/- 2%	-	414	412	0	2	yes	-	-	-	-	ggcugugacuaucuacuugcaaa	auucaaguagauagugacag	auucaaguagauagugacaggguuaaaggcugugacuaucuacuugcaaa	chromosome_5:13785891..13785941:+
+chromosome_2_5761	2	97 +/- 2%	-	24	24	0	0	yes	-	-	-	-	ccugugggaaugacuacuguu	cuguaagcaauucccacaggga	ccugugggaaugacuacuguuccauuaaggaagucuguaagcaauucccacaggga	chromosome_2:17773525..17773581:-
+chromosome_10_39168	2	97 +/- 2%	-	22	22	0	0	yes	-	-	-	-	uaaaccuucugaacuuaaugagg	ccauuaaguuaaggagauuuaaa	ccauuaaguuaaggagauuuaaauuuaauuuuaaaccuucugaacuuaaugagg	chromosome_10:33589078..33589132:-
+chromosome_13_53827	2	97 +/- 2%	-	149	149	0	0	yes	-	-	-	-	auucgauguacagucauguuugu	uaacaugacuguacaguguauac	auucgauguacagucauguuuguacauaauguaguaacaugacuguacaguguauac	chromosome_13:9868551..9868608:-
+chromosome_9_31730	1.9	94 +/- 2%	-	25	25	0	0	yes	-	-	-	-	cauuuuaacuccagcuagaccag	ggucuagcugaaguuaaaucugcc	cauuuuaacuccagcuagaccaguuuuguggucuagcugaaguuaaaucugcc	chromosome_9:30792245..30792298:+
+chromosome_1_853	1.9	94 +/- 2%	-	55	55	0	0	yes	-	-	-	-	ugccagucugugucaagauua	aucuuaacaaaggaugguaau	aucuuaacaaaggaugguaauuaucaaaauugccagucugugucaagauua	chromosome_1:14412110..14412161:+
+chromosome_4_10544	1.9	94 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21654285..21654327:+
+chromosome_4_10506	1.9	94 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21642655..21642697:+
+chromosome_4_10530	1.9	94 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21651460..21651502:+
+chromosome_8_26814	1.9	94 +/- 2%	-	43	43	0	0	yes	-	-	-	-	aauuccccuuacccuuac	gggggggggggguacucc	aauuccccuuacccuuacccagaugggggggggggguacucc	chromosome_8:20887384..20887426:+
+chromosome_4_10520	1.9	94 +/- 2%	-	65	65	0	0	yes	-	-	-	-	ucacuggaacuccaaaccua	gguuuggaguccagugaau	gguuuggaguccagugaauaaaucacuggaacuccaaaccua	chromosome_4:21645476..21645518:+
+chromosome_13_55019	1.9	94 +/- 2%	-	16	16	0	0	yes	-	-	-	-	aaucuuaaguaaguuccaucacua	gugucggaaccuacuugggaccgu	aaucuuaaguaaguuccaucacuauuuaguagugucggaaccuacuugggaccgu	chromosome_13:25931005..25931060:-
+chromosome_5_13907	1.9	94 +/- 2%	-	136	130	0	6	yes	-	-	-	-	gcuguggacuaucuacuugaaau	aauucaaguagauagugacagg	aauucaaguagauagugacaggguuaaaggcuguggacuaucuacuugaaau	chromosome_5:13785430..13785482:+
+chromosome_5_13913	1.9	94 +/- 2%	-	180	180	0	0	yes	-	-	-	-	ggcugugaacuaucuacuugaaau	uucaaauagauagugacaggguuaa	uucaaauagauagugacaggguuaaaggcugugaacuaucuacuugaaau	chromosome_5:13786045..13786095:+
+chromosome_10_36400	1.8	94 +/- 2%	-	52	52	0	0	yes	-	-	-	-	uuuuaacgauucuaguuuacuuu	gguaaacuaagaugguuaaaucu	uuuuaacgauucuaguuuacuuuauuuuaugguaaacuaagaugguuaaaucu	chromosome_10:30942864..30942917:+
+chromosome_5_13726	1.8	94 +/- 2%	-	34	34	0	0	yes	-	-	-	-	acagccguaauugcaauaauua	auuauugcaguugcugcuauug	acagccguaauugcaauaauuauaauaaauauaauuauugcaguugcugcuauug	chromosome_5:11282790..11282845:+
+chromosome_14_65537	1.8	94 +/- 2%	-	87	87	0	0	yes	-	-	-	-	uugccuuuugauuauacuuuuc	caaguuuaaucaauuggcaaua	caaguuuaaucaauuggcaauauuuuaaauauugccuuuugauuauacuuuuc	chromosome_14:39460290..39460343:+
+chromosome_11_39191	1.8	94 +/- 2%	-	12	9	0	3	yes	-	-	-	-	gauugcaaguuuuccuacuaccu	agauacuaggaaaacuugcaa	agauacuaggaaaacuugcaauucaaagauugcaaguuuuccuacuaccu	chromosome_11:404865..404915:+
+chromosome_10_36404	1.8	94 +/- 2%	-	52	52	0	0	yes	-	-	-	-	uuuuaacgauucuaguuuacuuu	gguaaacuaagaugguuaaaucu	uuuuaacgauucuaguuuacuuuauuuuaugguaaacuaagaugguuaaaucu	chromosome_10:30951892..30951945:+
+chromosome_5_13909	1.7	94 +/- 2%	-	418	412	0	6	yes	-	-	-	-	ggcugugacuaucuacuugcaaa	aauucaaguagauagugacagg	aauucaaguagauagugacaggguuaaaggcugugacuaucuacuugcaaa	chromosome_5:13785738..13785789:+
+chromosome_3_7714	1.7	94 +/- 2%	-	1276	1276	0	0	yes	-	-	-	-	auaagauggaaccuacaagauca	aacuuauaggucccauccaauua	aacuuauaggucccauccaauuaaauaagauggaaccuacaagauca	chromosome_3:3503369..3503416:-
+chromosome_14_68553	1.7	94 +/- 2%	-	22	22	0	0	yes	-	-	-	-	uauggcagcuguuuuggaucaaau	gugauucaaaacauuugccuuuac	uauggcagcuguuuuggaucaaaucuuugaggugauucaaaacauuugccuuuac	chromosome_14:16793103..16793158:-
+chromosome_5_15914	1.7	94 +/- 2%	-	188	188	0	0	yes	-	-	-	-	ccacaggaauggcaagaac	guuuguuauacgcugggua	guuuguuauacgcuggguagauuauuucagccacaggaauggcaagaac	chromosome_5:13939010..13939059:-
+chromosome_13_54250	1.7	94 +/- 2%	-	27	19	0	8	yes	-	-	-	-	aaacaccugaacccugug	cacagaguuugggugucugaa	cacagaguuugggugucugaaucaauuuggaugucaaacaccugaacccugug	chromosome_13:15058237..15058290:-
+chromosome_5_16514	1.6	94 +/- 2%	-	48	48	0	0	yes	-	-	-	-	aguguacaauuccuaaguaag	aacuuugguauuguacacucu	aacuuugguauuguacacucuaaaaguguacaauuccuaaguaag	chromosome_5:23799493..23799538:-
+chromosome_13_50563	1.6	94 +/- 2%	-	39	39	0	0	yes	-	-	-	-	uucucuacuguuacacggucaca	uggcuguguaacaguugaaagua	uggcuguguaacaguugaaaguaauaguuauucucuacuguuacacggucaca	chromosome_13:7028645..7028698:+
+chromosome_9_31939	1.6	94 +/- 2%	-	23	23	0	0	yes	-	-	-	-	uaacaguacaggaucggauuuac	acccccauccuauacuguaacc	uaacaguacaggaucggauuuacuuaauguacccccauccuauacuguaacc	chromosome_9:2864913..2864965:-
+chromosome_9_33846	1.6	94 +/- 2%	-	61	61	0	0	yes	-	-	-	-	uaccagugagaacagaaaugcgu	acauuuuuguuuucuuuuguaau	acauuuuuguuuucuuuuguaauuuuaaguuaccagugagaacagaaaugcgu	chromosome_9:29811346..29811399:-
+chromosome_11_39665	1.6	94 +/- 2%	-	11	11	0	0	yes	-	-	-	-	cugaauacuacauuuauacggc	cguauacaugaaguauuuagug	cguauacaugaaguauuuagugacaaucgcugaauacuacauuuauacggc	chromosome_11:7921123..7921174:+
+chromosome_7_25055	1.6	94 +/- 2%	-	87	87	0	0	yes	-	-	-	-	acaaccuuucccacuuag	gaggcaugggaacaacugguc	acaaccuuucccacuuagucggcggagccugaggcaugggaacaacugguc	chromosome_7:25540661..25540712:-
+chromosome_14_57155	1.5	94 +/- 2%	-	23	23	0	0	yes	-	-	-	-	ucgucgaaaaauugagaaucacu	cgauugucaauuuuucgauuaaa	cgauugucaauuuuucgauuaaauuuaauuucgucgaaaaauugagaaucacu	chromosome_14:9961783..9961836:+
+chromosome_6_18888	1.5	94 +/- 2%	-	17	10	0	7	yes	-	-	-	-	gcugguaggugcgagaagugugcau	acacuucguaggccuaacagcca	acacuucguaggccuaacagccaauaaacagcugguaggugcgagaagugugcau	chromosome_6:27836951..27837006:+
+chromosome_5_14548	1.5	94 +/- 2%	-	37	36	0	1	yes	-	-	-	-	ccaauaaucuggggauugugca	cauaacccagauuauuguaagu	ccaauaaucuggggauugugcacuuuacguuuacauaacccagauuauuguaagu	chromosome_5:23795878..23795933:+
+chromosome_12_48444	1.5	94 +/- 2%	-	28	28	0	0	yes	-	-	-	-	caguuucccaucgaccac	gguccaugggaaauaguu	gguccaugggaaauaguuuugcaauaauuauuauugaaaaacaguuucccaucgaccac	chromosome_12:22869522..22869581:-
+chromosome_12_48442	1.5	94 +/- 2%	-	28	28	0	0	yes	-	-	-	-	caguuucccaucgaccac	gguccaugggaaauaguu	gguccaugggaaauaguuuugcaauaauuauuauugaaaaacaguuucccaucgaccac	chromosome_12:22867619..22867678:-
+chromosome_4_9075	1.5	94 +/- 2%	-	294	294	0	0	yes	-	-	-	-	ucaagucuaggcugguuagucu	acuauaccaacauaggcuuuuca	acuauaccaacauaggcuuuucauguuuauuuugucaagucuaggcugguuagucu	chromosome_4:1651019..1651075:+
+chromosome_4_10527	1.5	94 +/- 2%	-	19	19	0	0	yes	-	-	-	-	acacugaaacuccaaaccaua	uaguuuggaguuuagcgcau	uaguuuggaguuuagcgcauaaaacacugaaacuccaaaccaua	chromosome_4:21649570..21649614:+
+chromosome_14_57103	1.4	94 +/- 2%	-	9	7	0	2	yes	-	-	-	-	uccaauuacagguauccaauuu	aaauuggacaccuguaauugga	uccaauuacagguauccaauuugaaguugcucaaauuggacaccuguaauugga	chromosome_14:9198304..9198358:+
+chromosome_5_13821	1.4	94 +/- 2%	-	21	21	0	0	yes	-	-	-	-	aagaaauguacaggaacugca	uaguuucuguaaauuucuuaa	uaguuucuguaaauuucuuaauuacuaagaaauguacaggaacugca	chromosome_5:12612082..12612129:+
+chromosome_4_11683	1.4	94 +/- 2%	-	16	16	0	0	yes	-	-	-	-	uuuugaagauauuuacugaccugu	aggucaauaaauauuccaaaaau	uuuugaagauauuuacugaccugucuuuaaaagaaaggucaauaaauauuccaaaaau	chromosome_4:10324789..10324847:-
+chromosome_11_41855	1.4	94 +/- 2%	-	12	12	0	0	yes	-	-	-	-	gccguauaaauguaguauucag	aaauacuucauguauacggcuu	gccguauaaauguaguauucagcgauugucacuaaauacuucauguauacggcuu	chromosome_11:7921119..7921174:-
+chromosome_5_15724	1.4	94 +/- 2%	-	40	40	0	0	yes	-	-	-	-	uaauuauugcaauuacggcugu	agcagcaacugcaauaauuaua	agcagcaacugcaauaauuauauuuauuauaauuauugcaauuacggcugu	chromosome_5:11282790..11282841:-
+chromosome_1_2312	1.4	94 +/- 2%	-	11	11	0	0	yes	-	-	-	-	uuaauuucuuccaccguauucu	aauaugguggaaaaaauuaaua	aauaugguggaaaaaauuaauaauuauuauuaauuucuuccaccguauucu	chromosome_1:17575688..17575739:-
+chromosome_1_1446	1.4	94 +/- 2%	-	20	20	0	0	yes	-	-	-	-	aacaagcgugcacuuacuauua	acagcaagugcacccuuguucu	acagcaagugcacccuuguucuaaaaacaagcgugcacuuacuauua	chromosome_1:2984918..2984965:-
+chromosome_14_67685	1.4	94 +/- 2%	-	23	23	0	0	yes	-	-	-	-	agugauucucaauuuuucgacga	aucgaaaaauugacaaucgcuuu	agugauucucaauuuuucgacgaaauuaaauuuaaucgaaaaauugacaaucgcuuu	chromosome_14:9961779..9961836:-
+chromosome_14_65539	1.3	94 +/- 2%	-	87	87	0	0	yes	-	-	-	-	uugccuuuugauuauacuuuuc	caaguuuaaucaauuggcaaua	caaguuuaaucaauuggcaauauuuuaaguauugccuuuugauuauacuuuuc	chromosome_14:39462122..39462175:+
+chromosome_10_36584	1.3	94 +/- 2%	-	21	21	0	0	yes	-	-	-	-	ccucauuaaguucagaagguuua	aaucuccuuaacuuaaugggug	ccucauuaaguucagaagguuuaaaauuaaauuuaaaucuccuuaacuuaaugggug	chromosome_10:33589078..33589135:+
+chromosome_11_41903	1.3	94 +/- 2%	-	10	10	0	0	yes	-	-	-	-	aguaucagaaaaugaacgaguga	acgaguucauuuucugauacaac	aguaucagaaaaugaacgagugagcguagcgaacgaguucauuuucugauacaac	chromosome_11:8398728..8398783:-
+chromosome_5_15256	1.3	94 +/- 2%	-	12	3	2	7	no	-	-	-	-	ugauccuagcaguaugca	ccguagcucaguugguuaga	ugauccuagcaguaugcaggacgcgugucacauuucaaccuaguaaauggcccagcucacaacgcguuuuccguagcucaguugguuaga	chromosome_5:4740107..4740197:-
+chromosome_10_38296	1.3	94 +/- 2%	-	10	10	0	0	yes	-	-	-	-	uagucguuuaauguucauccca	gaauguacaugaaacgacuaau	gaauguacaugaaacgacuaauaauuagucguuuaauguucauccca	chromosome_10:21809804..21809851:-
+chromosome_2_5061	1.3	94 +/- 2%	-	53	53	0	0	yes	-	-	-	-	ggaagcacaguucguuuugacaa	gucaauaaaaacuaugcaacccac	ggaagcacaguucguuuugacaacacuuaaaguugucaauaaaaacuaugcaacccac	chromosome_2:5314213..5314271:-
+chromosome_3_7490	1.3	94 +/- 2%	-	9	9	0	0	yes	-	-	-	-	cccaaaagaacgucugcguagg	uacgcaggcauucuuuuggcuc	uacgcaggcauucuuuuggcucgucgugcaaucuauuuuccgagacgacccaaaagaacgucugcguagg	chromosome_3:456787..456857:-
+chromosome_1_2358	1.2	94 +/- 2%	-	142	142	0	0	yes	-	-	-	-	gcugaguuccauaaacaugcaaaa	uugcuuguuuaugaacuaagaca	uugcuuguuuaugaacuaagacaaagcugaguuccauaaacaugcaaaa	chromosome_1:18136832..18136881:-
+chromosome_13_51891	1.2	94 +/- 2%	-	14	14	0	0	yes	-	-	-	-	uagugauggaacuuacuuaagauu	ucccaaguagguuccgacacuacu	ucccaaguagguuccgacacuacuaaauagugauggaacuuacuuaagauu	chromosome_13:25931009..25931060:+
+chromosome_4_11083	1.2	94 +/- 2%	-	271	271	0	0	yes	-	-	-	-	agacuaaccagccuagacuuga	aagccuauguugguauagugucu	agacuaaccagccuagacuugacaaaauaaacaugaaaagccuauguugguauagugucu	chromosome_4:1651015..1651075:-
+chromosome_13_53815	1.2	94 +/- 2%	-	11	11	0	0	yes	-	-	-	-	uguaaagaacuucuuuugguc	ccaaaauaaguuuuuuauacu	uguaaagaacuucuuuuggucuuuaaaggccaaaauaaguuuuuuauacu	chromosome_13:9836294..9836344:-
+chromosome_1_2125	1.2	94 +/- 2%	-	64	64	0	0	yes	-	-	-	-	uaaucuugacacagacuggca	ccauccuuuguuaagauaacu	uaaucuugacacagacuggcaauuuugauaauuaccauccuuuguuaagauaacu	chromosome_1:14412106..14412161:-
+chromosome_6_20645	1.2	94 +/- 2%	-	11	11	0	0	yes	-	-	-	-	caagaauuuuucgcagguuucua	gaagccugcaaaaaacucuugag	caagaauuuuucgcagguuucuaaaaaauaaauauagaagccugcaaaaaacucuugag	chromosome_6:20409340..20409399:-
+chromosome_11_39705	1.1	94 +/- 2%	-	10	10	0	0	yes	-	-	-	-	ucacucguucauuuucugauacu	uaucagaaaaugaacucguucgc	uaucagaaaaugaacucguucgcuacgcucacucguucauuuucugauacu	chromosome_11:8398732..8398783:+
+chromosome_14_76099	1.1	94 +/- 2%	-	78	78	0	0	yes	-	-	-	-	gaaaaguauaaucaaaaggcaa	gccaauugauuaaacuugcau	gaaaaguauaaucaaaaggcaauauuuaaaauauugccaauugauuaaacuugcau	chromosome_14:39460287..39460343:-
+chromosome_7_21540	1.1	94 +/- 2%	-	13	13	0	0	yes	-	-	-	-	acgaugagagucguacaauaua	uauugagacgacuuucaccgccu	acgaugagagucguacaauauacaguaaaauguuuauugagacgacuuucaccgccu	chromosome_7:2303838..2303895:+
+chromosome_4_9272	1	94 +/- 2%	-	9	9	0	0	yes	-	-	-	-	aauguggcuuuaaacacggcug	gccgugucuaaaggcacuauug	aauguggcuuuaaacacggcuguuuaacagccgugucuaaaggcacuauug	chromosome_4:4478940..4478991:+
+chromosome_7_21473	1	94 +/- 2%	-	4	3	0	1	yes	-	-	-	-	uaaaacaaugucgaguuggaucu	uccaacacuacauugucuugu	uccaacacuacauugucuuguaauaauuauaaaacaaugucgaguuggaucu	chromosome_7:1257325..1257377:+
+chromosome_10_36384	1	94 +/- 2%	-	52	52	0	0	yes	-	-	-	-	uuuuaacgauucuaguuuacuuu	gguaaacuaagaugguuaaaucu	uuuuaacgauucuaguuuacuuuauuuuaugguaaacuaagaugguuaaaucu	chromosome_10:30761418..30761471:+
+chromosome_3_7741	1	94 +/- 2%	-	18	18	0	0	yes	-	-	-	-	uaaacugaauuacaauaugccau	ugcauguuguauuacaguaaaau	uaaacugaauuacaauaugccauaauuauuacugcauguuguauuacaguaaaau	chromosome_3:4023197..4023252:-
+chromosome_12_45183	1	94 +/- 2%	-	57	57	0	0	yes	-	-	-	-	uauuucucggccauauacacuuu	agugaacauggcuguaugauaau	agugaacauggcuguaugauaauauuguuaauuauuucucggccauauacacuuu	chromosome_12:23069232..23069287:+
+chromosome_13_52870	1	94 +/- 2%	-	231	231	0	0	yes	-	-	-	-	cucugguguucauucucuuucuga	agauagaagauggacaccaaaagg	cucugguguucauucucuuucugacaacaacaguuagauagaagauggacaccaaaagg	chromosome_13:39611469..39611528:+
+chromosome_4_11286	0.9	82 +/- 2%	-	9	9	0	0	yes	-	-	-	-	cagccguguuuaaagccacauu	agugccuuuagacacggcuguu	agugccuuuagacacggcuguuaaacagccguguuuaaagccacauu	chromosome_4:4478940..4478987:-
+chromosome_12_45807	0.9	82 +/- 2%	-	95	95	0	0	yes	-	-	-	-	ucuaccuguaacaauugcucagu	ugaauaauuguuacaaauagaau	ugaauaauuguuacaaauagaauguauuauucuaccuguaacaauugcucagu	chromosome_12:29194487..29194540:+
+chromosome_10_36471	0.9	82 +/- 2%	-	8	7	0	1	yes	-	-	-	-	uccaauuacagguauccaauuu	aaaugggauaccuguaauugga	uccaauuacagguauccaauuugaaguugcucaaaugggauaccuguaauugga	chromosome_10:31857031..31857085:+
+chromosome_12_48457	0.9	82 +/- 2%	-	50	50	0	0	yes	-	-	-	-	aaaguguauauggccgagaaaua	ucauacagccauguucacuguag	aaaguguauauggccgagaaauaauuaacaauauuaucauacagccauguucacuguag	chromosome_12:23069228..23069287:-
+chromosome_14_76343	0.9	82 +/- 2%	-	10	10	0	0	yes	-	-	-	-	agaagaacuguucagguuauuua	aauaacaacuacaguucuucucu	agaagaacuguucagguuauuuauaauaaauauuaauaacaacuacaguucuucucu	chromosome_14:41841525..41841582:-
+chromosome_7_21507	0.9	82 +/- 2%	-	10	10	0	0	yes	-	-	-	-	auguuaucucuacacaaccuuu	agguugcguagaaauaacauua	agguugcguagaaauaacauuauuuauuaauguuaucucuacacaaccuuu	chromosome_7:1696739..1696790:+
+chromosome_4_11696	0.9	82 +/- 2%	-	54	54	0	0	yes	-	-	-	-	gauuagauacccugggaga	accgaauccaaucga	accgaauccaaucgaacgauugguguucgauugacuucgauugcugaacguucgauuagauacccugggaga	chromosome_4:10585313..10585385:-
+chromosome_14_57266	0.9	82 +/- 2%	-	70	70	0	0	yes	-	-	-	-	cggacgguugaggguuauc	gaauucuccauaaaucugau	cggacgguugaggguuaucaacuuagaauucuccauaaaucugau	chromosome_14:11138302..11138347:+
+chromosome_14_58003	0.8	82 +/- 2%	-	20	20	0	0	yes	-	-	-	-	uuugauccaaaacagcugccaua	aggcaaauguuuugaaucaccuc	aggcaaauguuuugaaucaccucaaagauuugauccaaaacagcugccaua	chromosome_14:16793107..16793158:+
+chromosome_14_65807	0.8	82 +/- 2%	-	10	10	0	0	yes	-	-	-	-	uaaauaaccugaacaguucuucu	aagaacuguaguuguuauuaaua	aagaacuguaguuguuauuaauauuuauuauaaauaaccugaacaguucuucu	chromosome_14:41841529..41841582:+
+chromosome_11_43054	0.8	82 +/- 2%	-	20	20	0	0	yes	-	-	-	-	aggacuugaacccacgaccu	gacguguguuuuauuag	gacguguguuuuauuagagaagaacucagaaaaaaguucugaguucaaagguaggacuugaacccacgaccu	chromosome_11:26824290..26824362:-
+chromosome_6_17618	0.8	82 +/- 2%	-	15	9	0	6	yes	-	-	-	-	uguuuauaguauucuauagcuugu	ucaagaacacugcaaacguaca	ucaagaacacugcaaacguacauuuacuguguuuauaguauucuauagcuugu	chromosome_6:10327964..10328017:+
+chromosome_12_44153	0.8	82 +/- 2%	-	12	12	0	0	yes	-	-	-	-	uuugcuaguugcuuuugucccauu	uaggcaaaaguuucaagcacaug	uaggcaaaaguuucaagcacauguuuaucauuugcuaguugcuuuugucccauu	chromosome_12:6515505..6515559:+
+chromosome_12_45181	0.8	82 +/- 2%	-	58	58	0	0	yes	-	-	-	-	uauuucucggccauauacacuuu	aguguacauggcuguauaauaau	aguguacauggcuguauaauaauauuguuaauuauuucucggccauauacacuuu	chromosome_12:23068971..23069026:+
+chromosome_10_37209	0.7	82 +/- 2%	-	7	3	4	0	yes	-	-	-	-	uuuucgggcucugagcgga	uagagccugaauuuu	uuuucgggcucugagcggagucgaacccacgaccuuugcguugcaacgcaaaggucguggguucgacucuagagccugaauuuu	chromosome_10:8083391..8083475:-
+chromosome_5_16669	0.7	82 +/- 2%	-	22	22	0	0	yes	-	-	-	-	gcaacuuccgcgggcuaaaaau	uuuuaaccagugaaaguugagc	gcaacuuccgcgggcuaaaaauucacauaaaggaauuuuuaaccagugaaaguugagc	chromosome_5:26230032..26230090:-
+chromosome_7_23517	0.7	82 +/- 2%	-	9	9	0	0	yes	-	-	-	-	aaagguuguguagagauaacau	guuauuucuacgcaaccucuua	aaagguuguguagagauaacauuaauaaauaauguuauuucuacgcaaccucuua	chromosome_7:1696735..1696790:-
+chromosome_6_17535	0.7	82 +/- 2%	-	455	455	0	0	yes	-	-	-	-	cuccugugggggugucuu	cccauccucaaaguagac	cccauccucaaaguagacuaucucucaugaagugaucucucaugagacucucuccugugggggugucuu	chromosome_6:9120045..9120114:+
+chromosome_14_76101	0.7	82 +/- 2%	-	77	77	0	0	yes	-	-	-	-	gaaaaguauaaucaaaaggcaa	gccaauugauuaaacuugcau	gaaaaguauaaucaaaaggcaauacuuaaaauauugccaauugauuaaacuugcau	chromosome_14:39462119..39462175:-
+chromosome_14_66948	0.6	82 +/- 2%	-	8	7	0	1	yes	-	-	-	-	uccaauuacagguauccaauuu	aaaugggauaccuguaauugga	uccaauuacagguauccaauuugaacaacuucaaaugggauaccuguaauugga	chromosome_14:195..249:-
+chromosome_1_1094	0.6	82 +/- 2%	-	160	160	0	0	yes	-	-	-	-	uuuugcauguuuauggaacucagc	uuaguucauaaacaagcaacaaa	uuuugcauguuuauggaacucagcuuugucuuaguucauaaacaagcaacaaa	chromosome_1:18136832..18136885:+
+chromosome_8_27485	0.6	82 +/- 2%	-	8	7	0	1	yes	-	-	-	-	uccaauuacagguauccaauuu	aaaugggauaccuguaauugga	uccaauuacagguauccaauuugaacaacuucaaaugggauaccuguaauugga	chromosome_8:29859553..29859607:+
+chromosome_9_29729	0.6	82 +/- 2%	-	9	9	0	0	yes	-	-	-	-	agugaauccucuucucuacugcuga	aguaguagcgaaaaggucacaua	aguaguagcgaaaaggucacauaaagugaauccucuucucuacugcuga	chromosome_9:2864771..2864820:+
+chromosome_5_15829	0.5	82 +/- 2%	-	23	23	0	0	yes	-	-	-	-	ugcaguuccuguacauuucuu	gaaauuuacagaaacuacaua	ugcaguuccuguacauuucuuaguaauuaagaaauuuacagaaacuacaua	chromosome_5:12612078..12612129:-
+chromosome_13_53560	0.5	82 +/- 2%	-	62	62	0	0	yes	-	-	-	-	acuaauuuaaugaguaggacug	gcuugcucauuaaguuauuua	gcuugcucauuaaguuauuuaauaauuaacuaauuuaaugaguaggacug	chromosome_13:5073253..5073303:-
+chromosome_1_1032	0.5	82 +/- 2%	-	10	10	0	0	yes	-	-	-	-	agaauacgguggaagaaauuaa	aauuuuuuccaccauauucuaa	agaauacgguggaagaaauuaauaauaauuauuaauuuuuuccaccauauucuaa	chromosome_1:17575688..17575743:+
+chromosome_1_226	0.4	82 +/- 2%	-	9	9	0	0	yes	-	-	-	-	uuuggaacagaguaguaguu	auacuacucucuuccgaaua	uuuggaacagaguaguaguucaauaguuugacauacuacucucuuccgaaua	chromosome_1:4503977..4504029:+
+chromosome_1_1514	0.3	82 +/- 2%	-	9	9	0	0	yes	-	-	-	-	aacuacuacucuguuccaaa	cggaagagaguaguauguca	cggaagagaguaguaugucaaacuauugaacuacuacucuguuccaaa	chromosome_1:4503977..4504025:-
+chromosome_6_20667	0.3	82 +/- 2%	-	19	19	0	0	yes	-	-	-	-	gagaguggccagaaugug	cguuuuuuauuccgcuuucau	gagaguggccagaaugugaaaugcacgcguuuuuuauuccgcuuucau	chromosome_6:21150604..21150652:-
+chromosome_11_39497	0.2	82 +/- 2%	-	17	12	0	5	yes	-	-	-	-	caccacaaaaagaccugccu	uaucaggccuuuucgugauacu	uaucaggccuuuucgugauacuuuuaaagcaccacaaaaagaccugccu	chromosome_11:5010944..5010993:+
+chromosome_6_19468	0.2	82 +/- 2%	-	15	15	0	0	yes	-	-	-	-	aagaaguucaagcucuuacauca	augucaaagcuuuaacuuuuuga	augucaaagcuuuaacuuuuugaaaaagaaguucaagcucuuacauca	chromosome_6:4849435..4849483:-
+chromosome_5_16508	0.2	82 +/- 2%	-	32	32	0	0	yes	-	-	-	-	ugcacaauccccagauuauugg	aauaaucuggguuauguaaacg	aauaaucuggguuauguaaacguaaagugcacaauccccagauuauugg	chromosome_5:23795878..23795927:-
+chromosome_12_49189	0.1	82 +/- 2%	-	12	12	0	0	yes	-	-	-	-	ucgcagguuugguaaagacauaa	auaacuuuuccaaaacugugaau	ucgcagguuugguaaagacauaauaauaauuacuauaacuuuuccaaaacugugaau	chromosome_12:29812277..29812334:-
+chromosome_9_31937	0.1	82 +/- 2%	-	10	10	0	0	yes	-	-	-	-	ucagcaguagagaagaggauuca	accuuuucgcuacuacuaucg	ucagcaguagagaagaggauucacuuuaugugaccuuuucgcuacuacuaucg	chromosome_9:2864767..2864820:-
+chromosome_9_33441	0	82 +/- 2%	-	5	3	0	2	yes	-	-	-	-	uacggcaaaauaguaaaacc	gguuuuacuauuuugccgua	uacggcaaaauaguaaaacccuuuaauggcagcuaauaauuagcugccauuaaaggguuuuacuauuuugccgua	chromosome_9:23664555..23664630:-
+chromosome_14_76440	0	82 +/- 2%	-	7	7	0	0	yes	-	-	-	-	cuuuaccucagucuucaa	ggagauugauguaaaguu	ggagauugauguaaaguugugagacucgcgacuuuaccucagucuucaa	chromosome_14:43263148..43263197:-
+chromosome_11_43501	0	82 +/- 2%	-	22	22	0	0	yes	-	-	-	-	gaaccuugaagacugaaa	uaaguuuuccuguuuccu	gaaccuugaagacugaaaaguccauaaguuuuccuguuuccu	chromosome_11:31460486..31460528:-
+chromosome_5_14556	0	82 +/- 2%	-	8	8	0	0	yes	-	-	-	-	cuacuaacuuggaauuguacacu	uguacaauaccuaaguuauguacgu	cuacuaacuuggaauuguacacuuuaaaguguacaauaccuaaguuauguacgu	chromosome_5:23800798..23800852:+
+chromosome_2_3616	0	82 +/- 2%	-	13	13	0	0	yes	-	-	-	-	uaaguguucaaaucgauau	auugguuuugaacaugagaag	uaaguguucaaaucgauaucaagugggagcaagugagauauugguuuugaacaugagaag	chromosome_2:9674207..9674267:+
+chromosome_14_67817	0	82 +/- 2%	-	15	15	0	0	yes	-	-	-	-	uugagaucaaguacugaa	caauacucggugcucguuu	uugagaucaaguacugaagaagguuucguaaaccuucaccaauacucggugcucguuu	chromosome_14:11128175..11128233:-
+
+
+
+mature miRBase miRNAs detected by miRDeep2
+tag id	miRDeep2 score	estimated probability that the miRNA is a true positive	rfam alert	total read count	mature read count	loop read count	star read count	significant randfold p-value	mature miRBase miRNA	example miRBase miRNA with the same seed	UCSC browser	NCBI blastn	consensus mature sequence	consensus star sequence	consensus precursor sequence	precursor coordinate
+chromosome_6_18514	8.6	96 +/- 3%	-	14	13	0	1	yes	nve-miR-9425_MIMAT0035384_Nematostella_vectensis_miR-9425	-	-	-	aagaacacccaaaauagcugaa	cagcuauguugaguguucucauu	aagaacacccaaaauagcugaauuuucuucagcuauguugaguguucucauu	chromosome_6:21902755..21902807:+
+chromosome_12_44936	2.4	97 +/- 2%	-	170	170	0	0	yes	spi-mir-temp-14_Stylophora_pistillata_Liew_et_al._2014_NA	-	-	-	caauguuucggcuuguucc	ugcaagccgaaacauugua	caauguuucggcuuguucccguucuugggugcaagccgaaacauugua	chromosome_12:19826692..19826740:+
+chromosome_7_24825	2.4	97 +/- 2%	-	6637	6594	0	43	yes	ola-miR-100_MIMAT0022614_Oryzias_latipes_miR-100	-	-	-	acccguagauccgaacuugu	acaaguucggcuccauggucc	acccguagauccgaacuugugggauuuuucuccacaaguucggcuccauggucc	chromosome_7:21599196..21599250:-
+chromosome_7_23552	2.2	97 +/- 2%	-	15	15	0	0	yes	eca-nve-F-miR-2036_Edwardsiella_carnea_Praher_et_al._2021_Transcriptome-level	-	-	-	uauauuguacgacucucaucgu	ggugaaagucgucucaauaaaca	ggugaaagucgucucaauaaacauuuuacuguauauuguacgacucucaucgu	chromosome_7:2303838..2303891:-
+chromosome_5_14705	2.1	97 +/- 2%	-	27	27	0	0	yes	adi-nve-F-miR-2025_Acropora_digitifera__Praher_et_al._2021_NA	-	-	-	auuuuuagcccgcggaaguugc	aacuuucacugguuaaaaauuc	aacuuucacugguuaaaaauuccuuuaugugaauuuuuagcccgcggaaguugc	chromosome_5:26230036..26230090:+
+chromosome_4_12946	2.1	97 +/- 2%	-	17	17	0	0	yes	apa-mir-2050_Exaiptasia_pallida_Baumgarten_et_al._2017_miR-2050;_Nve;_Spis;_Adi	-	-	-	uuugauugcugugaucugguug	accugcucauugcaauuaaaga	accugcucauugcaauuaaagaucuuguuauguuugauugcugugaucugguug	chromosome_4:27098906..27098960:-
+chromosome_14_67602	1.9	94 +/- 2%	-	15	15	0	0	yes	avi-miR-temp-2037_Anemonia_viridis_Urbarova_et_al._2018_NA	-	-	-	ugugauuggagacuuuuaucgu	gaugaaagucuugaaucaagcu	gaugaaagucuugaaucaagcucuuuaugaagugugauuggagacuuuuaucgu	chromosome_14:8601360..8601414:-
+chromosome_8_27807	1.8	94 +/- 2%	-	15	15	0	0	yes	miR-2030_Nematostella_vectensis_Moran_et_al._2014_NA	-	-	-	uagcauaacauuguaagagauc	ccucuugcacuguugugcuguc	uagcauaacauuguaagagaucuucauggccucuugcacuguugugcuguc	chromosome_8:4117903..4117954:-
+chromosome_12_47380	0.3	82 +/- 2%	-	10	10	0	0	yes	ami-nve-F-miR-2022-3p_Acropora_millepora_Praher_et_al._2021_NA	-	-	-	uuugcuaguugcuuuugucccguu	aaggcaaaagcuucaagcacaug	aaggcaaaagcuucaagcacauguuuaucauuugcuaguugcuuuugucccguu	chromosome_12:6479796..6479850:-
