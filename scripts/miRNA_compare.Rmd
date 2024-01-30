@@ -38,3 +38,205 @@ test <- full_join(AST_1065_novel, AST_1147_novel, by = "consensus.mature.sequenc
 length(unique(test$consensus.mature.sequence)) # 24 seqs shared 
 ```
 
+1/30/24
+Now I have run mirdeep2 on all samples and the known and novel info. I'm going to try reading in all files and comparing if the samples have any sequences in common
+```{r}
+# Check the current working directory
+getwd()
+
+# Define the directory path where your CSV files are located
+directory_path <- "../data/Molecular/smRNA/mirdeep2/novel/"
+
+# List all CSV file names in the directory
+file_names <- list.files(path = directory_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Read all CSV files into a list
+csv_data <- lapply(file_names, read.csv)
+
+# Extract mature sequences from each CSV file
+mature_sequences_list <- lapply(csv_data, function(df) df$consensus.mature.sequence)
+
+# Find the intersection of mature sequences across all files
+shared_mature_sequences <- Reduce(intersect, mature_sequences_list)
+## These are all of the sequences shared across all samples 
+
+
+
+
+
+
+# Define the directory path where your CSV files are located
+directory_path <- "../data/Molecular/smRNA/mirdeep2/novel/"
+
+# List all CSV file names in the directory
+file_names <- list.files(path = directory_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Read all CSV files into a list
+csv_data <- lapply(file_names, read.csv)
+
+# Extract mature sequences from each CSV file
+mature_sequences_list <- lapply(csv_data, function(df) df$consensus.mature.sequence)
+
+# Initialize a list to store groups of shared sequences
+shared_sequence_groups <- list()
+
+# Loop through each pair of files and find shared sequences
+for (i in 1:(length(file_names) - 1)) {
+  for (j in (i + 1):length(file_names)) {
+    # Check if i and j are within bounds
+    if (i <= length(mature_sequences_list) && j <= length(mature_sequences_list)) {
+      # Create a key for the shared sequence group
+      key <- paste(file_names[i], file_names[j], sep = " & ")
+      
+      # Find the intersection of mature sequences between files i and j
+      intersection <- intersect(mature_sequences_list[[i]], mature_sequences_list[[j]])
+      
+      # Store the shared sequences in the shared_sequence_groups list
+      shared_sequence_groups[[key]] <- intersection
+    } else {
+      print("Index i or j out of bounds.")
+    }
+  }
+}
+## These are the shared sequences between two files 
+
+
+
+
+
+
+
+# Define the directory path where your CSV files are located
+directory_path <- "../data/Molecular/smRNA/mirdeep2/novel/"
+
+# List all CSV file names in the directory
+file_names <- list.files(path = directory_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Read all CSV files into a list
+csv_data <- lapply(file_names, read.csv)
+
+# Create a data structure to track which sequences came from which files
+sequence_file_mapping <- list()
+
+# Loop through each CSV file and extract mature sequences
+for (i in seq_along(file_names)) {
+  # Extract mature sequences
+  mature_sequences <- csv_data[[i]]$consensus.mature.sequence
+  
+  # Update sequence_file_mapping
+  for (sequence in mature_sequences) {
+    if (is.null(sequence_file_mapping[[sequence]])) {
+      sequence_file_mapping[[sequence]] <- list()
+    }
+    sequence_file_mapping[[sequence]][[basename(file_names[i])]] <- TRUE
+  }
+}
+
+# Find groups of shared sequences across all files
+shared_sequences <- list()
+
+for (sequence in names(sequence_file_mapping)) {
+  # Check if the sequence is shared across files
+  if (length(sequence_file_mapping[[sequence]]) > 1) {
+    shared_sequences[[sequence]] <- names(sequence_file_mapping[[sequence]])
+  }
+}
+
+# Print or further process shared_sequences
+print(shared_sequences)
+```
+
+Yay!!! I got a large list of the shared sequences across multiple files!!!!! Good job me. Now how to utilize this info usefully...
+
+Save shared seqs as csv -- important to note that these are not filtered by score or anything like that.
+```{r}
+# Create a data frame to store shared sequences and associated files
+shared_sequences_df <- data.frame(
+  sequence = character(),
+  files = character(),
+  stringsAsFactors = FALSE
+)
+
+# Convert shared_sequences list to data frame format
+for (sequence in names(shared_sequences)) {
+  # Extract sequence and files
+  files <- paste(shared_sequences[[sequence]], collapse = ", ")
+  
+  # Append to the dataframe
+  shared_sequences_df <- rbind(shared_sequences_df, data.frame(sequence = sequence, files = files))
+}
+
+# Save shared sequences as a CSV file
+write.csv(shared_sequences_df, file = "../output/Molecular/smRNA/shared_miRNA_all.csv", row.names = FALSE)
+```
+
+Will I need to process the samples individually? Hmmmmmmmm 
+
+Read in data so that I make one massive df of all files that includes the file name as a column
+```{r}
+# Define the directory path where your CSV files are located
+directory_path <- "../data/Molecular/smRNA/mirdeep2/novel/"
+
+# List all CSV file names in the directory
+file_names <- list.files(path = directory_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Read all CSV files into a list of data frames
+csv_data <- lapply(file_names, function(file) {
+  # Read CSV file
+  df <- read.csv(file, stringsAsFactors = FALSE)
+  
+  # Convert miRDeep2.score column to numeric
+  df$miRDeep2.score <- as.numeric(df$miRDeep2.score)
+  
+  # Convert read count columns to numeric
+  df$total.read.count <- as.numeric(df$total.read.count)
+  df$mature.read.count <- as.numeric(df$mature.read.count)
+  df$loop.read.count <- as.numeric(df$loop.read.count)
+  df$star.read.count <- as.numeric(df$star.read.count)
+  
+  # Add a new column indicating the file name
+  df$file_name <- basename(file)
+  
+  return(df)
+})
+
+# Combine all data frames into a single dataframe
+df_all <- bind_rows(csv_data)
+```
+
+Filter so that mirdeep2 score >= 10, no rfam alerts and significant randfold pvalues only. 
+```{r}
+df_filt <- df_all %>%
+  filter(!is.na(miRDeep2.score)) %>%
+  filter(miRDeep2.score > 10,    # Rows where values in numeric_column are above 10
+         significant.randfold.p.value == "yes",    # Rows where 'yes' appears in yes_column
+        !grepl(c("rRNA/tRNA", "rfam alert"), rfam.alert, ignore.case = TRUE))  # Rows where 'rfam' does not appear in rfam_column
+```
+
+We are left with 2154 rows. Lets look at how many sequences we have and how many samples were retained
+```{r}
+length(unique(df_filt$consensus.mature.sequence)) # 657 unique seqs
+length(unique(df_filt$file_name)) # 19 files - all samples retained after filtering 
+```
+
+Look at the shared miRNAs across samples after filtering 
+```{r}
+# Group by consensus.mature.sequence and aggregate file names
+shared_sequences <- df_filt %>%
+  group_by(consensus.mature.sequence) %>%
+  summarize(files_shared = paste(unique(file_name), collapse = ", ")) %>%
+  filter(lengths(strsplit(files_shared, ", ")) > 1) # Remove sequences that only have 1 sample associated with it 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
