@@ -16,6 +16,17 @@ library(pheatmap)
 library(lme4)
 library(tidyverse)
 library(car)
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
+library(tidyverse)
+library(car)
+library(gplots)
+library(wesanderson)
+library(cowplot)
+library(gridExtra)
 ```
 
 Read in data
@@ -681,15 +692,15 @@ TP7 Amb v TP7 Heat
 TP7_amb_v_TP7_heat <- results(dds, contrast=c("Condition", "TP7_Ambient" , "TP7_Heat"))
 head(TP7_amb_v_TP7_heat)
 plotMA(TP7_amb_v_TP7_heat)
-sum(TP7_amb_v_TP7_heat$padj <0.05, na.rm=T) 
+sum(TP7_amb_v_TP7_heat$padj <0.05, na.rm=T) # 2 genes with significant p-values
 TP7_amb_v_TP7_heat.sig <- subset(TP7_amb_v_TP7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T)
-sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T)
+sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T) # 2 genes are downregulated in TP7 heat relative to TP7 amb
+sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T) # 0 genes are upregulated in TP7 heat relative to TP7 amb
 TP7_amb_v_TP7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP7_amb_v_TP7_heat.sig)),] #subset list of sig transcripts from original count data
 write.csv(counts(TP7_amb_v_TP7_heat.sig.list), file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")
 TP7_amb_v_TP7_heat.rsig <- rlog(TP7_amb_v_TP7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
 
-##### the rlog() step isn't working. Giving me this error: Error in estimateSizeFactorsForMatrix(counts(object), locfunc = locfunc, : every gene contains at least one zero, cannot compute log geometric means
+##### the rlog() step isn't working. Giving me this error: Error in estimateSizeFactorsForMatrix(counts(object), locfunc = locfunc, : every gene contains at least one zero, cannot compute log geometric means. I tried to apply a psuedo count to the filt_outrm_poa (ie adding 1 to each gene count) but it resulted in differenti numbers of DEGs for other comparisons. May need to come back to this. 
 
 
 
@@ -712,251 +723,155 @@ pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
 
 TP5 Heat v TP7 Amb
 ```{r}
-TP5_heat_v_7_amb <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Ambient"))
-head(TP5_heat_v_7_amb)
-plotMA(TP5_heat_v_7_amb)
-sum(TP5_heat_v_7_amb$padj <0.05, na.rm=T) 
-TP5_heat_v_7_amb.sig <- subset(TP5_heat_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_7_amb.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_heat_v_7_amb.sig$log2FoldChange >0, na.rm=T)
-TP5_heat_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-TP5_heat_v_7_amb.rsig <- rlog(TP5_heat_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_heat_v_7_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(TP5_heat_v_7_amb.rsig) #make an expression object
+TP5_heat_v_TP7_amb <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Ambient"))
+head(TP5_heat_v_TP7_amb)
+ma_plot <- plotMA(TP5_heat_v_TP7_amb)
+sum(TP5_heat_v_TP7_amb$padj <0.05, na.rm=T) 
+TP5_heat_v_TP7_amb.sig <- subset(TP5_heat_v_TP7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP5_heat_v_TP7_amb.sig$log2FoldChange <0, na.rm=T)
+sum(TP5_heat_v_TP7_amb.sig$log2FoldChange >0, na.rm=T)
+TP5_heat_v_TP7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_TP7_amb.sig)),] #subset list of sig transcripts from original count data
+write.csv(counts(TP5_heat_v_TP7_amb.sig.list), file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb_DEG.csv")
+TP5_heat_v_TP7_amb.rsig <- rlog(TP5_heat_v_TP7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+plotPCA(TP5_heat_v_TP7_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
+mat <- assay(TP5_heat_v_TP7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
               "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
               "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
               "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
 mat <- mat[,col.order]
-df <- as.data.frame(colData(TP5_heat_v_7_amb.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
+df <- as.data.frame(colData(TP5_heat_v_TP7_amb.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
                          clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+                         show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+
+## Save plots 
+ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_amb_DEG.pdf", heatmap, width = 8, height = 10)
 ```
 
-
-
-## 2) Remove TP0 and only analyze TP5 Amb v Heat and TP7 Amb v Heat. Then run DESeq2 so the design is ~Timepoint + Treatment + Timepoint:Treatment OR Timepoint * Treatment 
-
-For the metadata and the counts, I need to remove the TP0 samples 
+Look at unique genes 
 ```{r}
-# Remove rows from metadata
-meta_subset <- meta %>% 
-  filter(Timepoint != "TP0")
+TP0_v_5_amb.DEGs <- as.data.frame(row.names(TP0_v_5_amb.sig.list))
+colnames(TP0_v_5_amb.DEGs) <- "DEGs"
+length(t(unique(TP0_v_5_amb.DEGs)))
 
-# Remove column from gene count matrix 
-filt_outrm_poa_subset <- filt_outrm_poa %>%
-  select(-c("AST-1147", "AST-1567", "AST-1722", "AST-2398"))
+TP0_v_7_amb.DEGs <- as.data.frame(row.names(TP0_v_7_amb.sig.list))
+colnames(TP0_v_7_amb.DEGs) <- "DEGs"
+length(t(unique(TP0_v_7_amb.DEGs)))
 
-all(rownames(meta_subset$ID) %in% colnames(filt_outrm_poa_subset)) # must come out TRUE
+TP5_v_7_amb.DEGs <- as.data.frame(row.names(TP5_v_7_amb.sig.list))
+colnames(TP5_v_7_amb.DEGs) <- "DEGs"
+length(t(unique(TP5_v_7_amb.DEGs)))
+
+TP0_v_5_heat.DEGs <- as.data.frame(row.names(TP0_v_5_heat.sig.list))
+colnames(TP0_v_5_heat.DEGs) <- "DEGs"
+length(t(unique(TP0_v_5_heat.DEGs)))
+
+TP0_v_7_heat.DEGs <- as.data.frame(row.names(TP0_v_7_heat.sig.list))
+colnames(TP0_v_7_heat.DEGs) <- "DEGs"
+length(t(unique(TP0_v_7_heat.DEGs)))
+
+TP5_heat_v_7_heat.DEGs <- as.data.frame(row.names(TP5_heat_v_7_heat.sig.list))
+colnames(TP5_heat_v_7_heat.DEGs) <- "DEGs"
+length(t(unique(TP5_heat_v_7_heat.DEGs)))
+
+TP5_amb_v_TP5_heat.DEGs <- as.data.frame(row.names(TP5_amb_v_TP5_heat.sig.list))
+colnames(TP5_amb_v_TP5_heat.DEGs) <- "DEGs"
+length(t(unique(TP5_amb_v_TP5_heat.DEGs)))
+
+TP7_amb_v_7_heat.DEGs <- as.data.frame(row.names(TP7_amb_v_TP7_heat.sig.list))
+colnames(TP7_amb_v_7_heat.DEGs) <- "DEGs"
+length(t(unique(TP7_amb_v_7_heat.DEGs)))
+
+TP5_heat_v_7_amb.DEGs <- as.data.frame(row.names(TP5_heat_v_TP7_amb.sig.list))
+colnames(TP5_heat_v_7_amb.DEGs) <- "DEGs"
+length(t(unique(TP5_heat_v_7_amb.DEGs)))
 ```
 
-Run DESeq2
+Bind genes from all contrasts
 ```{r}
-data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa_subset, colData = meta_subset, design = ~Timepoint + Treatment + Timepoint:Treatment)
-dds <- DESeq(data)
-resultsNames(dds)
+DEGs.all <- rbind(TP0_v_5_amb.DEGs, TP0_v_7_amb.DEGs, TP5_v_7_amb.DEGs, TP0_v_5_heat.DEGs, 
+                TP0_v_7_heat.DEGs, TP5_heat_v_7_heat.DEGs, TP5_amb_v_TP5_heat.DEGs, 
+                TP7_amb_v_7_heat.DEGs, TP5_heat_v_7_amb.DEGs)
+DEGs.all <- unique(DEGs.all)
+length(unique(DEGs.all$DEGs))
+
+Unique.sig.list <- data[which(rownames(data) %in% DEGs.all$DEGs),] #subset list of sig transcripts from original count data
+Unique.rsig <- rlog(Unique.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+write.csv(counts(Unique.sig.list), file="../output/Molecular/mRNA/Unique_DEGs.csv")
 ```
 
-Look at contrasts - how do I look at the interaction term contrasts?
+Visualize DEGs. 
 
-TP5 v TP7
+PCA with DEGs
 ```{r}
-TP5_v_7 <- results(dds, contrast=c("Timepoint", "TP5" , "TP7"))
-head(TP5_v_7)
-plotMA(TP5_v_7)
-sum(TP5_v_7$padj <0.05, na.rm=T) 
-TP5_v_7.sig <- subset(TP5_v_7, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_v_7.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_v_7.sig$log2FoldChange >0, na.rm=T)
-TP5_v_7.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_7.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-TP5_v_7.rsig <- rlog(TP5_v_7.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_v_7.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(TP5_v_7.rsig) #make an expression object
-col.order <- c( #"AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
+pca_plot <- plotPCA(Unique.rsig, intgroup = c("Condition")); pca_plot
+# percentVar_pca <- round(100*attr(pca_plot, "percentVar")) #plot PCA of samples with all data
+# 
+# pca_plot_degs <- ggplot(pca_plot, aes(PC1, PC2, color = Condition)) + 
+#   geom_point(size=10) +
+#   xlab(paste0("PC1: ",percentVar_pca[1],"% variance")) +
+#   ylab(paste0("PC2: ",percentVar_pca[2],"% variance")) +
+#   #scale_color_manual(values = wes_palette("GrandBudapest1", n=3)) +
+#   #ggtitle(label = "M. capitata") +
+#   theme_bw() + #Set background color
+#   theme(legend.text = element_text(size=13), 
+#         #legend.position="none",
+#         plot.background = element_blank(),
+#         legend.title = element_text(size=18, face="bold"), 
+#         #legend.title=element_blank(),
+#         axis.text = element_text(size=13), 
+#         axis.title = element_text(size=15,  face="bold"), 
+#         axis.title.y = element_text(vjust=-1.5),
+#         plot.title = element_text(size = 20, face = "italic", hjust = 0.5)) +
+#   coord_equal(ratio = 2); pca_plot_degs
+##^^ code above wasn't working 
+
+# Customize the PCA plot
+pca_plot2 <- pca_plot + 
+  #labs(x = paste0("PC1: ", percentVar_pca[1], "% variance"),
+  #     y = paste0("PC2: ", percentVar_pca[2], "% variance")) +
+  theme_bw() +
+  theme(legend.text = element_text(size = 13),
+        plot.background = element_blank(),
+        legend.title = element_text(size = 18, face = "bold"),
+        axis.text = element_text(size = 13),
+        axis.title = element_text(size = 15, face = "bold"),
+        axis.title.y = element_text(vjust = -1.5),
+        plot.title = element_text(size = 20, face = "italic", hjust = 0.5)); pca_plot2
+
+```
+
+Need to make the plot prettier and figure out how to incorporate Treatment and timepoint 
+
+Heatmap with DEGs
+```{r}
+mat <- assay(Unique.rsig) #make an expression object
+col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
               "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
               "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
               "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
 mat <- mat[,col.order]
-df <- as.data.frame(colData(TP5_v_7.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
+df <- as.data.frame(colData(Unique.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
 df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
+heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
                          clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+                         show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 ```
 
-Heat v Amb
+Also need to make this prettier 
+
+Save DEG plots 
 ```{r}
-amb_v_heat <- results(dds, contrast=c("Treatment", "Ambient" , "Heat"))
-head(amb_v_heat)
-plotMA(amb_v_heat)
-sum(amb_v_heat$padj <0.05, na.rm=T) 
-amb_v_heat.sig <- subset(amb_v_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(amb_v_heat.sig$log2FoldChange <0, na.rm=T)
-sum(amb_v_heat.sig$log2FoldChange >0, na.rm=T)
-amb_v_heat.sig.list <- data[which(rownames(dds) %in% rownames(amb_v_heat.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-amb_v_heat.rsig <- rlog(amb_v_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(amb_v_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(amb_v_heat.rsig) #make an expression object
-col.order <- c( #"AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
-              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
-              "AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
-              "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
-              "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
-mat <- mat[,col.order]
-df <- as.data.frame(colData(amb_v_heat.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
-df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", pca_plot, width = 10, height = 8)
+
+ggsave("../output/Molecular/mRNA/heatmap_DEGs.pdf", heatmap, width = 8, height = 10)
+ggsave("../output/Molecular/mRNA/heatmap_DEGs.png", heatmap, width = 8, height = 10)
 ```
-
-Not sure how to do interaction term...giving me errors. 
-
-## 3) Remove TP5 and TP7 Amb samples and only keep TP0, TP5 Heat and TP7 Heat. Then run DESeq2 so the design is ~Timepoint + Treatment + Timepoint:Treatment OR Timepoint * Treatment 
-
-For the metadata and the counts, I need to remove the TP5 and TP7 ambient samples 
-```{r}
-# Remove rows from metadata
-meta_subset <- meta %>% 
-  filter(!(Timepoint == "TP5" & Treatment == "Ambient")) %>%
-  filter(!(Timepoint == "TP7" & Treatment == "Ambient"))
-
-
-# Remove column from gene count matrix 
-filt_outrm_poa_subset <- filt_outrm_poa %>%
-  select(-c("AST-1412", "AST-1560", "AST-1617", "AST-2000", "AST-2302", "AST-2360", "AST-2523"))
-
-all(rownames(meta_subset$ID) %in% colnames(filt_outrm_poa_subset)) # must come out TRUE
-```
-
-Run DESeq2
-```{r}
-data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa_subset, colData = meta_subset, design = ~Timepoint + Treatment + Timepoint:Treatment)
-dds <- DESeq(data)
-resultsNames(dds)
-```
-
-Says model is not full rank. Makes sense 
-
-## 4) Remove Heat samples from TP5 and TP7 and only analyze the Amb samples for TP0, TP5, and TP7. The DESeq2 design would be ~Timepoint 
-
-For the metadata and the counts, I need to remove the TP5 and TP7 heat samples 
-```{r}
-# Remove rows from metadata
-meta_subset <- meta %>% 
-  filter(!(Timepoint == "TP5" & Treatment == "Heat")) %>%
-  filter(!(Timepoint == "TP7" & Treatment == "Heat"))
-
-
-# Remove column from gene count matrix 
-filt_outrm_poa_subset <- filt_outrm_poa %>%
-  select(-c("AST-1065", "AST-2007", "AST-2404", "AST-2412", "AST-2512", "AST-2563", "AST-2729", "AST-2755"))
-
-all(rownames(meta_subset$ID) %in% colnames(filt_outrm_poa_subset)) # must come out TRUE
-```
-
-Run DESeq2
-```{r}
-data <- DESeqDataSetFromMatrix(countData = filt_outrm_poa_subset, colData = meta_subset, design = ~Timepoint)
-dds <- DESeq(data)
-resultsNames(dds)
-```
-
-Look at contrasts
-
-TP0 v TP5
-```{r}
-TP0_v_5 <- results(dds, contrast=c("Timepoint", "TP0" , "TP5"))
-head(TP0_v_5)
-plotMA(TP0_v_5)
-sum(TP0_v_5$padj <0.05, na.rm=T) 
-TP0_v_5.sig <- subset(TP0_v_5, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_5.sig$log2FoldChange >0, na.rm=T)
-TP0_v_5.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-TP0_v_5.rsig <- rlog(TP0_v_5.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_5.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(TP0_v_5.rsig) #make an expression object
-col.order <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
-              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
-              #"AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
-              "AST-1560", "AST-2302", "AST-2523")  # TP7, Ambient
-              #"AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
-mat <- mat[,col.order]
-df <- as.data.frame(colData(TP0_v_5.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
-df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
-```
-
-TP0 v TP7
-```{r}
-TP0_v_7 <- results(dds, contrast=c("Timepoint", "TP0" , "TP7"))
-head(TP0_v_7)
-plotMA(TP0_v_7)
-sum(TP0_v_7$padj <0.05, na.rm=T) 
-TP0_v_7.sig <- subset(TP0_v_7, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7.sig$log2FoldChange <0, na.rm=T)
-sum(TP0_v_7.sig$log2FoldChange >0, na.rm=T)
-TP0_v_7.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-TP0_v_7.rsig <- rlog(TP0_v_7.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP0_v_7.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(TP0_v_7.rsig) #make an expression object
-col.order <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
-              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
-              #"AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
-              "AST-1560", "AST-2302", "AST-2523")  # TP7, Ambient
-              #"AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
-mat <- mat[,col.order]
-df <- as.data.frame(colData(TP0_v_7.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
-df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
-```
-
-
-TP5 v TP7
-```{r}
-TP5_v_7 <- results(dds, contrast=c("Timepoint", "TP5" , "TP7"))
-head(TP5_v_7)
-plotMA(TP5_v_7)
-sum(TP5_v_7$padj <0.05, na.rm=T) 
-TP5_v_7.sig <- subset(TP5_v_7, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_v_7.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_v_7.sig$log2FoldChange >0, na.rm=T)
-TP5_v_7.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_7.sig)),] #subset list of sig transcripts from original count data
-#write.csv
-TP5_v_7.rsig <- rlog(TP5_v_7.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-plotPCA(TP5_v_7.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
-mat <- assay(TP5_v_7.rsig) #make an expression object
-col.order <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
-              "AST-1412", "AST-1617", "AST-2000", "AST-2360", # TP5, Ambient
-              #"AST-2404", "AST-2412", "AST-2512", "AST-2563",  # TP5, Heat
-              "AST-1560", "AST-2302", "AST-2523")  # TP7, Ambient
-              #"AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
-mat <- mat[,col.order]
-df <- as.data.frame(colData(TP5_v_7.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
-df <- df[order(df$Condition),]
-pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE) #plot heatmap of all DEG by group
-```
-
-
-
-
-
-
-
 
