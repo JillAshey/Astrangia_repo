@@ -272,6 +272,134 @@ known_filt <- known %>%
 write.csv(known_filt, "../data/Molecular/smRNA/known_filt.csv")
 ```
 
+20240226
+
+Ran the quantifier module of mirdeep2 on all samples using the output from mirdeep2 above as input for the mature and precursor sequences. All files have the same number of rows and appear to be ordered in the same way. I'm going to read the files in (there are 19) and merge them together based on the miRNA id. 
+
+```{r}
+# Load the first file to initialize the data frame
+df <- read.csv("../data/Molecular/smRNA/quantifier/AST-1065_miRNAs_expressed_all_samples_1709048527.csv", sep = "\t", header = T)[,c(1)]
+df <- as.data.frame(df)
+colnames(df) <- "miRNA"
+
+df2 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv", sep = "\t", header = T)[,c(1)]
+df2 <- as.data.frame(df2)
+colnames(df2) <- "miRNA"
+
+blah <- cbind(df, df2)
+blah <- unique(blah)
+
+are_identical <- identical(df$miRNA, df2$miRNA)
+## Can use this to check if rows are identical 
+
+getwd()
+
+
+
+
+
+test <- merge(df, df2, by = "miRNA")
+test <- unique(test)
+
+
+# Read and left join the rest of the files
+file_names <- c(
+    "../data/Molecular/smRNA/quantifier/AST-2360_miRNAs_expressed_all_samples_1709055924.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2398_miRNAs_expressed_all_samples_1709055986.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1412_miRNAs_expressed_all_samples_1709053021.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2404_miRNAs_expressed_all_samples_1709057037.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1560_miRNAs_expressed_all_samples_1709054526.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2512_miRNAs_expressed_all_samples_1709057192.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1617_miRNAs_expressed_all_samples_1709055134.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2523_miRNAs_expressed_all_samples_1709057251.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1722_miRNAs_expressed_all_samples_1709055319.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2563_miRNAs_expressed_all_samples_1709057330.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2000_miRNAs_expressed_all_samples_1709055397.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2729_miRNAs_expressed_all_samples_1709057412.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2007_miRNAs_expressed_all_samples_1709055480.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2755_miRNAs_expressed_all_samples_1709057479.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2302_miRNAs_expressed_all_samples_1709055687.csv"
+)
+
+for (file_name in file_names) {
+    # Extract the unique number from the file name
+    unique_number <- gsub("AST-", "", substr(file_name, 1, regexpr("_miRNAs", file_name) - 1))
+    
+    # Read the next file
+    next_df <- read.csv(file_name, sep = "\t", header = TRUE)
+    
+    # Add prefix to selected column names (2 to 6)
+    colnames_to_modify <- colnames(next_df)[2:6]
+    modified_colnames <- paste0("AST-", unique_number, "_", colnames_to_modify)
+    colnames(next_df)[2:6] <- modified_colnames
+  
+    # Perform left join
+    df <- merge(df, next_df, by = "X.miRNA", all.x = TRUE)
+}
+
+# Save the final joined dataframe
+write.csv(df, "final_joined_file.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Define the file names
+file_names <- c(
+    "../data/Molecular/smRNA/quantifier/AST-2360_miRNAs_expressed_all_samples_1709055924.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2398_miRNAs_expressed_all_samples_1709055986.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1412_miRNAs_expressed_all_samples_1709053021.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2404_miRNAs_expressed_all_samples_1709057037.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1560_miRNAs_expressed_all_samples_1709054526.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2512_miRNAs_expressed_all_samples_1709057192.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1617_miRNAs_expressed_all_samples_1709055134.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2523_miRNAs_expressed_all_samples_1709057251.csv",
+    "../data/Molecular/smRNA/quantifier/AST-1722_miRNAs_expressed_all_samples_1709055319.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2563_miRNAs_expressed_all_samples_1709057330.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2000_miRNAs_expressed_all_samples_1709055397.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2729_miRNAs_expressed_all_samples_1709057412.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2007_miRNAs_expressed_all_samples_1709055480.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2755_miRNAs_expressed_all_samples_1709057479.csv",
+    "../data/Molecular/smRNA/quantifier/AST-2302_miRNAs_expressed_all_samples_1709055687.csv"
+)
+
+# Create an empty list to store data frames
+df_list <- list()
+
+# Read each file into a separate data frame and store it in the list
+for (file_name in file_names) {
+    # Extract the unique number from the file name
+    unique_number <- gsub("AST-", "", substr(file_name, 1, regexpr("_miRNAs", file_name) - 1))
+    
+    # Read the file and store it in the list
+    df <- read.csv(file_name, sep = "\t", header = TRUE)
+    
+    # Rename columns
+    colnames(df)[-1] <- paste0("AST_", unique_number, "_", colnames(df)[-1])
+    
+    # Store the data frame in the list
+    df_list[[unique_number]] <- df
+}
+
+# Now df_list contains all your data frames, indexed by the unique numbers
+# You can access each data frame using df_list[[unique_number]]
+
+# For example, to access the data frame for AST-1065, you can do:
+# ast_1065_df <- df_list[["1065"]]
+
+# Loop through each dataframe in df_list
+for (i in seq_along(df_list)) {
+    # Remove the last 4 columns
+    df_list[[i]] <- df_list[[i]][, -(ncol(df_list[[i]]) - 3):ncol(df_list[[i]])]
+}
+
+
+```
+
+
 
 
 
