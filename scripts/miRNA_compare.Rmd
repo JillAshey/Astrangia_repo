@@ -399,8 +399,249 @@ for (i in seq_along(df_list)) {
 
 ```
 
+20240305
+
+Just going to read each file in individually and cbind them together (provided they are all the same lenth). This code is disgusting. 
+```{r}
+AST_1065 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1065_miRNAs_expressed_all_samples_1709048527.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1065" = "read_count")
+
+AST_1147 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1147" = "read_count")
+
+# check if columns are the same 
+identical(AST_1065$X.miRNA, AST_1147$X.miRNA)
+#identical(AST_1065$read_count_1065, AST_1147$read_count_1147) # sanity check to make sure I'm using identical() correctly 
+
+# Bind dfs
+all <- cbind(AST_1065, AST_1147) # still need to remove the extra miRNA column
+
+# Next sample!
+AST_1412 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1412_miRNAs_expressed_all_samples_1709053021.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1412" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_1412$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_1412) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_1560 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1560_miRNAs_expressed_all_samples_1709054526.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1560" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_1560$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_1560) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_1567 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1567" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_1567$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_1567) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_1617 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1617_miRNAs_expressed_all_samples_1709055134.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1617" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_1617$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_1617) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_1722 <- read.csv("../data/Molecular/smRNA/quantifier/AST-1722_miRNAs_expressed_all_samples_1709055319.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_1722" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_1722$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_1722) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2000 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2000_miRNAs_expressed_all_samples_1709055397.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2000" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2000$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2000) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2007 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2007_miRNAs_expressed_all_samples_1709055480.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2007" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2007$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2007) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2302 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2302_miRNAs_expressed_all_samples_1709055687.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2302" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2302$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2302) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2360 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2360_miRNAs_expressed_all_samples_1709055924.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2360" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2360$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2360) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2398 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2398_miRNAs_expressed_all_samples_1709055986.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2398" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2398$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2398) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2404 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2404_miRNAs_expressed_all_samples_1709057037.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2404" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2404$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2404) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2412 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2412_miRNAs_expressed_all_samples_1709057124.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2412" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2412$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2412) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2512 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2512_miRNAs_expressed_all_samples_1709057192.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2512" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2512$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2512) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2523 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2523_miRNAs_expressed_all_samples_1709057251.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2523" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2523$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2523) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2563 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2563_miRNAs_expressed_all_samples_1709057330.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2563" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2563$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2563) # still need to remove the extra miRNA columns
+
+# Next sample!
+AST_2729 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2729_miRNAs_expressed_all_samples_1709057412.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2729" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2729$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2729) # still need to remove the extra miRNA columns
+
+# Last sample!
+AST_2755 <- read.csv("../data/Molecular/smRNA/quantifier/AST-2755_miRNAs_expressed_all_samples_1709057479.csv", sep = "\t", header = TRUE) %>% 
+  select(X.miRNA, read_count) %>%
+  rename("read_count_2755" = "read_count")
+
+# check if columns are the same 
+identical(all$X.miRNA, AST_2755$X.miRNA)
+
+# Bind dfs
+all <- cbind(all, AST_2755) # still need to remove the extra miRNA columns
+```
+
+Now read counts for all samples are in one df but there are still a bunch of extra miRNA columns. Going to put the miRNAs in a list, remove the miRNA cols, then bind the miRNA back so there is only one column 
+```{r}
+miRNA <- as.data.frame(all$X.miRNA)
+
+all <- all %>%
+  select(-contains("miRNA"))
+
+all <- cbind(miRNA, all) %>%
+    rename("id" = "all$X.miRNA")
+
+write.csv(all, "../data/Molecular/smRNA/miRNA_count_matrix.csv")
+```
 
 
+Final count matrix! Let's merge this with the miRNA list. 
+```{r}
+novel_filt <- read.csv("../data/Molecular/smRNA/novel_filt.csv", header = TRUE) %>%
+    rename("id" = "provisional.id",                                                  
+            "estimated_true_positive" = "estimated.probability.that.the.miRNA.candidate.is.a.true.positive", 
+            "miRBase" = "miRBase.miRNA") %>%
+    mutate(Type = "Novel")
 
+known_filt <- read.csv("../data/Molecular/smRNA/known_filt.csv", header = TRUE) %>%
+    rename("id" = "tag.id",                                                  
+            "estimated_true_positive" = "estimated.probability.that.the.miRNA.is.a.true.positive", 
+            "miRBase" = "mature.miRBase.miRNA") %>%
+    mutate(Type = "Known")
 
+all_filt <- rbind(novel_filt, known_filt) %>%
+  select(c("id", "miRDeep2.score", "estimated_true_positive", "rfam.alert", "total.read.count", "mature.read.count", "loop.read.count", "star.read.count", "significant.randfold.p.value", "consensus.mature.sequence", "consensus.star.sequence", "consensus.precursor.sequence", "precursor.coordinate", "Type"))
+```
+
+Join dfs
+```{r}
+test <- left_join(all_filt, all, by = "id")
+```
+
+!!!!!!! the putative/known miRNAs joined with the count matrix!!!!!!!!!! 
 
