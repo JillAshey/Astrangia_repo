@@ -8,7 +8,24 @@ output: html_document
 ```{r setup, include=T}
 knitr::opts_chunk$set(echo = F)
 
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
 library(tidyverse)
+library(car)
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
+library(tidyverse)
+library(car)
+library(gplots)
+library(wesanderson)
+library(cowplot)
+library(gridExtra)
 ```
 
 I am running mirdeep2 on each of my samples individually. Now I am going to look at the output (known and novel miRNAs) from those scripts. 
@@ -258,7 +275,7 @@ length(unique(known$tag.id))
 length(unique(known$consensus.mature.sequence))
 ```
 
-Because we can see some mapping to known miRNAs in cnidarians, I am only going to filter so that mirdeep2 score >0, no rfam info, at least 10 reads in mature read count, and significant rannovel_filtold p-value
+Because we can see some mapping to known miRNAs in cnidarians, I am only going to filter so that mirdeep2 score >0, no rfam info, at least 10 reads in mature read count, and significant ranfold p-value
 ```{r}
 known_filt <- known %>%
   filter(miRDeep2.score > 0) %>%
@@ -619,7 +636,6 @@ all <- cbind(miRNA, all) %>%
 write.csv(all, "../data/Molecular/smRNA/miRNA_count_matrix.csv")
 ```
 
-
 Final count matrix! Let's merge this with the miRNA list. 
 ```{r}
 novel_filt <- read.csv("../data/Molecular/smRNA/novel_filt.csv", header = TRUE) %>%
@@ -638,10 +654,43 @@ all_filt <- rbind(novel_filt, known_filt) %>%
   select(c("id", "miRDeep2.score", "estimated_true_positive", "rfam.alert", "total.read.count", "mature.read.count", "loop.read.count", "star.read.count", "significant.randfold.p.value", "consensus.mature.sequence", "consensus.star.sequence", "consensus.precursor.sequence", "precursor.coordinate", "Type"))
 ```
 
-Join dfs
+Remove miRNAs that have <2 samples with counts
 ```{r}
-test <- left_join(all_filt, all, by = "id")
+all <- all %>%
+  mutate(zeros = rowSums(select(., starts_with("read_count")) == 0))
+
+# Filter out rows with more than 17 zeros
+filtered_all <- all %>%
+  filter(zeros < 17)
+
+# Remove the temporary 'zeros' column
+filtered_all <- select(filtered_all, -zeros)
+```
+
+```{r}
+mirna_counts_info <- left_join(all_filt, filtered_all, by = "id")
 ```
 
 !!!!!!! the putative/known miRNAs joined with the count matrix!!!!!!!!!! 
+
+Remove miRNA info from the df so its only counts
+```{r}
+mirna_counts <- mirna_counts_info %>%
+  select(c("id", "read_count_1065", "read_count_1147", "read_count_1412", "read_count_1560", "read_count_1567", "read_count_1617", "read_count_1722", "read_count_2000", "read_count_2007", "read_count_2302", "read_count_2360", "read_count_2398", "read_count_2404", "read_count_2412", "read_count_2512", "read_count_2523", "read_count_2563", "read_count_2729"))
+
+colnames(mirna_counts) <- c("ID", "AST-1065", "AST-1105", "AST-1147", "AST-1412", "AST-1560", "AST-1567", "AST-1617", "AST-1722", "AST-2000", "AST-2007", "AST-2302", "AST-2360", "AST-2398", "AST-2404", "AST-2412", "AST-2512", "AST-2523", "AST-2563", "AST-2729", "AST-2755")
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) #%>% # rearrange metadata so IDs are sorted in descending order 
+  #mutate(Treatment = ifelse(Treatment == "Acclimation", "Ambient", Treatment))
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+```
+
+
 
