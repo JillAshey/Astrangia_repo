@@ -31,7 +31,7 @@ novel_filt <- novel %>%
   #na.omit()
 
 # Save csv 
-write.csv(novel_filt, "../data/Molecular/smRNA/novel_filt.csv")
+#write.csv(novel_filt, "../data/Molecular/smRNA/novel_filt.csv")
 ```
 
 Select specific columns for downstream analysis
@@ -61,7 +61,7 @@ known_filt <- known %>%
   #na.omit()
 
 # Save csv 
-write.csv(known_filt, "../data/Molecular/smRNA/known_filt.csv")
+#write.csv(known_filt, "../data/Molecular/smRNA/known_filt.csv")
 ```
 
 Select specific columns for downstream analysis
@@ -73,7 +73,7 @@ known_filt <- known_filt %>%
     mutate(Type = "Known")
 ```
 
-Bind 
+Bind filtered known and novel miRNAs
 ```{r}
 all_miRNA_filt <- rbind(novel_filt, known_filt) %>%
   select(c("ID", "miRDeep2.score", "estimated_true_positive", "rfam.alert", "total.read.count", "mature.read.count", "loop.read.count", "star.read.count", "significant.randfold.p.value", "consensus.mature.sequence", "consensus.star.sequence", "consensus.precursor.sequence", "precursor.coordinate", "Type"))
@@ -93,14 +93,46 @@ process_csv <- function(file_path, suffix) {
 # List of file paths and corresponding suffixes
 file_paths <- c(
   "../data/Molecular/smRNA/quantifier/AST-1065_miRNAs_expressed_all_samples_1709048527.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv"
-  # Add more file paths here
+  "../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv",
+  "../data/Molecular/smRNA/quantifier/AST-1412_miRNAs_expressed_all_samples_1709053021.csv",
+  "../data/Molecular/smRNA/quantifier/AST-1560_miRNAs_expressed_all_samples_1709054526.csv",
+  "../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv",
+  "../data/Molecular/smRNA/quantifier/AST-1617_miRNAs_expressed_all_samples_1709055134.csv",
+  "../data/Molecular/smRNA/quantifier/AST-1722_miRNAs_expressed_all_samples_1709055319.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2000_miRNAs_expressed_all_samples_1709055397.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2007_miRNAs_expressed_all_samples_1709055480.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2302_miRNAs_expressed_all_samples_1709055687.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2360_miRNAs_expressed_all_samples_1709055924.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2398_miRNAs_expressed_all_samples_1709055986.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2404_miRNAs_expressed_all_samples_1709057037.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2412_miRNAs_expressed_all_samples_1709057124.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2512_miRNAs_expressed_all_samples_1709057192.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2523_miRNAs_expressed_all_samples_1709057251.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2563_miRNAs_expressed_all_samples_1709057330.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2729_miRNAs_expressed_all_samples_1709057412.csv",
+  "../data/Molecular/smRNA/quantifier/AST-2755_miRNAs_expressed_all_samples_1709057479.csv"
 )
 
 suffixes <- c(
   "1065",
-  "1147"
-  # Add more suffixes here
+  "1147", 
+  "1412",
+  "1560",
+  "1567",
+  "1617",
+  "1722",
+  "2000",
+  "2007",
+  "2302",
+  "2360",
+  "2398",
+  "2404",
+  "2412",
+  "2512",
+  "2523",
+  "2563",
+  "2729",
+  "2755"
 )
 
 # Initialize an empty list to store data frames
@@ -117,7 +149,7 @@ identical_columns <- map_lgl(dfs[-1], ~identical(dfs[[1]]$X.miRNA, .x$X.miRNA))
 
 # If all columns are the same, bind the data frames together
 if (all(identical_columns)) {
-  all <- Reduce(function(x, y) cbind(x, y), dfs)
+  mirna_counts <- Reduce(function(x, y) cbind(x, y), dfs)
   # Remove the extra miRNA columns
   #all <- select(all, -contains("X.miRNA"))
 } else {
@@ -125,20 +157,32 @@ if (all(identical_columns)) {
 }
 ```
 
-miRNA cunts for all samples are in one df but there are still a bunch of extra miRNA id columns. Put the miRNAs in a separate df, remove the miRNA id columns, and then bind the miRNA id df back so there is only one miRNA id column 
+miRNA counts for all samples are in one df but there are still a bunch of extra miRNA id columns. Put the miRNAs in a separate df, remove the miRNA id columns, and then bind the miRNA id df back so there is only one miRNA id column 
 ```{r}
-miRNA <- as.data.frame(all$X.miRNA)
+miRNA <- as.data.frame(mirna_counts$X.miRNA)
 
-all <- all %>%
+mirna_counts <- mirna_counts %>%
   select(-contains("miRNA"))
 
-all <- cbind(miRNA, all) %>%
-    rename("id" = "all$X.miRNA")
+mirna_counts <- cbind(miRNA, mirna_counts) %>%
+    rename("ID" = "mirna_counts$X.miRNA")
 
-write.csv(all, "../data/Molecular/smRNA/miRNA_count_matrix.csv")
+#write.csv(mirna_counts, "../data/Molecular/smRNA/miRNA_count_matrix.csv")
 ```
 
+Remove miRNAs that have <2 samples with counts
+```{r}
+mirna_counts <- mirna_counts %>%
+  mutate(zeros = rowSums(select(., starts_with("read_count")) == 0)) %>% # sum how many zeros are in each row
+  filter(zeros < 17) %>% # Filter out rows with more than 17 zeros (these represent miRNAs that are not expressed in more than 2 samples)
+  select(-zeros) # remove zeros column 
+```
 
+```{r}
+mirna_counts_info <- left_join(all_miRNA_filt, mirna_counts, by = "ID")
+```
+
+!!!!!!! the putative/known miRNAs joined with the count matrix!!!!!!!!!! 
 
 
 
