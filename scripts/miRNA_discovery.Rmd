@@ -37,9 +37,9 @@ novel_filt <- novel %>%
 Select specific columns for downstream analysis
 ```{r}
 novel_filt <- novel_filt %>%
-    rename("ID" = "provisional.id",                                                  
-            "estimated_true_positive" = "estimated.probability.that.the.miRNA.candidate.is.a.true.positive", 
-            "miRBase" = "miRBase.miRNA") %>%
+    rename("provisional.id" = "ID",                                                  
+            "estimated.probability.that.the.miRNA.candidate.is.a.true.positive" = "estimated_true_positive" , 
+             "miRBase.miRNA" = "miRBase") %>%
     mutate(Type = "Novel")
 ```
 
@@ -67,9 +67,9 @@ known_filt <- known %>%
 Select specific columns for downstream analysis
 ```{r}
 known_filt <- known_filt %>%
-    rename("ID" = "tag.id",                                                  
-            "estimated_true_positive" = "estimated.probability.that.the.miRNA.is.a.true.positive", 
-            "miRBase" = "mature.miRBase.miRNA") %>%
+    rename("tag.id" = "ID",                                                  
+            "estimated.probability.that.the.miRNA.is.a.true.positive" = "estimated_true_positive", 
+            "mature.miRBase.miRNA" = "miRBase") %>%
     mutate(Type = "Known")
 ```
 
@@ -84,8 +84,8 @@ Read in miRNA counts from each sample
 # Define a function to read and process CSV files
 process_csv <- function(file_path, suffix) {
   df <- read.csv(file_path, sep = "\t", header = TRUE) %>%
-    select(X.miRNA, read_count) %>%
-    rename(!!paste0("read_count_AST-", suffix) := read_count)
+    dplyr::select(X.miRNA, read_count) %>%
+    dplyr::rename(!!paste0("read_count_AST-", suffix) := read_count)
   
   return(df)
 }
@@ -165,12 +165,10 @@ mirna_counts <- mirna_counts %>%
   select(-contains("miRNA"))
 
 mirna_counts <- cbind(miRNA, mirna_counts) %>%
-    rename("ID" = "mirna_counts$X.miRNA")
-
-#write.csv(mirna_counts, "../data/Molecular/smRNA/miRNA_count_matrix.csv")
+    dplyr::rename("ID" = "mirna_counts$X.miRNA")
 ```
 
-Remove miRNAs that have <2 samples with counts
+Remove miRNAs that have <2 samples with counts and write to csv
 ```{r}
 mirna_counts <- mirna_counts %>%
   mutate(zeros = rowSums(select(., starts_with("read_count")) == 0)) %>% # sum how many zeros are in each row
@@ -178,8 +176,11 @@ mirna_counts <- mirna_counts %>%
   select(-zeros) # remove zeros column 
 ```
 
+Join counts matrix with miRNA df to select only rows that have putative miRNAs
 ```{r}
-mirna_counts_info <- left_join(all_miRNA_filt, mirna_counts, by = "ID")
+mirna_counts_info <- inner_join(all_miRNA_filt, mirna_counts, by = "ID")
+
+write.csv(mirna_counts_info, "../data/Molecular/smRNA/miRNA_count_info.csv")
 ```
 
 !!!!!!! the putative/known miRNAs joined with the count matrix!!!!!!!!!! 
