@@ -1,0 +1,36 @@
+---
+title: "GFF 3' UTR filter"
+author: "Jill Ashey"
+date: "2024-03-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+Load gff file 
+```{r}
+gff <- read.csv(file="~/Desktop/PutnamLab/Astrangia_Genome/apoculata_v2.0.gff3", header=FALSE, sep="\t") %>%
+  na.omit() %>%
+  dplyr::rename("seqname" = "V1",
+                "source" = "V2",
+                "feature" = "V3", 
+                "start" = "V4",
+                "end" = "V5",
+                "score" = "V6",
+                "strand" = "V7",
+                "frame" = "V8",
+                "attribute" = "V9")
+```
+
+Filter so that the three_prime_UTR is the only feature and calculate length of three_prime_UTR feature 
+```{r}
+three_prime_UTR_gff <- gff %>%
+  filter(feature == "three_prime_UTR") %>%
+  mutate(length = end - start)
+```
+
+There are only 687 entries for the three_prime_UTR...hmm. Why? Were not all of them identified? Do I need to ID them myself????

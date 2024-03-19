@@ -378,10 +378,12 @@ ggsave("../output/Molecular/smRNA/heatmap_DEMs.pdf", heatmap, width = 8, height 
 ggsave("../output/Molecular/smRNA/heatmap_DEMs.png", heatmap, width = 8, height = 10)
 ```
 
-Save unique DEMs in a list for subsetting fasta files
+Save unique DEGs in a list for subsetting fasta files
 ```{r}
-list <- as.character(DEMs.all)
+DEMs.list <- read.csv("../output/Molecular/smRNA/Unique_DEMs.csv")
+length(unique(DEMs.list$X))
+
+list <- as.character(DEMs.list$X)
 
 writeLines(list, "../output/Molecular/smRNA/DEM_list.txt")
 ```
-

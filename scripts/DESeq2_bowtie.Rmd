@@ -880,7 +880,7 @@ Save unique DEGs in a list for subsetting fasta files
 DEGs.list <- read.csv("../output/Molecular/mRNA/Unique_DEGs.csv")
 length(unique(DEGs.list$X))
 
-list <- as.character(DEGs.list)
+list <- as.character(DEGs.list$X)
 
 writeLines(list, "../output/Molecular/mRNA/DEG_list.txt")
 ```
