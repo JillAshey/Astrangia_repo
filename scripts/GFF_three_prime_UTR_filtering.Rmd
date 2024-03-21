@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(rtracklayer)
 ```
 
 Load gff file 
@@ -23,14 +24,81 @@ gff <- read.csv(file="~/Desktop/PutnamLab/Astrangia_Genome/apoculata_v2.0.gff3",
                 "score" = "V6",
                 "strand" = "V7",
                 "frame" = "V8",
-                "attribute" = "V9")
+                "attribute" = "V9") %>%
+    mutate(length = end - start)
 ```
 
-Filter so that the three_prime_UTR is the only feature and calculate length of three_prime_UTR feature 
+Count number of instances a particular feature appears 
 ```{r}
-three_prime_UTR_gff <- gff %>%
+mRNA_count <- gff %>%
+  filter(feature == "mRNA") %>%
+  nrow()
+
+gene_count <- gff %>%
+  filter(feature == "gene") %>%
+  nrow()
+
+stop_count <- gff %>%
+  filter(feature == "stop_codon") %>%
+  nrow()
+
+start_count <- gff %>%
+  filter(feature == "start_codon") %>%
+  nrow()
+
+three_count <- gff %>%
   filter(feature == "three_prime_UTR") %>%
-  mutate(length = end - start)
+  nrow()
+
+five_count <- gff %>%
+  filter(feature == "five_prime_UTR") %>%
+  nrow()
 ```
 
-There are only 687 entries for the three_prime_UTR...hmm. Why? Were not all of them identified? Do I need to ID them myself????
+```{r}
+tx <- subset(gff, feature == "mRNA")
+cds <- subset(gff, feature == "CDS")
+cds <- range(multisplit(cds, cds$Parent))
+utrs <- psetdiff(tx, cds[tx$ID])
+```
+
+Create column for parent ID. Remove rows that do not have a parent ID associated with a gene, mRNA, CDS and exon. Ie remove genes that only have mRNA and gene annotated. 
+```{r}
+df <- gff %>%
+  mutate(parent_ID = str_extract(attribute, "(?<=Parent=)[^;]+"))
+
+# Remove rows that do not have a parent ID associated with a gene, mRNA, CDS, and exon
+df_filtered <- df %>%
+  filter(feature %in% c("mRNA", "CDS", "exon") & !is.na(parent_ID))
+
+mRNA_count <- sum(ifelse(df_filtered$feature == "mRNA", 1, 0))
+```
+
+Filter again so that there are separate dfs for exons and CDSs and arrange so that the parent term replaces seqname as the first column 
+```{r}
+exon_filt <- df_filtered %>%
+  filter(feature == "exon") %>%
+  select(parent_ID, source, feature, start, end, score, strand, frame, attribute)
+
+cds_filt <- df_filtered %>%
+  filter(feature == "CDS") %>%
+  select(parent_ID, source, feature, start, end, score, strand, frame, attribute)
+```
+
+Remove any rows that have tRNA in the parent ID column for both dfs 
+```{r}
+exon_filt <- exon_filt %>%
+  filter(!grepl("tRNA", parent_ID, ignore.case = TRUE))
+
+cds_filt <- cds_filt %>%
+  filter(!grepl("tRNA", parent_ID, ignore.case = TRUE))
+```
+
+Export exon and CDS gffs
+```{r}
+#write.table(df_filtered, file="~/Desktop/PutnamLab/Astrangia_Genome/exon_cds.gff3", sep="\t", col.names = FALSE, row.names=FALSE, quote=FALSE)
+
+write.table(exon_filt, file="~/Desktop/PutnamLab/Astrangia_Genome/exon.filt.gff3", sep="\t", col.names = FALSE, row.names=FALSE, quote=FALSE)
+write.table(cds_filt, file="~/Desktop/PutnamLab/Astrangia_Genome/cds.filt.gff3", sep="\t", col.names = FALSE, row.names=FALSE, quote=FALSE)
+```
+
