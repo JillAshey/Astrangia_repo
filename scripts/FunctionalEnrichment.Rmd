@@ -1,0 +1,574 @@
+---
+title: "Functional enrichment"
+author: "Jill Ashey"
+date: "2024-04-14"
+output: html_document
+---
+
+This script will perform functional enrichment analysis with GO terms using the [identified DEGs](https://github.com/JillAshey/Astrangia_repo/blob/main/output/Molecular/mRNA/Unique_DEGs.csv) from the AST 2021 experiment. I will then assess how these functional enrichment results relate to the putative interactions between differentially expressed genes and miRNAs. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load libraries
+library("DESeq2")
+library("tidyverse")
+library("dplyr")
+library("pheatmap")
+library("RColorBrewer")
+library("genefilter")
+library("ggplot2")
+library("gplots")
+library("limma")
+library("spdep") 
+library("adegenet") 
+library("goseq")
+library("gridExtra")
+library("clusterProfiler")
+library("DataCombine")
+library("VennDiagram")
+library(rtracklayer)
+#library(rrvgo)
+library(GO.db)
+library(tidyr)
+library(forcats)
+library(wesanderson)
+library(GSEABase)
+```
+
+Read in all expressed genes (poverA = 0.75, 5)
+```{r}
+filt_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+colnames(filt_counts)[1] <- "gene_id"
+
+str(filt_counts)
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/Unique_DEGs.csv")
+colnames(degs)[1] <- "gene_id"
+
+str(degs)
+```
+
+Calculate read lengths from the Astrangia mRNA fasta file (`apoculata_mrna_v2.0.fasta`). I did this on my local computer using the code below. 
+```{bash}
+cd /Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/
+
+awk 'BEGIN{FS="[> ]"} /^>/{val=$2;next}  {print val,length($0)}' apoculata_mrna_v2.0.fasta > gene_length.txt
+mv gene_length.txt /Users/jillashey/Desktop/PutnamLab/Repositories/Astrangia_repo/output/Molecular/mRNA
+```
+
+Read in gene lengths 
+```{r}
+length <- read.csv("../output/Molecular/mRNA/gene_length.txt", header = F)
+
+length <- length %>%
+  separate(V1, into = c("gene_id", "length"), sep = " ", remove = FALSE) %>%
+  dplyr::select(-V1)
+
+str(length)
+
+length$gene_id <- gsub("model", "TU", length$gene_id)
+```
+
+Merge length data with filtered count data
+```{r}
+length_merge <- left_join(filt_counts, length, by = "gene_id") %>%
+  na.omit()
+
+str(length_merge)
+```
+
+GOseq requires a vector of all genes, all differentially expressed genes, and gene lengths. Make vectors 
+```{r}
+# Make DEG vector
+DEG <- length_merge[length_merge$gene_id %in% degs$gene_id, ]
+DEG_names <- as.vector(DEG$gene_id)
+gene_vector <- as.integer(length_merge$gene_id%in%DEG_names)
+names(gene_vector) <- length_merge$gene_id
+
+# Make ID vector
+ID_vector <- as.vector(length_merge$gene_id)
+
+# Make length vector
+length_vector <- as.numeric(length_merge$length)
+```
+
+Calculate probability weighting function 
+```{r}
+DEG.pwf <- nullp(gene_vector, ID_vector, bias.data = length_vector)
+
+str(DEG.pwf)
+```
+
+Code above giving me this warning: Warning: initial point very close to some inequality constraintsWarning: collapsing to unique 'x' values
+
+Read in GO annotation information (annotation from Kate)
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+```
+
+This annot file has annotation information from SwissProt, Trembl, and NCBI but only presents GO information for SwissProt and Trembl. Paste the swissprot
+
+
+Unite the GO terms from SwissProt and Trembl, select GO terms, and split so there is only one GO term per row. 
+```{r}
+annot_GO <- annot %>%
+  unite("GOs", GO_Swiss.Prot, GO_Trembl, sep = ";", na.rm = TRUE) %>%
+  dplyr::select(Protein_ID, GOs) %>%
+  separate_rows(GOs, sep = ";") %>%
+  rename(gene_id = Protein_ID,
+          GO.ID = GOs) %>%
+  filter(GO.ID != "")
+
+# Remove leading and trailing whitespaces
+annot_GO$GO.ID <- trimws(annot_GO$GO.ID)
+
+# Set gene and go ids as factors 
+annot_GO$gene_id <- as.factor(annot_GO$gene_id)
+annot_GO$GO.ID <- as.factor(annot_GO$GO.ID)
+
+# Select only unique rows
+annot_GO <- unique(annot_GO)
+
+# Look at unique gene and go ids 
+length(unique(annot_GO$gene_id)) # 31823 genes have GO annotations
+length(unique(annot_GO$GO.ID)) # there are 14581 unique GO annotations 
+
+# Swap model with TU
+annot_GO$gene_id <- gsub("model", "TU", annot_GO$gene_id)
+
+# Remove annotation info for genes not present in the data
+filt_annot_GO <- subset(annot_GO, gene_id %in% filt_counts$gene_id)
+
+# Look at unique gene and go idsthat are present in this dataset 
+length(unique(filt_annot_GO$gene_id)) # 14721 genes have GO annotations
+length(unique(filt_annot_GO$GO.ID)) # there are 13443 unique GO annotations 
+
+str(filt_annot_GO)
+
+# Convert filt_annot_GO from tibble to df 
+filt_annot_GO <-as.data.frame(filt_annot_GO)
+```
+
+Perform GOSeq
+```{r}
+GO.wall<-goseq::goseq(DEG.pwf, ID_vector, gene2cat=filt_annot_GO, method="Wallenius", use_genes_without_cat=T)
+
+GO <- GO.wall[order(GO.wall$over_represented_pvalue),]
+write.csv(GO, file = "../output/Molecular/functional_enrichment/GOSeq_GO_all.csv")
+
+class(GO.wall)
+head(GO.wall)
+tail(GO.wall)
+nrow(GO.wall)
+```
+
+Filter by significantly enriched GO terms (p < 0.05)
+```{r}
+GO_05 <- GO %>%
+  dplyr::filter(over_represented_pvalue<0.05) %>%
+        dplyr::arrange(., ontology, over_represented_pvalue)
+
+write.csv(GO_05, file = "../output/Molecular/functional_enrichment/GOSeq_GO_05.csv")
+```
+
+Plot all ontologies (BP, CC, MF) and order by p-value 
+```{r}
+GO_05_plot <- GO_05 %>% drop_na(ontology) %>% mutate(term = fct_reorder(term, numDEInCat)) %>%
+  mutate(term = fct_reorder(term, ontology)) %>%
+  ggplot( aes(x=term, y=numDEInCat) ) +
+  geom_segment( aes(x=term ,xend=term, y=0, yend=numDEInCat), color="grey") +
+  geom_text(aes(label = over_represented_pvalue), hjust = -1, vjust = 0, size = 2) +
+  geom_point(size=1, aes(colour = ontology)) +
+  coord_flip() +
+  ylim(0,305) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position="bottom"
+  ) +
+  xlab("") +
+  ylab("") +
+  theme_bw() + #Set background color 
+  theme(panel.border = element_blank(), # Set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()); GO_05_plot #Set the plot background #set title attributes
+
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05.pdf", GO_05_plot, width = 20, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05.png", GO_05_plot, width = 20, height = 10)
+```
+
+Plot ontologies (BP, CC, MF) separately and order by p-value 
+```{r}
+## BP 
+GO_05_plot_BP <- GO_05 %>% 
+  drop_na(ontology) %>% 
+  filter(ontology == "BP") %>%
+  mutate(term = fct_reorder(term, numDEInCat)) %>%
+  #mutate(term = fct_reorder(term)) %>%
+  ggplot( aes(x=term, y=numDEInCat) ) +
+  geom_segment( aes(x=term ,xend=term, y=0, yend=numDEInCat), color="grey") +
+  geom_text(aes(label = over_represented_pvalue), hjust = -1, vjust = 0, size = 2) +
+  geom_point(size=1) +
+  coord_flip() +
+  #ylim(0,305) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position="bottom"
+  ) +
+  xlab("") +
+  ylab("") +
+  theme_bw() + #Set background color 
+  theme(panel.border = element_blank(), # Set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()); GO_05_plot_BP #Set the plot background #set title attributes
+
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_BP.pdf", GO_05_plot_BP, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_BP.png", GO_05_plot_BP, width = 30, height = 10)
+
+## CC
+GO_05_plot_CC <- GO_05 %>% 
+  drop_na(ontology) %>% 
+  filter(ontology == "CC") %>%
+  mutate(term = fct_reorder(term, numDEInCat)) %>%
+  #mutate(term = fct_reorder(term)) %>%
+  ggplot( aes(x=term, y=numDEInCat) ) +
+  geom_segment( aes(x=term ,xend=term, y=0, yend=numDEInCat), color="grey") +
+  geom_text(aes(label = over_represented_pvalue), hjust = -1, vjust = 0, size = 2) +
+  geom_point(size=1) +
+  coord_flip() +
+  #ylim(0,305) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position="bottom"
+  ) +
+  xlab("") +
+  ylab("") +
+  theme_bw() + #Set background color 
+  theme(panel.border = element_blank(), # Set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()); GO_05_plot_CC #Set the plot background #set title attributes
+
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_CC.pdf", GO_05_plot_CC, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_CC.png", GO_05_plot_CC, width = 30, height = 10)
+
+## MF
+GO_05_plot_MF <- GO_05 %>% 
+  drop_na(ontology) %>% 
+  filter(ontology == "MF") %>%
+  mutate(term = fct_reorder(term, numDEInCat)) %>%
+  #mutate(term = fct_reorder(term)) %>%
+  ggplot( aes(x=term, y=numDEInCat) ) +
+  geom_segment( aes(x=term ,xend=term, y=0, yend=numDEInCat), color="grey") +
+  geom_text(aes(label = over_represented_pvalue), hjust = -1, vjust = 0, size = 2) +
+  geom_point(size=1) +
+  coord_flip() +
+  #ylim(0,305) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position="bottom"
+  ) +
+  xlab("") +
+  ylab("") +
+  theme_bw() + #Set background color 
+  theme(panel.border = element_blank(), # Set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()); GO_05_plot_MF #Set the plot background #set title attributes
+
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_MF.pdf", GO_05_plot_MF, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05_MF.png", GO_05_plot_MF, width = 30, height = 10)
+```
+Merge significant GO terms and annot list together 
+```{r}
+GO_genes <- annot_GO %>%
+  inner_join(GO_05, by = c("GO.ID" = "category"))
+
+length(unique(GO_genes$gene_id)) # 9111 genes with over-represented GO terms 
+```
+
+Merge degs with significant GO terms 
+```{r}
+GO_deg <- GO_genes %>%
+  inner_join(degs, by = "gene_id")
+
+length(unique(GO_deg$gene_id)) # 644 DEGs with over-represented GO terms 
+
+write.csv(GO_deg, file = "../output/Molecular/functional_enrichment/DEG_GO.csv")
+```
+
+How does this relate to our DEG comparisons? There were many comparisons. I'm going to start out looking at the DEGs between ambient at TP0, TP5 and TP7. 
+
+Look first at TP0 amb vs TP5 amb. 
+```{r}
+TP0_amb_v_TP5_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv") %>%
+  rename("gene_id" = "X")
+
+# Merge DEGs and GO information and remove extra columns
+GO_TP0_amb_v_TP5_amb <- TP0_amb_v_TP5_amb %>%
+  inner_join(GO_deg, by = "gene_id") %>%
+  dplyr::select(-c("AST.1065.y", "AST.1147.y", "AST.1412.y", "AST.1560.y", "AST.1567.y", "AST.1617.y", "AST.1722.y", "AST.2000.y", "AST.2007.y", "AST.2302.y", "AST.2360.y", "AST.2398.y", "AST.2404.y", "AST.2412.y", "AST.2512.y", "AST.2523.y", "AST.2563.y","AST.2729.y"))
+
+# Select only unique rows
+GO_TP0_amb_v_TP5_amb <- unique(GO_TP0_amb_v_TP5_amb)
+    
+# Look at number of DEGs with GO terms for this comparison
+length(unique(GO_TP0_amb_v_TP5_amb$gene_id)) # 241 unique DEGs with GO terms 
+
+write.csv(GO_TP0_amb_v_TP5_amb, file = "../output/Molecular/functional_enrichment/GO_TP0_amb_v_TP5_amb.csv")
+
+# Visualize the data
+GO_BP_TP0_amb_v_TP5_amb <- GO_TP0_amb_v_TP5_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "BP") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_BP_TP0_amb_v_TP5_amb
+ggsave("../output/Molecular/functional_enrichment/GO_BP_TP0_amb_v_TP5_amb_pvalue.pdf", GO_BP_TP0_amb_v_TP5_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_BP_TP0_amb_v_TP5_amb_pvalue.png", GO_BP_TP0_amb_v_TP5_amb, width = 30, height = 10)
+
+GO_CC_TP0_amb_v_TP5_amb <- GO_TP0_amb_v_TP5_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "CC") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_CC_TP0_amb_v_TP5_amb
+ggsave("../output/Molecular/functional_enrichment/GO_CC_TP0_amb_v_TP5_amb_pvalue.pdf", GO_CC_TP0_amb_v_TP5_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_CC_TP0_amb_v_TP5_amb_pvalue.png", GO_CC_TP0_amb_v_TP5_amb, width = 30, height = 10)
+
+GO_MF_TP0_amb_v_TP5_amb <- GO_TP0_amb_v_TP5_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "MF") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_MF_TP0_amb_v_TP5_amb
+ggsave("../output/Molecular/functional_enrichment/GO_MF_TP0_amb_v_TP5_amb_pvalue.pdf", GO_MF_TP0_amb_v_TP5_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_MF_TP0_amb_v_TP5_amb_pvalue.png", GO_MF_TP0_amb_v_TP5_amb, width = 30, height = 10)
+```
+Positive LFC means that the genes are upregulated in the TP0 ambient treatment. 
+
+TP0 amb vs TP7 amb. 
+```{r}
+TP0_amb_v_TP7_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv") %>%
+  rename("gene_id" = "X")
+
+# Merge DEGs and GO information and remove extra columns
+GO_TP0_amb_v_TP7_amb <- TP0_amb_v_TP7_amb %>%
+  inner_join(GO_deg, by = "gene_id") %>%
+  dplyr::select(-c("AST.1065.y", "AST.1147.y", "AST.1412.y", "AST.1560.y", "AST.1567.y", "AST.1617.y", "AST.1722.y", "AST.2000.y", "AST.2007.y", "AST.2302.y", "AST.2360.y", "AST.2398.y", "AST.2404.y", "AST.2412.y", "AST.2512.y", "AST.2523.y", "AST.2563.y","AST.2729.y"))
+
+# Select only unique rows
+GO_TP0_amb_v_TP7_amb <- unique(GO_TP0_amb_v_TP7_amb)
+    
+# Look at number of DEGs with GO terms for this comparison
+length(unique(GO_TP0_amb_v_TP7_amb$gene_id)) # 285 unique DEGs with GO terms 
+
+write.csv(GO_TP0_amb_v_TP7_amb, file = "../output/Molecular/functional_enrichment/GO_TP0_amb_v_TP7_amb.csv")
+
+# Visualize the data
+GO_BP_TP0_amb_v_TP7_amb <- GO_TP0_amb_v_TP7_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "BP") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_BP_TP0_amb_v_TP7_amb
+ggsave("../output/Molecular/functional_enrichment/GO_BP_TP0_amb_v_TP7_amb_pvalue.pdf", GO_BP_TP0_amb_v_TP7_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_BP_TP0_amb_v_TP7_amb_pvalue.png", GO_BP_TP0_amb_v_TP7_amb, width = 30, height = 10)
+
+GO_CC_TP0_amb_v_TP7_amb <- GO_TP0_amb_v_TP7_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "CC") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_CC_TP0_amb_v_TP7_amb
+ggsave("../output/Molecular/functional_enrichment/GO_CC_TP0_amb_v_TP7_amb_pvalue.pdf", GO_CC_TP0_amb_v_TP7_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_CC_TP0_amb_v_TP7_amb_pvalue.png", GO_CC_TP0_amb_v_TP7_amb, width = 30, height = 10)
+
+GO_MF_TP0_amb_v_TP7_amb <- GO_TP0_amb_v_TP7_amb %>% 
+    #mutate(hitsPerc=numDEInCat*100/numInCat) %>% 
+    dplyr::filter(ontology == "MF") %>%
+    dplyr::  filter(log2FoldChange > 2 | log2FoldChange < -2) %>%
+    top_n(50, wt=over_represented_pvalue) %>% 
+    ggplot(aes(x=numDEInCat, 
+               y=term, 
+               colour=pvalue, 
+               size=log2FoldChange)) +
+        geom_point() +
+        expand_limits(x=0) +
+        labs(x="Number of DEGs", y="GO term", colour="p value", size="L2FC"); GO_MF_TP0_amb_v_TP7_amb
+ggsave("../output/Molecular/functional_enrichment/GO_MF_TP0_amb_v_TP7_amb_pvalue.pdf", GO_MF_TP0_amb_v_TP7_amb, width = 30, height = 10)
+ggsave("../output/Molecular/functional_enrichment/GO_MF_TP0_amb_v_TP7_amb_pvalue.png", GO_MF_TP0_amb_v_TP7_amb, width = 30, height = 10)
+```
+
+Look at the gene ids shared between these two treatment comparisons (ie TP0_amb_v_TP5_amb and TP0_amb_v_TP7_amb)
+```{r}
+my_list <- list(unique(GO_TP0_amb_v_TP5_amb$gene_id), unique(GO_TP0_amb_v_TP7_amb$gene_id))
+venn(my_list)
+Intersect <- venn(my_list, intersection=TRUE)
+isect <- attr(Intersect, "intersection")
+str(isect)
+isect$`A:B`
+```
+
+There are 118 genes that only present in GO_TP0_amb_v_TP5_amb comparison, 162 genes that are only present in the GO_TP0_amb_v_TP7_amb comparison, and 123 genes shared between both comparisons. Filter the GO dfs so that we only have the shared genes. 
+
+```{r}
+GO_TP0_amb_v_TP5_amb_filt <- GO_TP0_amb_v_TP5_amb %>%
+  dplyr::filter(gene_id %in% isect$`A:B`)
+
+GO_TP0_amb_v_TP7_amb_filt <- GO_TP0_amb_v_TP7_amb %>%
+  dplyr::filter(gene_id %in% isect$`A:B`)
+```
+
+I'm also interested in the miRNA regulation of these genes. I ran miranda with the differentially expressed genes (3'UTR sequence) and miRNAs to assess putative interactions. 
+
+Read in the miranda results. 
+```{r}
+miranda <- read.delim("../output/Molecular/interactions/miranda_de_strict_parsed.txt", header = F) %>% 
+  rename(mirna = V1,
+        Target = V2, 
+        Score = V3, 
+        Energy_kcal_mol = V4, 
+        Query_start_end = V5, 
+        Subject_start_end = V6,
+        Length = V7, 
+        Subject_Identity = V8, 
+        Query_Identity = V9)
+
+head(miranda)
+```
+
+The miRNA column corresponds to the differentially expressed miRNAs. The target column corresponds to the 3'UTR sequence of a differentially expressed gene. To get the corresponding gene name for the 3'UTR, read in DEG 3'UTR text file.
+```{r}
+deg_3utr <- read.delim("../output/Molecular/interactions/uniq_modified_closest_degs_3UTRid.txt", header = F) %>%
+  dplyr::select(V1, V12) %>%
+  rename(UTR = V1, 
+         gene_id = V12)
+
+# Remove everything after the space in the UTR column
+deg_3utr$UTR <- sub("\\s.*", "", deg_3utr$UTR)
+```
+
+Merge the miranda results with the deg 3UTR info.
+```{r}
+miranda_gene <- miranda %>%
+  inner_join(deg_3utr, by = c("Target" = "UTR"))
+```
+
+Now that we know the miranda results and the gene ids, merge with the GO_TP0_amb_v_TP5_amb and GO_TP0_amb_v_TP7_amb dfs to investigate potential regulation. Only doing genes shared between GO_TP0_amb_v_TP5_amb and GO_TP0_amb_v_TP7_amb
+```{r}
+miranda_TP0_amb_v_TP5_amb <- GO_TP0_amb_v_TP5_amb_filt %>%
+  inner_join(miranda_gene, by = "gene_id")
+length(unique(miranda_TP0_amb_v_TP5_amb$gene_id))
+length(unique(miranda_TP0_amb_v_TP5_amb$mirna))
+
+miranda_TP0_amb_v_TP7_amb <- GO_TP0_amb_v_TP7_amb_filt %>%
+  inner_join(miranda_gene, by = "gene_id")
+length(unique(miranda_TP0_amb_v_TP7_amb$gene_id))
+length(unique(miranda_TP0_amb_v_TP7_amb$mirna))
+```
+
+Read in differentially expressed miRNAs for TP0 amb v TP5 amb and TP0 amb v TP7 amb. 
+```{r}
+mirna_de_TP0_amb_v_TP5_amb <- read.csv("../output/Molecular/smRNA/TP0_amb_v_TP5_amb_DEM.csv") %>%
+  rename(mirna = X)
+
+mirna_de_TP0_amb_v_TP7_amb <- read.csv("../output/Molecular/smRNA/TP0_amb_v_TP7_amb_DEM.csv") %>%
+  rename(mirna = X)
+```
+
+Merge the miranda results with the mirna DEGs
+```{r}
+## TP0 amb v TP5 amb
+# Remove > in the mirna id name 
+miranda_TP0_amb_v_TP5_amb$mirna <- gsub(">", "", miranda_TP0_amb_v_TP5_amb$mirna)
+
+# Join dfs
+interaction_TP0_amb_v_TP5_amb <- miranda_TP0_amb_v_TP5_amb %>%
+  inner_join(mirna_de_TP0_amb_v_TP5_amb, by = "mirna")
+
+length(unique(interaction_TP0_amb_v_TP5_amb$gene_id))
+length(unique(interaction_TP0_amb_v_TP5_amb$mirna))
+
+## TP0 amb v TP7 amb
+# Remove > in the mirna id name 
+miranda_TP0_amb_v_TP7_amb$mirna <- gsub(">", "", miranda_TP0_amb_v_TP7_amb$mirna)
+
+# Join dfs
+interaction_TP0_amb_v_TP7_amb <- miranda_TP0_amb_v_TP7_amb %>%
+  inner_join(mirna_de_TP0_amb_v_TP7_amb, by = "mirna")
+
+length(unique(interaction_TP0_amb_v_TP7_amb$gene_id))
+length(unique(interaction_TP0_amb_v_TP7_amb$mirna))
+```
+
+There are many rows here. Pare them down to only look at the important stuff (to me) and rename columns
+```{r}
+## TP0 amb v TP5 amb
+interaction_TP0_amb_v_TP5_amb <- interaction_TP0_amb_v_TP5_amb %>%
+  dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
+  rename(log2FoldChange_gene = log2FoldChange.x, 
+         log2FoldChange_mirna = log2FoldChange.y,
+         padj_gene = padj.x,
+         padj_mirna = padj.y) %>%
+  filter(log2FoldChange_gene >= 2 | log2FoldChange_gene <= -2) %>%
+  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2) 
+interaction_TP0_amb_v_TP5_amb <- unique(interaction_TP0_amb_v_TP5_amb)
+
+## TP0 amb v TP7 amb
+interaction_TP0_amb_v_TP7_amb <- interaction_TP0_amb_v_TP7_amb %>%
+  dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
+  rename(log2FoldChange_gene = log2FoldChange.x, 
+         log2FoldChange_mirna = log2FoldChange.y,
+         padj_gene = padj.x,
+         padj_mirna = padj.y) %>%
+  filter(log2FoldChange_gene >= 2 | log2FoldChange_gene <= -2) %>%
+  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2) 
+interaction_TP0_amb_v_TP5_amb <- unique(interaction_TP0_amb_v_TP5_amb)
+```
+
+
+
