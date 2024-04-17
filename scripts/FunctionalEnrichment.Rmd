@@ -386,7 +386,7 @@ TP0_amb_v_TP7_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.cs
 # Merge DEGs and GO information and remove extra columns
 GO_TP0_amb_v_TP7_amb <- TP0_amb_v_TP7_amb %>%
   inner_join(GO_deg, by = "gene_id") %>%
-  dplyr::select(-c("AST.1065.y", "AST.1147.y", "AST.1412.y", "AST.1560.y", "AST.1567.y", "AST.1617.y", "AST.1722.y", "AST.2000.y", "AST.2007.y", "AST.2302.y", "AST.2360.y", "AST.2398.y", "AST.2404.y", "AST.2412.y", "AST.2512.y", "AST.2523.y", "AST.2563.y","AST.2729.y"))
+  dplyr::select(-c("AST.1065.y", "AST.1147.y", "AST.1412.y", "AST.1560.y", "AST.1567.y", "AST.1617.y", "AST.1722.y", "AST.2000.y", "AST.2007.y", "AST.2302.y", "AST.2360.y", "AST.2398.y", "AST.2404.y", "AST.2412.y", "AST.2512.y", "AST.2523.y", "AST.2563.y","AST.2729.y", "AST.2755.y"))
 
 # Select only unique rows
 GO_TP0_amb_v_TP7_amb <- unique(GO_TP0_amb_v_TP7_amb)
@@ -549,26 +549,92 @@ There are many rows here. Pare them down to only look at the important stuff (to
 ```{r}
 ## TP0 amb v TP5 amb
 interaction_TP0_amb_v_TP5_amb <- interaction_TP0_amb_v_TP5_amb %>%
-  dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
-  rename(log2FoldChange_gene = log2FoldChange.x, 
+  #dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
+  rename(log2FoldChange_gene = log2FoldChange.x,
          log2FoldChange_mirna = log2FoldChange.y,
          padj_gene = padj.x,
          padj_mirna = padj.y) %>%
   filter(log2FoldChange_gene >= 2 | log2FoldChange_gene <= -2) %>%
-  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2) 
+  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2)
+
 interaction_TP0_amb_v_TP5_amb <- unique(interaction_TP0_amb_v_TP5_amb)
+length(unique(interaction_TP0_amb_v_TP5_amb$gene_id))
+length(unique(interaction_TP0_amb_v_TP5_amb$mirna))
 
 ## TP0 amb v TP7 amb
 interaction_TP0_amb_v_TP7_amb <- interaction_TP0_amb_v_TP7_amb %>%
-  dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
-  rename(log2FoldChange_gene = log2FoldChange.x, 
+  #dplyr::select(gene_id, log2FoldChange.x, padj.x, GO.ID, over_represented_pvalue, numDEInCat, numInCat, term, ontology, mirna, Score, Energy_kcal_mol, log2FoldChange.y, padj.y) %>%
+  rename(log2FoldChange_gene = log2FoldChange.x,
          log2FoldChange_mirna = log2FoldChange.y,
          padj_gene = padj.x,
          padj_mirna = padj.y) %>%
   filter(log2FoldChange_gene >= 2 | log2FoldChange_gene <= -2) %>%
-  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2) 
+  filter(log2FoldChange_mirna >= 2 | log2FoldChange_mirna <= -2)
+
 interaction_TP0_amb_v_TP5_amb <- unique(interaction_TP0_amb_v_TP5_amb)
+length(unique(interaction_TP0_amb_v_TP7_amb$gene_id))
+length(unique(interaction_TP0_amb_v_TP7_amb$mirna))
 ```
+
+In our 4/16/24 meeting, Hollie suggested a number of ideas for further analyses, including co-expression plots. So we will look at genes and miRNAs of interest and plot them. Let's first look at `interaction_TP0_amb_v_TP5_amb`. There are 28 unique genes and 4 unique miRNAs. 
+
+```{r}
+# get counts and gene/mirna id only 
+counts <- interaction_TP0_amb_v_TP5_amb %>%
+  dplyr::select(-AST.2755.y) %>%
+  dplyr::select(gene_id, starts_with("AST"), mirna)
+
+counts <- unique(counts)
+
+# Reshape the data for gene counts
+gene_counts <- counts %>%
+  dplyr::select(gene_id, starts_with("AST.")) %>%
+  pivot_longer(cols = -gene_id, names_to = "Sample_ID", values_to = "Gene_Count") %>%
+  inner_join(interaction_TP0_amb_v_TP5_amb, by = "gene_id") %>%
+  dplyr::select(gene_id, Sample_ID, Gene_Count, mirna)
+
+gene_counts <- unique(gene_counts)
+
+# Reshape the data for miRNA counts
+full<- counts %>%
+  dplyr::select(mirna, contains(".x")) %>%
+  pivot_longer(cols = -mirna, names_to = "Sample_ID", values_to = "miRNA_Count") %>%
+  inner_join(gene_counts, by = c("mirna", "Sample_ID"))
+
+full <- unique(full)
+
+# Plot the data
+full <- full %>%
+  #filter(mirna == "chromosome_12_481048") %>% # [1] "chromosome_12_481048" "chromosome_3_79553"   "chromosome_5_147390"  "chromosome_5_147456" 
+  filter(Sample_ID == c("AST.1147.x", "AST.1412.x", "AST.1567.x", "AST.1617.x", "AST.1722.x", "AST.2000.x", "AST.2360.x", "AST.2398.x")) %>%
+  mutate(Gene_Count_log = log(Gene_Count)) %>%
+  mutate(miRNA_count_log = log(miRNA_Count))
+
+ggplot(full, aes(x = Gene_Count_log, y = miRNA_count_log)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+
+  
+# Look at specific mirna  
+blah2 <- full %>%
+  filter(mirna == "chromosome_12_481048") %>% # [1] "chromosome_12_481048" "chromosome_3_79553"   "chromosome_5_147390"  "chromosome_5_147456" 
+  filter(Sample_ID == c("AST.1147.x", "AST.1412.x", "AST.1567.x", "AST.1617.x", "AST.1722.x", "AST.2000.x", "AST.2360.x", "AST.2398.x")) %>%
+  mutate(Gene_Count_log = log(Gene_Count)) %>%
+  mutate(miRNA_count_log = log(miRNA_Count))
+
+ggplot(blah, aes(x = Gene_Count_log, y = miRNA_count_log)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+
+# what samples are we interested in here? 
+# what am I expecting to see in the plot?
+```
+
+Try to log normalize it with the DESeq2 method 
+
+
 
 
 
