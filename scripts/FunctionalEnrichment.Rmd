@@ -607,23 +607,32 @@ full <- unique(full)
 full <- full %>%
   #filter(mirna == "chromosome_12_481048") %>% # [1] "chromosome_12_481048" "chromosome_3_79553"   "chromosome_5_147390"  "chromosome_5_147456" 
   filter(Sample_ID == c("AST.1147.x", "AST.1412.x", "AST.1567.x", "AST.1617.x", "AST.1722.x", "AST.2000.x", "AST.2360.x", "AST.2398.x")) %>%
+      mutate(Sample_ID = str_replace(Sample_ID, "AST\\.(\\d+)\\.x", "AST-\\1")) %>%
   mutate(Gene_Count_log = log(Gene_Count)) %>%
   mutate(miRNA_count_log = log(miRNA_Count))
 
-ggplot(full, aes(x = Gene_Count_log, y = miRNA_count_log)) +
+full_meta <- full %>%
+  inner_join(meta, by = c("Sample_ID" = "ID"))
+
+ggplot(full_meta, aes(x = miRNA_Count, y = Gene_Count, color = Timepoint, shape = mirna)) +
   geom_point() +
-  geom_smooth(method = "lm", se = T) +  # Add regression line
+  #geom_smooth(method = "lm", se = T) +  # Add regression line
   ggtitle("Scatter Plot of Gene Counts")
 
   
 # Look at specific mirna  
 blah2 <- full %>%
   filter(mirna == "chromosome_12_481048") %>% # [1] "chromosome_12_481048" "chromosome_3_79553"   "chromosome_5_147390"  "chromosome_5_147456" 
-  filter(Sample_ID == c("AST.1147.x", "AST.1412.x", "AST.1567.x", "AST.1617.x", "AST.1722.x", "AST.2000.x", "AST.2360.x", "AST.2398.x")) %>%
+  #filter(Sample_ID == c("AST.1147.x", "AST.1412.x", "AST.1567.x", "AST.1617.x", "AST.1722.x", "AST.2000.x", "AST.2360.x", "AST.2398.x")) %>%
+    #mutate(Sample_ID = str_replace(Sample_ID, "AST\\.(\\d+)\\.x", "AST-\\1")) %>%
   mutate(Gene_Count_log = log(Gene_Count)) %>%
-  mutate(miRNA_count_log = log(miRNA_Count))
+  mutate(miRNA_count_log = log(miRNA_Count)) 
 
-ggplot(blah, aes(x = Gene_Count_log, y = miRNA_count_log)) +
+blah2 <- blah2 %>%
+  inner_join(meta, by = c("Sample_ID" = "ID"))
+
+
+ggplot(blah2, aes(x = miRNA_count_log, y = Gene_Count_log, color = Timepoint, shape = mirna)) +
   geom_point() +
   geom_smooth(method = "lm", se = T) +  # Add regression line
   ggtitle("Scatter Plot of Gene Counts")
@@ -634,6 +643,19 @@ ggplot(blah, aes(x = Gene_Count_log, y = miRNA_count_log)) +
 
 Try to log normalize it with the DESeq2 method 
 
+4/17/24 - Zoe and I discussed potential avenues for analysis of this data. So much data! We decided to do a WGCNA on the genes and miRNAs separately, then see if there were any module correlations between them. Or to have the gene modules on the y-axis and the individual miRNAs on the x-axis and see if there could be any potential correlations with groups of genes and single miRNAs, since miRNAs can target multiple genes. 
+
+We also looked at the following papers/resources: 
+
+- [Diniz et al. 2020](https://www.researchgate.net/publication/341587054_Interplay_among_miR-29_family_mineral_metabolism_and_gene_regulation_in_Bos_indicus_muscle) has great figures that represent correlations and network analyses between miRNAs and mRNAs. Look into how to do this!
+- [Hao et al. 2021](https://www.frontiersin.org/articles/10.3389/fvets.2021.777477/full) also does some cool network analyses with miRNAs and mRNAs
+- [WGCNA tutorial](https://bioinformaticsworkbook.org/tutorials/wgcna.html#gsc.tab=0)
+- [Ariana WGCNA post](https://ahuffmyer.github.io/ASH_Putnam_Lab_Notebook/Analyzing-TagSeq-data-with-new-annotation/)
+
+For future miRNA:mRNA interaction visualization: 
+
+- [miRTarVis](https://bmcproc.biomedcentral.com/articles/10.1186/1753-6561-9-S6-S2)
+- [MMiRNA-Viewer 2](http://bioinf1.indstate.edu/mmirna-viewer2/tutorial/tutorial.html)
 
 
 
