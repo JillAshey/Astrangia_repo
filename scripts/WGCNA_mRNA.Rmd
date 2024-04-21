@@ -1,0 +1,349 @@
+---
+title: "WGCNA mRNA"
+author: "Jill Ashey"
+date: "2024-04-21"
+output: html_document
+---
+
+WGCNA analysis of mRNA data for AST 2021 project. I'm using Ariana's [code](https://github.com/AHuffmyer/EarlyLifeHistory_Energetics/blob/master/Mcap2020/Scripts/TagSeq/Genome_V3/1_WGCNA_Mcap_V3.Rmd) as a reference. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# The following setting is important, do not omit.
+options(stringsAsFactors = FALSE) #Set Strings to character
+```
+
+Load required libraries.  
+
+```{r}
+if ("tidyverse" %in% rownames(installed.packages()) == 'FALSE') install.packages('tidyverse') 
+if ("genefilter" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install("genefilter") 
+if ("DESeq2" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('DESeq2') 
+if ("RColorBrewer" %in% rownames(installed.packages()) == 'FALSE') install.packages('RColorBrewer') 
+if ("impute" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('impute') 
+if ("preprocessCore" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('preprocessCore') 
+if ("WGCNA" %in% rownames(installed.packages()) == 'FALSE') install.packages('WGCNA') 
+if ("flashClust" %in% rownames(installed.packages()) == 'FALSE') install.packages('flashClust') 
+if ("gridExtra" %in% rownames(installed.packages()) == 'FALSE') install.packages('gridExtra') 
+if ("ComplexHeatmap" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('ComplexHeatmap') 
+if ("goseq" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('goseq')
+if ("dplyr" %in% rownames(installed.packages()) == 'FALSE') install.packages('dplyr') 
+if ("clusterProfiler" %in% rownames(installed.packages()) == 'FALSE') BiocManager::install('clusterProfiler') 
+if ("pheatmap" %in% rownames(installed.packages()) == 'FALSE') install.packages('pheatmap') 
+if ("magrittr" %in% rownames(installed.packages()) == 'FALSE') install.packages('magrittr') 
+if ("vegan" %in% rownames(installed.packages()) == 'FALSE') install.packages('vegan') 
+if ("factoextra" %in% rownames(installed.packages()) == 'FALSE') install.packages('factoextra') 
+
+library("tidyverse")
+library("genefilter")
+library("DESeq2")
+library("RColorBrewer")
+library("impute")
+library("preprocessCore")
+library("WGCNA")
+library("flashClust")
+library("gridExtra")
+library("ComplexHeatmap")
+library("goseq")
+library("dplyr")
+library("clusterProfiler")
+library("pheatmap")
+library("magrittr")
+library("vegan")
+library("factoextra")
+library("dplyr")
+```
+
+## Load and manipulate data
+
+Load data files 
+```{r}
+# Metadta
+meta <- read.csv("../data/Molecular/RNA_metadata.csv") %>%
+ dplyr::arrange(ID)
+head(meta)
+
+# Gene count data
+gcount <- read_csv("../data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.csv")
+gcount <- as.data.frame(gcount)
+rownames(gcount) <- gcount[,1] #set first column that contains gene names as rownames
+gcount <- gcount[,-1] # remove column w/ gene names 
+dim(gcount)
+```
+
+Remove extraneous info from sample names. 
+```{r}
+colnames(gcount) <- sub("align.trimmed.", "", colnames(gcount))
+colnames(gcount) <- sub("_R1_001.fastq.gz.bam.gtf", "", colnames(gcount))
+```
+
+Remove sample AST-1105 because it didn't sequence well
+```{r}
+# Remove column from gene count matrix 
+gcount <- gcount %>%
+  dplyr::select(-"AST-1105")
+  
+# Remove row from metadata
+meta <- meta %>% 
+  filter(ID != "AST-1105")
+```
+
+Remove any genes with 0 counts across all samples.
+```{r}
+nrow(gcount)
+
+gcount<-gcount %>%
+     mutate(Total = rowSums(.[, 1:19]))%>%
+    filter(!Total==0)%>%
+    dplyr::select(!Total)
+
+nrow(gcount)
+```
+
+We had 47,156 genes, which was filtered down to 43,967 by removing genes with row sums of 0 (those not detected in our sequences).  
+
+Conduct data filtering, this includes:  
+
+*pOverA*: Specifying the minimum count for a proportion of samples for each gene. Here, we are using a pOverA of 0.15. This is because we have 19 samples with a minimum of n=3 samples per time point/treatment Therefore, we will accept genes that are present in 3/19 = 0.1578947 of the samples because we expect different expression by life stage. We are further setting the minimum count of genes to 10, such that 15% of the samples must have a gene count of >10 in order for the gene to remain in the data set. Pre-filtering our dataset to reduce the memory size dataframe, increase the speed of the transformation and testing functions, and improve quality of statistical analysis by removing low-coverage counts. Removed counts could represent outliers in the data and removing these improves sensitivity of statistical tests.   
+ 
+```{r}
+filt <- filterfun(pOverA(0.15,10))
+
+#create filter for the counts data
+gfilt <- genefilter(gcount, filt)
+
+#identify genes to keep by count filter
+gkeep <- gcount[gfilt,]
+
+#identify gene lists
+gn.keep <- rownames(gkeep)
+
+#gene count data filtered in PoverA, P percent of the samples have counts over A
+gcount_filt <- as.data.frame(gcount[which(rownames(gcount) %in% gn.keep),])
+
+#How many rows do we have before and after filtering?
+nrow(gcount) #Before
+nrow(gcount_filt) #After
+```
+
+Before filtering, we had 43,967 genes. After filtering for pOverA, we have approximately 30,374 genes. This indicates that there were many genes present in <7% of samples at <5 counts per gene.  
+
+Data sanity checks! Order IDs so that they are in the same order in meta and count files.
+```{r}
+meta$ID %in% colnames(gcount_filt) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta$ID) == colnames(gcount_filt)) #are they the same in the same order? Should be TRUE
+
+# Should be in same order 
+meta$ID
+colnames(gcount_filt)
+```
+
+## Construct DESeq2 dataset 
+
+Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition. I can't run an interaction term with this dataset because TP0 only has one treatment. 
+
+Merge Treatment and Timepoint into a single column. Order the Conditions
+```{r}
+meta$Condition <- paste(meta$Timepoint, meta$Treatment, sep = "_")
+meta$Condition <- factor(meta$Condition, levels = c("TP0_Acclimation", "TP5_Ambient", "TP5_Heat", "TP7_Ambient", "TP7_Heat"))
+```
+
+Set DESeq2 design
+```{r}
+gdds <- DESeqDataSetFromMatrix(countData = gcount_filt,
+                              colData = meta,
+                              design = ~Condition)
+```
+
+First we are going to log-transform the data using a variance stabilizing transforamtion (VST). This is only for visualization purposes. Essentially, this is roughly similar to putting the data on the log2 scale. It will deal with the sampling variability of low counts by calculating within-group variability (if blind=FALSE). Importantly, it does not use the design to remove variation in the data, and so can be used to examine if there may be any variability do to technical factors such as extraction batch effects. To do this we first need to calculate the size factors of our samples. This is a rough estimate of how many reads each sample contains compared to the others. In order to use VST (the faster log2 transforming process) to log-transform our data, the size factors need to be less than 4.
+
+Should print TRUE if size factors are less than 4. 
+```{r}
+SF.gdds <- estimateSizeFactors(gdds) #estimate size factors to determine if we can use vst  to transform our data. Size factors should be less than 4 for us to use vst
+print(sizeFactors(SF.gdds)) #View size factors
+
+all(sizeFactors(SF.gdds)) < 4
+```
+
+All size factors are less than 4, so we can use VST transformation.  
+```{r}
+gvst <- vst(gdds, blind=FALSE) #apply a variance stabilizing transformation to minimize effects of small counts and normalize wrt library size
+head(assay(gvst), 3) #view transformed gene count data for the first three genes in the dataset.  
+```
+
+Conduct PERMANOVA
+
+Export data for PERMANOVA test.  
+```{r}
+test<-t(assay(gvst)) #export as matrix
+test<-as.data.frame(test)
+
+#add category columns
+test$Sample<-rownames(test)
+test$Condition<-meta$Condition[match(test$Sample, meta$ID)]
+test$Timepoint<-meta$Timepoint[match(test$Sample, meta$ID)]
+test$Treatment<-meta$Treatment[match(test$Sample, meta$ID)]
+```
+
+Build PERMANOVA model.  
+```{r}
+scaled_test <-prcomp(test[c(1:30374)], scale=TRUE, center=TRUE)
+fviz_eig(scaled_test)
+
+# scale data
+vegan <- scale(test[c(1:30374)])
+
+# PerMANOVA 
+## Timepoint and Treatment
+permanova<-adonis2(vegan ~ Timepoint*Treatment, data = test, method='eu')
+permanova
+
+## Condition
+permanova<-adonis2(vegan ~ Condition, data = test, method='eu')
+permanova
+```
+
+For Timepoint*Treatment, gene expression is significantly different by timepoint (p=0.031) but not by treatment (p=0.234). The interaction term (Imepoint:Treatment) is also not significant (p=0.362).
+Permutation test for adonis under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+adonis2(formula = vegan ~ Timepoint * Treatment, data = test, method = "eu")
+                    Df SumOfSqs      R2      F Pr(>F)  
+Timepoint            2    81905 0.14981 1.4221  0.031 *
+Treatment            1    32449 0.05935 1.1268  0.234  
+Timepoint:Treatment  1    29215 0.05344 1.0145  0.362  
+Residual            14   403162 0.73740                
+Total               18   546732 1.00000                
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+For Condition, gene expression is significantly different (p=0.04). 
+Permutation test for adonis under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+adonis2(formula = vegan ~ Condition, data = test, method = "eu")
+          Df SumOfSqs     R2      F Pr(>F)  
+Condition  4   143570 0.2626 1.2464   0.04 *
+Residual  14   403162 0.7374                
+Total     18   546732 1.0000                
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Examine PCA and sample distances. Plot a heatmap to sample to sample distances. 
+```{r}
+gsampleDists <- dist(t(assay(gvst))) #calculate distance matix
+gsampleDistMatrix <- as.matrix(gsampleDists) #distance matrix
+rownames(gsampleDistMatrix) <- colnames(gvst) #assign row names
+colnames(gsampleDistMatrix) <- NULL #assign col names
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255) #assign colors
+
+save_pheatmap_pdf <- function(x, filename, width=7, height=7) {
+   stopifnot(!missing(x))
+   stopifnot(!missing(filename))
+   pdf(filename, width=width, height=height)
+   grid::grid.newpage()
+   grid::grid.draw(x$gtable)
+   dev.off()
+}
+
+pht<-pheatmap(gsampleDistMatrix, #plot matrix
+         clustering_distance_rows=gsampleDists, #cluster rows
+         clustering_distance_cols=gsampleDists, #cluster columns
+         col=colors); pht #set colors
+
+# Not letting me save...giving me this error: Error in x$gtable : $ operator not defined for this S4 class
+```
+
+Plot PCA of samples by condition 
+```{r}
+gPCAdata <- plotPCA(gvst, intgroup = c("Condition"), returnData=TRUE, ntop=30374) #use ntop to specify all genes
+
+percentVar <- round(100*attr(gPCAdata, "percentVar")) #plot PCA of samples with all data
+
+allgenesfilt_PCA <- ggplot(gPCAdata, aes(PC1, PC2, color = Condition)) + 
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) +
+  #xlim(-40,40)+ 
+  #ylim(-40,40)+
+  coord_fixed()+
+  theme_bw() + #Set background color
+  theme(panel.border = element_blank(), # Set border
+                     #panel.grid.major = element_blank(), #Set major gridlines 
+                     #panel.grid.minor = element_blank(), #Set minor gridlines
+                     axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()) # + #Set the plot background
+  #theme(legend.position = ("none")) #set title attributes
+allgenesfilt_PCA
+```
+
+## WGCNA
+
+Data are analyzed using dynamic tree cut approach, our data set is not large enough to have to use blockwiseModules to break data into "blocks". 
+
+Transpose the filtered gene count matrix so that the gene IDs are rows and the sample IDs are columns.
+```{r}
+datExpr <- as.data.frame(t(assay(gvst))) #transpose to output to a new data frame with the column names as row names. And make all data numeric
+```
+
+Check for genes and samples with too many missing values with goodSamplesGenes. There shouldn't be any because we performed pre-filtering
+```{r}
+gsg = goodSamplesGenes(datExpr, verbose = 3)
+gsg$allOK #Should return TRUE if not, the R chunk below will take care of flagged data
+```
+
+Look for outliers by examining tree of samples  
+```{r}
+sampleTree = hclust(dist(datExpr), method = "average");
+# Plot the sample tree: Open a graphic output window of size 12 by 9 inches
+# The user should change the dimensions if the window is too large or too small.
+pdf("../output/Molecular/mRNA/WGCNA/outliers.pdf")
+plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5, cex.axis = 1.5, cex.main = 2)
+dev.off()
+```
+
+AST-1560 may be an outlier...going to continue with analysis and re-visit 
+
+Now its time for network construction and consensus module detection!
+
+Choosing a soft-thresholding power: Analysis of network topology β. The soft thresholding power (β) is the number to which the co-expression similarity is raised to calculate adjacency. The function pickSoftThreshold performs a network topology analysis. The user chooses a set of candidate powers, however the default parameters are suitable values.  
+```{r, message=FALSE, warning=FALSE}
+allowWGCNAThreads()
+# # Choose a set of soft-thresholding powers
+powers <- c(seq(from = 1, to=19, by=2), c(21:30)) #Create a string of numbers from 1 through 10, and even numbers from 10 through 20
+# 
+# # Call the network topology analysis function
+sft <-pickSoftThreshold(datExpr, powerVector = powers, verbose = 5)
+```
+
+Plot the results.  
+```{r}
+sizeGrWindow(9, 5)
+par(mfrow = c(1,2));
+cex1 = 0.9;
+# # # Scale-free topology fit index as a function of the soft-thresholding power
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+      xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+     main = paste("Scale independence"));
+ text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     labels=powers,cex=cex1,col="red");
+# # # this line corresponds to using an R^2 cut-off
+ abline(h=0.9,col="red")
+# # # Mean connectivity as a function of the soft-thresholding power
+ plot(sft$fitIndices[,1], sft$fitIndices[,5],
+     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+     main = paste("Mean connectivity"))
+ text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+```
+
+Go through this tutorial: https://fuzzyatelin.github.io/bioanth-stats/module-F21-Group1/module-F21-Group1.html 
+
+
+
+
+

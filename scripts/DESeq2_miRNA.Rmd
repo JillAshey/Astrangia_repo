@@ -68,7 +68,7 @@ all(rownames(meta$ID) == colnames(counts)) #are they the same in the same order?
 
 Filter reads by proportion of samples containing cutoff value 
 ```{r}
-ffun<-filterfun(pOverA(0.75,5))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.15,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((counts), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
@@ -77,7 +77,7 @@ filt_outrm_poa <- counts[filt_outrm_poa,] #keep only rows that passed filter
 all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
 ```
 
-I am left with 120 miRNAs. Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
+I am left with 226 miRNAs. Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
 
 Merge Treatment and Timepoint into a single column 
 ```{r}
@@ -98,10 +98,10 @@ TP0 v TP5 Ambient
 TP0_v_5_amb <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP5_Ambient"))
 head(TP0_v_5_amb)
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
-sum(TP0_v_5_amb$padj <0.05, na.rm=T) # 20 miRNA with significant p-values
+sum(TP0_v_5_amb$padj <0.05, na.rm=T) # 11 miRNA with significant p-values
 TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # 13 miRNAs are downregulated in TP5 ambient relative to TP0 ambient
-sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # 7 miRNAs are upregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # 9 miRNAs are downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # 2 miRNAs are upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
 #write.csv(counts(TP0_v_5_amb.sig.list), file = "../output/Molecular/smRNA/TP0_amb_v_TP5_amb_DEM.csv")
 TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
@@ -118,8 +118,12 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_amb_DEM.pdf", ma_plot, width = 10, height = 8)
-# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_amb_DEM.pdf", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_amb_DEM.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_amb_DEM.pdf", pca_plot, width = 10, height = 8)
+pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
+
 # ggsave("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", heatmap, width = 8, height = 10)
 
 # Save info with pvalues and LFC
@@ -154,9 +158,11 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_amb_DEM.pdf", ma_plot, width = 10, height = 8)
-# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_amb_DEM.pdf", pca_plot, width = 10, height = 8)
-# ggsave("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_amb_DEM.pdf", heatmap, width = 8, height = 10)
+ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_amb_DEM.pdf", ma_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_amb_DEM.pdf", pca_plot, width = 10, height = 8)
+pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_amb_DEM.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_7_amb.sig <- as.data.frame(TP0_v_7_amb.sig)
@@ -178,12 +184,12 @@ TP0 v TP5 Heat
 TP0_v_5_heat <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP5_Heat"))
 head(TP0_v_5_heat)
 ma_plot <- plotMA(TP0_v_5_heat); ma_plot
-sum(TP0_v_5_heat$padj <0.05, na.rm=T) # 32 miRNAs with significant p-values
+sum(TP0_v_5_heat$padj <0.05, na.rm=T) # 13 miRNAs with significant p-values
 TP0_v_5_heat.sig <- subset(TP0_v_5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # 20 miRNAs are downregulated in TP5 heat relative to TP0 ambient
-sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # 12 miRNAs are upregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # 8 miRNAs are downregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # 5 miRNAs are upregulated in TP5 heat relative to TP0 ambient
 TP0_v_5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP0_v_5_heat.sig.list), file = "../output/Molecular/smRNA/TP0_amb_v_TP5_heat_DEM.csv")
+#write.csv(counts(TP0_v_5_heat.sig.list), file = "../output/Molecular/smRNA/TP0_amb_v_TP5_heat_DEM.csv")
 TP0_v_5_heat.rsig <- rlog(TP0_v_5_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
 pca_plot <- plotPCA(TP0_v_5_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_heat.rsig) #make an expression object
@@ -200,7 +206,15 @@ heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale
 ## Save plots 
 ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_heat_DEM.pdf", ma_plot, width = 10, height = 8)
 ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_heat_DEM.pdf", pca_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_heat_DEM.pdf", heatmap, width = 8, height = 10)
+pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_heat_DEM.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
+
+# Save info with pvalues and LFC
+TP0_v_5_heat.sig <- as.data.frame(TP0_v_5_heat.sig)
+TP0_v_5_heat.sig.list <- as.data.frame(counts(TP0_v_5_heat.sig.list))
+TP0_v_5_heat.sig.list.full <- cbind(TP0_v_5_heat.sig, TP0_v_5_heat.sig.list)
+write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP5_heat_DEM.csv")
 ```
 
 TP0 v TP7 Heat
@@ -230,7 +244,15 @@ heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale
 ## Save plots 
 ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_heat_DEM.pdf", ma_plot, width = 10, height = 8)
 ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_heat_DEM.pdf", pca_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_heat_DEM.pdf", heatmap, width = 8, height = 10)
+pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_heat_DEM.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
+
+# Save info with pvalues and LFC
+TP0_v_7_heat.sig <- as.data.frame(TP0_v_7_heat.sig)
+TP0_v_7_heat.sig.list <- as.data.frame(counts(TP0_v_7_heat.sig.list))
+TP0_v_7_heat.sig.list.full <- cbind(TP0_v_7_heat.sig, TP0_v_7_heat.sig.list)
+write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP7_heat_DEM.csv")
 ```
 
 TP5 Heat v TP7 Heat
@@ -238,13 +260,27 @@ TP5 Heat v TP7 Heat
 TP5_heat_v_7_heat <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Heat"))
 head(TP5_heat_v_7_heat)
 ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
-sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # 9 miRNAs with significant p-values
+sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # 6 miRNAs with significant p-values
 TP5_heat_v_7_heat.sig <- subset(TP5_heat_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 9 miRNAs are downregulated in TP7 heat relative to TP5 heat
+sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 6 miRNAs are downregulated in TP7 heat relative to TP5 heat
 sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T) # 0 miRNAs are upregulated in TP7 heat relative to TP5 heat
 TP5_heat_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_7_heat.sig)),] #subset list of sig transcripts from original count data
 write.csv(counts(TP5_heat_v_7_heat.sig.list), file = "../output/Molecular/smRNA/TP5_heat_v_TP7_heat_DEM.csv")
 TP5_heat_v_7_heat.rsig <- rlog(TP5_heat_v_7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+## Giving me an error
+# Error in estimateDispersionsFit(object, fitType, quiet = TRUE) : 
+#   all gene-wise dispersion estimates are within 2 orders of magnitude
+#   from the minimum value, and so the standard curve fitting techniques will not work.
+#   One can instead use the gene-wise estimates as final estimates:
+#   dds <- estimateDispersionsGeneEst(dds)
+#   dispersions(dds) <- mcols(dds)$dispGeneEst
+#   ...then continue with testing using nbinomWaldTest or nbinomLRT
+
+
+
+
+
 pca_plot <- plotPCA(TP5_heat_v_7_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_heat_v_7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -260,7 +296,15 @@ heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale
 ## Save plots 
 ggsave("../output/Molecular/smRNA/ma_plot_TP5_heat_v_TP7_heat_DEM.pdf", ma_plot, width = 10, height = 8)
 ggsave("../output/Molecular/smRNA/pca_plot_TP5_heat_v_TP7_heat_DEM.pdf", pca_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/heatmap_TP5_heat_v_TP7_heat_DEM.pdf", heatmap, width = 8, height = 10)
+pdf("../output/Molecular/smRNA/heatmap_TP5_heat_v_TP7_heat_DEM.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
+
+# Save info with pvalues and LFC
+TP5_heat_v_7_heat.sig <- as.data.frame(TP5_heat_v_7_heat.sig)
+TP5_heat_v_7_heat.sig.list <- as.data.frame(counts(TP5_heat_v_7_heat.sig.list))
+TP5_heat_v_7_heat.sig.list.full <- cbind(TP5_heat_v_7_heat.sig, TP5_heat_v_7_heat.sig.list)
+write.csv(TP5_heat_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/TP5_heat_v_TP7_heat_DEM.csv")
 ```
 
 TP5 Amb v TP5 Heat
@@ -312,7 +356,11 @@ length(t(unique(TP5_heat_v_7_heat.DEMs)))
 
 Bind genes from all contrasts
 ```{r}
-DEMs.all <- rbind(TP0_v_5_amb.DEMs, TP0_v_7_amb.DEMs, TP0_v_5_heat.DEMs, TP0_v_7_heat.DEMs, TP5_heat_v_7_heat.DEMs)
+DEMs.all <- rbind(TP0_v_5_amb.DEMs, 
+                  TP0_v_7_amb.DEMs, 
+                  TP0_v_5_heat.DEMs, 
+                  #TP0_v_7_heat.DEMs, 
+                  TP5_heat_v_7_heat.DEMs)
 DEMs.all <- unique(DEMs.all)
 length(unique(DEMs.all$DEMs))
 
@@ -321,7 +369,7 @@ Unique.rsig <- rlog(Unique.sig.list, blind=FALSE) #apply a regularized log trans
 write.csv(counts(Unique.sig.list), file="../output/Molecular/smRNA/Unique_DEMs.csv")
 ```
 
-There are 50 unique differentially expressed miRNAs. Visualize the differentially expressed miRNAs. 
+There are 26 unique differentially expressed miRNAs. Visualize the differentially expressed miRNAs. 
 
 PCA with DEMs
 ```{r}
@@ -386,8 +434,9 @@ Save DEM plots
 ggsave("../output/Molecular/smRNA/pca_plot_DEMs.pdf", pca_plot, width = 10, height = 8)
 ggsave("../output/Molecular/smRNA/pca_plot_DEMs.png", pca_plot, width = 10, height = 8)
 
-ggsave("../output/Molecular/smRNA/heatmap_DEMs.pdf", heatmap, width = 8, height = 10)
-ggsave("../output/Molecular/smRNA/heatmap_DEMs.png", heatmap, width = 8, height = 10)
+pdf("../output/Molecular/smRNA/heatmap_DEMs.pdf", width = 8, height = 10)
+print(heatmap)
+dev.off()
 ```
 
 Save unique DEGs in a list for subsetting fasta files
