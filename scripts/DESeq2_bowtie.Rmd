@@ -446,6 +446,8 @@ sum(filt_outrm_poa) #count number of genes left
 filt_outrm_poa <- bowtie_matrix[filt_outrm_poa,] #keep only rows that passed filter
 
 all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
+
+write.csv(filt_outrm_poa, "../output/Molecular/mRNA/filtered_gene_counts.csv")
 ```
 
 Remove AST-1105 from the data, as it did not have good mapping and has basically no counts. 
