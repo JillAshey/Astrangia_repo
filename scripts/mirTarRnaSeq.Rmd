@@ -302,3 +302,67 @@ mRNA is on the x axis, miRNA is on the y-axis. It is plotting the value as the c
 
 
 
+
+
+Now I'm going to do Part 2 with `miRNA_fc` and `mRNA_fc`, which identifies miRNA:mRNA correlations across 3+ time points or treatments. 
+
+Get miRNA mRNA correlation. 
+```{r}
+corr_0_test <- corMirnaRna(mRNA_fc, miRNA_fc, method = "pearson")
+```
+
+This is creating a correlation dataframe between the miRNAs and mRNAs. Look at page 6 of the paper for explanation of how the correlation (the value column in the df) is calculated. 
+
+Calculate a background distribution correlation
+```{r}
+outs_test <- sampCorRnaMirna(mRNA_fc, miRNA_fc, method = "pearson")
+```
+
+This function samples the mRNA and miRNA FCs by shuffling over the FC data (default is 100). Then it samples from the shuffled data (default is 1000) so that there is a predicted distribution correlation based on our data. 
+
+Plot densities 
+```{r}
+mirRnaDensityCor(corr_0_test, outs_test)
+```
+
+This plot is showing the densities of the correlations between mRNA:miRNA. So the plot is saying that the highest number of correlations is around -1 with another peak at 1. 
+Obtain correlations below a certain threshold (0.05)
+```{r}
+sig_corrs_test <- threshSig(corr_0_test, outs_test, pvalue = 0.05)
+mean(sig_corrs_test$value)
+median(sig_corrs_test$value)
+range(sig_corrs_test$value)
+```
+
+This function samples the miRNA:mRNA relationships to only select the significant ones. The data only ranges from -1 to -0.9951331, which is interesting. 
+
+I already loaded the mouse miranda data (`miranda_test`). 
+
+Using the miranda data, create a correlation heatmap.
+```{r}
+newcorr_test <- corMirnaRnaMiranda(mRNA_fc, miRNA_fc, -0.7, miRanda_test)
+mirRnaHeatmap(newcorr_test, upper_bound = -0.6)
+
+mirRnaHeatmap(corr_0_test, upper_bound = -0.6)
+```
+
+The `corMirnaRnaMiranda` uses the miranda information to determine which correlations are likely interactions. 
+
+Now get the miranda intersection and significant miRNA and mRNA interactions. 
+```{r}
+results_test <- miRandaIntersect(sig_corrs_test, outs_test, mRNA_fc, miRNA_fc, miRanda_test)
+
+results_blah <- miRandaIntersect(corr_0_test, outs_test, mRNA_fc, miRNA_fc, miRanda_test)
+```
+
+I need to look into how `miRandaIntersect` and `corMirnaRnaMiranda` are different. 
+
+Plots results 
+```{r}
+mirRnaHeatmap(results_test$corrs)
+
+mirRnaHeatmap(results_blah$corrs)
+```
+
+
+
