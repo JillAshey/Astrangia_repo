@@ -7,6 +7,8 @@ output: html_document
 
 This script will test out the R package [mirTarRnaSeq](https://bioconductor.org/packages/3.13/bioc/html/mirTarRnaSeq.html), which an be used for interactive mRNA miRNA sequencing statistical analysis. This package utilizes expression or differential expression mRNA and miRNA sequencing results and performs interactive correlation and various GLMs (Regular GLM, Multivariate GLM, and Interaction GLMs ) analysis between mRNA and miRNA expriments. These experiments can be time point experiments, and or condition expriments.
 
+[Source code](https://rdrr.io/github/Mercedeh66/mirTarRnaSeq/api/) for mirTarRnaSeq functions.
+
 Load packages
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -366,8 +368,7 @@ mirRnaHeatmap(results_blah$corrs)
 
 ### Part 2 - Identify miRNA mRNA correlations across 3 or more time points with my data. 
 
-From the vignette: "Note for this analysis we need fold change data for time points or control versus condition. Hence, a differential expression (DE) analysis needs to be performed before proceeding this analysis (These values should be provided for all miRNA and mRNA in the DE expression and not only the significantly DE miRNAs/mRNAs). Here we are looking at differential expression (DE) files between three time points. The format of each timepoint/control vs condition file needs to be Gene/miRNA names as the first column, log2FC or logfoldchange (FC), (or any other FC metrics as long as for both miRNA, and mRNA the same metrics is used) for column two. The pvalue assigned to the gene(mRNA) expression after the differential expression analysis on the third column.For the miRNA file, the user needs to assign Gene names on the
-first column and the representative log2FC or logfoldchange (FC) on the second column.
+From the vignette: "Note for this analysis we need fold change data for time points or control versus condition. Hence, a differential expression (DE) analysis needs to be performed before proceeding this analysis (These values should be provided for all miRNA and mRNA in the DE expression and not only the significantly DE miRNAs/mRNAs). Here we are looking at differential expression (DE) files between three time points. The format of each timepoint/control vs condition file needs to be Gene/miRNA names as the first column, log2FC or logfoldchange (FC), (or any other FC metrics as long as for both miRNA, and mRNA the same metrics is used) for column two. The pvalue assigned to the gene(mRNA) expression after the differential expression analysis on the third column.For the miRNA file, the user needs to assign Gene names on the first column and the representative log2FC or logfoldchange (FC) on the second column.
 
 Read in mRNA DE information (only going to try 3 conditions before trying them all). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
 ```{r}
@@ -391,12 +392,171 @@ mrna_files <- list(TP0_v_5_amb_df, TP0_v_7_amb_df, TP5_v_7_amb_df)
 
 Get mRNAs with particular fold change and pvalue
 ```{r}
-mrna <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)
-
-mrna$foldchanges
-mrna$pvalues
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
 ```
 
+Read in miRNA DE information (only going to try 3 conditions before trying them all). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of miRNA dfs 
+```{r}
+mirna_files <- list(TP0_v_5_amb_miRNA_df, TP0_v_7_amb_miRNA_df, TP5_v_7_amb_miRNA_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Change data in mRNA and miRNA dfs from double to numeric 
+```{r}
+mrna_data$FC1 <- as.numeric(mrna_data$FC1)
+mrna_data$FC2 <- as.numeric(mrna_data$FC2)
+mrna_data$FC3 <- as.numeric(mrna_data$FC3)
+
+mirna_data$FC1 <- as.numeric(mirna_data$FC1)
+mirna_data$FC2 <- as.numeric(mirna_data$FC2)
+mirna_data$FC3 <- as.numeric(mirna_data$FC3)
+```
+
+Get mRNA miRNA correlation
+```{r}
+corr_0 <- corMirnaRna(mrna_data, mirna_data, method = "pearson")
+```
+
+Pearson correlation coefficient (the value in the resulting df) is calculated by taking the sum of the products of the differences of each data point from their respective means, divided by the product of the standard deviations of each variable.
+
+Make background distribution correlation
+```{r, }
+outs_corr <- sampCorRnaMirna(mrna_data, mirna_data, method = "pearson", Shrounds = 100, Srounds = 1000)
+```
+
+I like that this program uses my data to generate the background distribution, as then it is more specific to me instead of just setting arbitrary background distributions. 
+
+Make density plots for background and actual correlations in data
+```{r}
+mirRnaDensityCor(corr_0, outs_corr)
+```
+
+Identify correlations below specific threshold
+```{r}
+sig_corrs <- threshSig(corr_0, outs_corr, pvalue = 0.05)
+```
+
+Read in miranda data 
+```{r}
+miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+The vignette includes the following information for the example mouse miranda data:  
+```{r}
+head(miRanda)
+```
+
+V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6
+```{r}
+# Select specific columns
+miranda_data_filt <- miranda_data %>%
+  dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+
+# Remove any duplicate rows
+miranda_data_filt <- unique(miranda_data_filt)
+
+# Rearrange columns
+miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
+
+# Rename columns V1-6
+miranda_data_filt <- miranda_data_filt %>%    
+  rename(V1 = mirna, 
+         V2 = gene_id,
+         V3 = Score,
+         V4 = Energy_kcal_mol, 
+         V5 = Subject_Identity,
+         V6 = Query_Identity)
+```
+
+Make a mRNA miRNA correlation heatmap w/ all correlations 
+```{r}
+results_test <- miRandaIntersect(corr_0, outs_corr, mrna_data, mirna_data, miranda_data_filt)
+mirRnaHeatmap(results_test$corrs)
+```
+
+Make a mRNA miRNA correlation heatmap w/ significant correlations 
+```{r}
+results_test <- miRandaIntersect(sig_corrs, outs_corr, mrna_data, mirna_data, miranda_data_filt)
+blah <- mirRnaHeatmap(results_test$corrs)
+```
+
+Most of the significant correlations are negative which is interesting. Need to look at source code for threshSig 
+
+So exciting!!!!! Need to think more about interpretation of these plots. 
+
+### Part 3 - Identify significant miRNA mRNA relationships for two time points with my data
+
+For this example, I will use the TP0 v TP5 ambient data. mRNA data is `TP0_v_5_amb_df` and miRNA data is `TP0_v_5_amb_miRNA_df`. Miranda data (in correct format for this package) is `miranda_data_filt`. 
+
+Get mRNAs and miRNAs with particular fold change and pvalue
+```{r}
+# mRNA
+mrna_files <- list(TP0_v_7_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# miRNA
+mirna_files <- list(TP0_v_7_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0_test <- twoTimePoint(mrna_data, mirna_data)
+```
+
+I don't think its a correlation because the values are from 0-28. Looking at the source code, it seems like it is calculating the absolute difference between expression values (ie FC) of every mRNA miRNA combo. It represents the magnitude of difference between expression levels of a mRNA and miRNA.
+
+Make background distribution
+```{r}
+outs_test <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0_test, outs_test)
+```
+
+Intersect miranda data with significant relationships
+```{r}
+results_blah <- mirandaIntersectInter(sig_interRel, outs_test, mrna_data, mirna_data, miranda_data_filt)
+```
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+final_results_test <- finInterResult(results_blah)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, final_results_test)
+```
+
+Make heatmap for significant relationships
+```{r}
+mirRnaHeatmapDiff(results_blah$corrs)
+```
+
+- Low Absolute Difference Value: When the absolute difference value is low, it suggests that the miRNA and mRNA expression levels are close to each other. This could indicate potential regulatory interactions between the miRNA and mRNA. Low absolute differences might imply that the miRNA is not exerting a strong regulatory effect on the mRNA, or that the regulatory effect is being buffered or compensated by other factors.
+
+- High Absolute Difference Value: Conversely, when the absolute difference value is high, it suggests that the miRNA and mRNA expression levels are substantially different. This might indicate that the miRNA is playing a regulatory role in controlling the expression of the mRNA. High absolute differences might suggest a strong regulatory effect of the miRNA on the mRNA expression level, potentially implicating the miRNA in the regulation of biological processes associated with the mRNA's function.
 
 
 

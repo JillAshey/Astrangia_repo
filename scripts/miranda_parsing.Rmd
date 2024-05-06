@@ -1,0 +1,66 @@
+---
+title: "miRanda output parsing"
+author: "Jill Ashey"
+date: "2024-05-06"
+output: html_document
+---
+
+This script will read in the miranda output and assign the correct gene id to each comparison.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+Read in miranda results. 
+```{r}
+miranda <- read.delim("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_strict_all_parsed.txt", header = F) %>% 
+  rename(mirna = V1,
+        Target = V2, 
+        Score = V3, 
+        Energy_kcal_mol = V4, 
+        Query_start_end = V5, 
+        Subject_start_end = V6,
+        Length = V7, 
+        Subject_Identity = V8, 
+        Query_Identity = V9)
+
+head(miranda)
+```
+
+This will likely take a while to load because the file is so large. 
+
+The miRNA column corresponds to the differentially expressed miRNAs. The target column corresponds to the 3'UTR sequence of a differentially expressed gene. To get the corresponding gene name for the 3'UTR, read in gene 3'UTR text file.
+```{r}
+gene_3utr <- read.delim("output/Molecular/interactions/uniq_modified_closest_genes_3UTRid.txt", header = F) %>%
+  dplyr::select(V1, V12) %>%
+  rename(UTR = V1, 
+         gene_id = V12)
+
+# Remove everything after the space in the UTR column
+gene_3utr$UTR <- sub("\\s.*", "", gene_3utr$UTR)
+```
+
+Merge the miranda results with the 3UTR info.
+```{r}
+miranda_gene <- miranda %>%
+  inner_join(gene_3utr, by = c("Target" = "UTR"))
+```
+
+Remove `>` in miRNA id name
+```{r}
+miranda_gene$mirna <- gsub(">", "", miranda_gene$mirna)
+```
+
+Save file
+```{r}
+write.csv(miranda_gene, file = "~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv")
+```
+
+
+
+
+
+
+
