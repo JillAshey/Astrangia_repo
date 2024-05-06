@@ -450,16 +450,18 @@ prot <- prot %>%
     Timepoint == "TP7" ~ "August")) # TP7
 ```
 
-Remove acclimatization (TP0) and field data 
+Remove field data and change Treatment for TP0 to be "Acclimation"
 ```{r}
 prot <- prot %>%
-  filter(!Timepoint == "TP0") %>%
-  filter(!Treatment == "Field")
+#   filter(!Timepoint == "TP0") %>%
+   filter(!Treatment == "Field") %>%
+   mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
+
 ```
 
 Set levels for plotting by month 
 ```{r}
-prot$Month <- factor(prot$Month, levels = c("March", "Early April", "Late April", "May", "June", "July", "August"))
+prot$Month <- factor(prot$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
 ```
 
 Plot 
@@ -467,8 +469,8 @@ Plot
 plot <- ggplot(prot, aes(x = Month, y = prot_mg.cm2, colour = Treatment)) +
   geom_boxplot(aes(colour=Treatment), lwd=1) +
   geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  scale_fill_manual(values = c("blue", "red")) +
-  scale_colour_manual(values = c("blue", "red")) +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) +
   xlab("") +
   #hjust(x = 0) +
   #facet_wrap(~Assay, ncol = 2) +
@@ -486,11 +488,35 @@ ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240108.pd
 ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240108.png", plot, width = 10, height = 8)
 ```
 
+Looking at this plot, I see that not all of the treatments/timepoints have n=8. I need to look through my data and notebooks so that I can make sure I have all the data that I need and that I have processed everything. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Summarize data 
 ```{r}
+summary <- prot %>%
+  dplyr::select(Timepoint, Treatment, prot_mg.cm2)%>%  # Select the necessary columns
+  group_by(Timepoint, Treatment) %>%
+  summarise(mean_prot_mg.cm2 = mean(prot_mg.cm2, na.rm = TRUE),
+            sd_prot_mg.cm2 = sd(prot_mg.cm2, na.rm = TRUE))
+
 summary <- prot %>% 
   group_by(Timepoint, Treatment) %>%
-  select(prot_mg.cm2) %>%
+  dplyr::select(prot_mg.cm2) %>%
   summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary
 
 summary_tp <- prot %>% 

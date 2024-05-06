@@ -439,7 +439,7 @@ all(rownames(meta$ID) == colnames(bowtie_matrix)) #are they the same in the same
 
 Filter reads by proportion of samples containing cutoff value 
 ```{r}
-ffun<-filterfun(pOverA(0.15,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.5,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((bowtie_matrix), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
@@ -482,16 +482,28 @@ Look at contrasts
 
 TP0 v TP5 Ambient
 ```{r}
+# Look at results 
 TP0_v_5_amb <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP5_Ambient"))
 head(TP0_v_5_amb)
+
+# Save results for all genes 
+TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
+write.csv(TP0_v_5_amb_df, file = "../output/Molecular/mRNA/TP0_v_5_amb.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
-sum(TP0_v_5_amb$padj <0.05, na.rm=T) # 675 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP0_v_5_amb$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # 520 genes are downregulated in TP5 ambient relative to TP0 ambient
-sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # 155 genes are upregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP0_v_5_amb.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
-TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP0_v_5_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -520,16 +532,28 @@ write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_
 
 TP0 v TP7 Ambient
 ```{r}
+# Look at results 
 TP0_v_7_amb <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP7_Ambient"))
 head(TP0_v_7_amb)
+
+# Save results for all genes 
+TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
+write.csv(TP0_v_7_amb_df, file = "../output/Molecular/mRNA/TP0_v_7_amb.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
-sum(TP0_v_7_amb$padj <0.05, na.rm=T) # 690 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP0_v_7_amb$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_7_amb.sig <- subset(TP0_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # 460 genes are downregulated in TP5 ambient relative to TP0 ambient
-sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # 230 genes are upregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes are downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # genes are upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP0_v_7_amb.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
-TP0_v_7_amb.rsig <- rlog(TP0_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP0_v_7_amb.rsig <- rlog(TP0_v_7_amb.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP0_v_7_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
