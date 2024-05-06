@@ -68,7 +68,7 @@ all(rownames(meta$ID) == colnames(counts)) #are they the same in the same order?
 
 Filter reads by proportion of samples containing cutoff value 
 ```{r}
-ffun<-filterfun(pOverA(0.15,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.5,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((counts), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
@@ -93,18 +93,31 @@ resultsNames(dds)
 ```
 
 Look at contrasts 
+
 TP0 v TP5 Ambient
 ```{r}
+# Look at results 
 TP0_v_5_amb <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP5_Ambient"))
 head(TP0_v_5_amb)
+
+# Save results for all miRNAs 
+TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
+write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
-sum(TP0_v_5_amb$padj <0.05, na.rm=T) # 11 miRNA with significant p-values
+
+# Subset miRNAs with significant padj values
+sum(TP0_v_5_amb$padj <0.05, na.rm=T) # miRNA with significant p-values
 TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # 9 miRNAs are downregulated in TP5 ambient relative to TP0 ambient
-sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # 2 miRNAs are upregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # miRNAs downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # miRNAs upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv(counts(TP0_v_5_amb.sig.list), file = "../output/Molecular/smRNA/TP0_amb_v_TP5_amb_DEM.csv")
-TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP0_v_5_amb.rsig <- rlog(TP0_v_5_amb.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEMs for this comparison
 pca_plot <- plotPCA(TP0_v_5_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -124,8 +137,6 @@ pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", width = 8, he
 print(heatmap)
 dev.off()
 
-# ggsave("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", heatmap, width = 8, height = 10)
-
 # Save info with pvalues and LFC
 TP0_v_5_amb.sig <- as.data.frame(TP0_v_5_amb.sig)
 TP0_v_5_amb.sig.list <- as.data.frame(counts(TP0_v_5_amb.sig.list))
@@ -135,16 +146,28 @@ write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v
 
 TP0 v TP7 Ambient
 ```{r}
+# Look at results 
 TP0_v_7_amb <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP7_Ambient"))
 head(TP0_v_7_amb)
+
+# Save results for all miRNAs 
+TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
+write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
-sum(TP0_v_7_amb$padj <0.05, na.rm=T) # 25 miRNAs with significant p-values
+
+# Subset miRNAs with significant padj values
+sum(TP0_v_7_amb$padj <0.05, na.rm=T) # miRNAs with significant p-values
 TP0_v_7_amb.sig <- subset(TP0_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # 14 miRNAs are downregulated in TP5 ambient relative to TP0 ambient
-sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # 11 miRNAs are upregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # miRNAs downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # miRNAs upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-#write.csv(counts(TP0_v_7_amb.sig.list), file = "../output/Molecular/smRNA/TP0_amb_v_TP7_amb_DEM.csv")
+
+# Apply a regularized log transformation to minimize effects of small counts
 TP0_v_7_amb.rsig <- rlog(TP0_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Plot PCA and heatmap of DEMs for this comparison
 pca_plot <- plotPCA(TP0_v_7_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient

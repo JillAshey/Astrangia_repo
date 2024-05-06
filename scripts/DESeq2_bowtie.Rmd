@@ -582,16 +582,28 @@ write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_
 
 TP5 v TP7 Ambient 
 ```{r}
+# Look at results 
 TP5_v_7_amb <- results(dds, contrast=c("Condition", "TP5_Ambient" , "TP7_Ambient"))
 head(TP5_v_7_amb)
+
+# Save results for all genes 
+TP5_v_7_amb_df <- as.data.frame(TP5_v_7_amb)
+write.csv(TP5_v_7_amb_df, file = "../output/Molecular/mRNA/TP5_v_7_amb.csv")
+
+# Volcano plot for LFC 
 ma_plot<- plotMA(TP5_v_7_amb); ma_plot
-sum(TP5_v_7_amb$padj <0.05, na.rm=T) # 189 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP5_v_7_amb$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_v_7_amb.sig <- subset(TP5_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T) # 58 genes are downregulated in TP7 ambient relative to TP5 ambient
-sum(TP5_v_7_amb.sig$log2FoldChange >0, na.rm=T) # 131 genes are upregulated in TP7 ambient relative to TP5 ambient
+sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 ambient relative to TP5 ambient
+sum(TP5_v_7_amb.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 ambient relative to TP5 ambient
 TP5_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_7_amb.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP5_v_7_amb.sig.list), file = "../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
-TP5_v_7_amb.rsig <- rlog(TP5_v_7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP5_v_7_amb.rsig <- rlog(TP5_v_7_amb.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP5_v_7_amb.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_v_7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -620,16 +632,28 @@ write.csv(TP5_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP5_amb_v_
 
 TP0 v TP5 Heat
 ```{r}
+# Look at results 
 TP0_v_5_heat <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP5_Heat"))
 head(TP0_v_5_heat)
+
+# Save results for all genes 
+TP0_v_5_heat_df <- as.data.frame(TP0_v_5_heat)
+write.csv(TP0_v_5_heat_df, file = "../output/Molecular/mRNA/TP0_v_5_heat.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_heat); ma_plot
-sum(TP0_v_5_heat$padj <0.05, na.rm=T) # 613 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP0_v_5_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_5_heat.sig <- subset(TP0_v_5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # 424 genes are downregulated in TP5 heat relative to TP0 ambient
-sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # 189 genes are upregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # genes  upregulated in TP5 heat relative to TP0 ambient
 TP0_v_5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP0_v_5_heat.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")
-TP0_v_5_heat.rsig <- rlog(TP0_v_5_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP0_v_5_heat.rsig <- rlog(TP0_v_5_heat.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP0_v_5_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_5_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -658,16 +682,28 @@ write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v
 
 TP0 v TP7 Heat
 ```{r}
+# Look at results 
 TP0_v_7_heat <- results(dds, contrast=c("Condition", "TP0_Ambient" , "TP7_Heat"))
 head(TP0_v_7_heat)
+
+# Save results for all genes 
+TP0_v_7_heat_df <- as.data.frame(TP0_v_7_heat)
+write.csv(TP0_v_7_heat_df, file = "../output/Molecular/mRNA/TP0_v_7_heat.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_heat); ma_plot
-sum(TP0_v_7_heat$padj <0.05, na.rm=T) # 954 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP0_v_7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_7_heat.sig <- subset(TP0_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 593 genes are downregulated in TP7 heat relative to TP0 ambient
-sum(TP0_v_7_heat.sig$log2FoldChange >0, na.rm=T) # 361 genes are upregulated in TP7 heat relative to TP0 ambient
+sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP0 ambient
+sum(TP0_v_7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP0 ambient
 TP0_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP0_v_7_heat.sig.list), file = "../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
-TP0_v_7_heat.rsig <- rlog(TP0_v_7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP0_v_7_heat.rsig <- rlog(TP0_v_7_heat.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP0_v_7_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP0_v_7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -696,16 +732,28 @@ write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v
 
 TP5 Heat v TP7 Heat
 ```{r}
+# Look at results 
 TP5_heat_v_7_heat <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Heat"))
 head(TP5_heat_v_7_heat)
+
+# Save results for all genes 
+TP5_heat_v_7_heat_df <- as.data.frame(TP5_heat_v_7_heat)
+write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/mRNA/TP5_heat_v_7_heat.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
-sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # 66 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_heat_v_7_heat.sig <- subset(TP5_heat_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # 21 genes are downregulated in TP7 heat relative to TP5 heat
-sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T) # 45 genes are upregulated in TP7 heat relative to TP5 heat
+sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP5 heat
+sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP5 heat
 TP5_heat_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_7_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP5_heat_v_7_heat.sig.list), file = "../output/Molecular/mRNA/TP5_heat_v_TP7_heat_DEG.csv")
-TP5_heat_v_7_heat.rsig <- rlog(TP5_heat_v_7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP5_heat_v_7_heat.rsig <- rlog(TP5_heat_v_7_heat.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP5_heat_v_7_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_heat_v_7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -734,16 +782,28 @@ write.csv(TP5_heat_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5_
 
 TP5 Amb v TP5 Heat
 ```{r}
+# Look at results 
 TP5_amb_v_TP5_heat <- results(dds, contrast=c("Condition", "TP5_Ambient" , "TP5_Heat"))
 head(TP5_amb_v_TP5_heat)
+
+# Save results for all genes 
+TP5_amb_v_TP5_heat_df <- as.data.frame(TP5_amb_v_TP5_heat)
+write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP5_amb_v_TP5_heat)
-sum(TP5_amb_v_TP5_heat$padj <0.05, na.rm=T) # 107 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP5_amb_v_TP5_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_amb_v_TP5_heat.sig <- subset(TP5_amb_v_TP5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T) # 48 genes are downregulated in TP5 heat relative to TP5 amb
-sum(TP5_amb_v_TP5_heat.sig$log2FoldChange >0, na.rm=T) # 59 genes are upregulated in TP5 heat relative to TP5 amb
+sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP5 amb
+sum(TP5_amb_v_TP5_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP5 heat relative to TP5 amb
 TP5_amb_v_TP5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_amb_v_TP5_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP5_amb_v_TP5_heat.sig.list), file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
-TP5_amb_v_TP5_heat.rsig <- rlog(TP5_amb_v_TP5_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP5_amb_v_TP5_heat.rsig <- rlog(TP5_amb_v_TP5_heat.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 pca_plot <- plotPCA(TP5_amb_v_TP5_heat.rsig, intgroup = c("Condition")); pca_plot #Plot PCA of all samples for DEG only
 mat <- assay(TP5_amb_v_TP5_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -772,16 +832,28 @@ write.csv(TP5_amb_v_TP5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5
 
 TP7 Amb v TP7 Heat
 ```{r}
+# Look at results 
 TP7_amb_v_TP7_heat <- results(dds, contrast=c("Condition", "TP7_Ambient" , "TP7_Heat"))
 head(TP7_amb_v_TP7_heat)
+
+# Save results for all genes 
+TP7_amb_v_TP7_heat_df <- as.data.frame(TP7_amb_v_TP7_heat)
+write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat.csv")
+
+# Volcano plot for LFC
 plotMA(TP7_amb_v_TP7_heat)
-sum(TP7_amb_v_TP7_heat$padj <0.05, na.rm=T) # 74 genes with significant p-values
+
+# Subset genes with significant padj values
+sum(TP7_amb_v_TP7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP7_amb_v_TP7_heat.sig <- subset(TP7_amb_v_TP7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T) # 51 genes are downregulated in TP7 heat relative to TP7 amb
-sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T) # 23 genes are upregulated in TP7 heat relative to TP7 amb
+sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP7 amb
+sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP7 amb
 TP7_amb_v_TP7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP7_amb_v_TP7_heat.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP7_amb_v_TP7_heat.sig.list), file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")
-TP7_amb_v_TP7_heat.rsig <- rlog(TP7_amb_v_TP7_heat.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP7_amb_v_TP7_heat.rsig <- rlog(TP7_amb_v_TP7_heat.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 plotPCA(TP7_amb_v_TP7_heat.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
 mat <- assay(TP7_amb_v_TP7_heat.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
@@ -812,16 +884,28 @@ write.csv(TP7_amb_v_TP7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP7
 
 TP5 Heat v TP7 Amb
 ```{r}
+# Look at results 
 TP5_heat_v_TP7_amb <- results(dds, contrast=c("Condition", "TP5_Heat" , "TP7_Ambient"))
 head(TP5_heat_v_TP7_amb)
+
+# Save results for all genes 
+TP5_heat_v_TP7_amb_df <- as.data.frame(TP5_heat_v_TP7_amb)
+write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb.csv")
+
+# Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_TP7_amb)
+
+# Subset genes with significant padj values
 sum(TP5_heat_v_TP7_amb$padj <0.05, na.rm=T) 
 TP5_heat_v_TP7_amb.sig <- subset(TP5_heat_v_TP7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
 sum(TP5_heat_v_TP7_amb.sig$log2FoldChange <0, na.rm=T)
 sum(TP5_heat_v_TP7_amb.sig$log2FoldChange >0, na.rm=T)
 TP5_heat_v_TP7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_TP7_amb.sig)),] #subset list of sig transcripts from original count data
-write.csv(counts(TP5_heat_v_TP7_amb.sig.list), file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb_DEG.csv")
-TP5_heat_v_TP7_amb.rsig <- rlog(TP5_heat_v_TP7_amb.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+
+# Apply a regularized log transformation to minimize effects of small counts
+TP5_heat_v_TP7_amb.rsig <- rlog(TP5_heat_v_TP7_amb.sig.list, blind=FALSE) 
+
+# Plot PCA and heatmap of DEGs for this comparison
 plotPCA(TP5_heat_v_TP7_amb.rsig, intgroup = c("Condition")) #Plot PCA of all samples for DEG only
 mat <- assay(TP5_heat_v_TP7_amb.rsig) #make an expression object
 col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient

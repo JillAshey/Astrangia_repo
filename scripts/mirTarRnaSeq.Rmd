@@ -364,5 +364,40 @@ mirRnaHeatmap(results_test$corrs)
 mirRnaHeatmap(results_blah$corrs)
 ```
 
+### Part 2 - Identify miRNA mRNA correlations across 3 or more time points with my data. 
+
+From the vignette: "Note for this analysis we need fold change data for time points or control versus condition. Hence, a differential expression (DE) analysis needs to be performed before proceeding this analysis (These values should be provided for all miRNA and mRNA in the DE expression and not only the significantly DE miRNAs/mRNAs). Here we are looking at differential expression (DE) files between three time points. The format of each timepoint/control vs condition file needs to be Gene/miRNA names as the first column, log2FC or logfoldchange (FC), (or any other FC metrics as long as for both miRNA, and mRNA the same metrics is used) for column two. The pvalue assigned to the gene(mRNA) expression after the differential expression analysis on the third column.For the miRNA file, the user needs to assign Gene names on the
+first column and the representative log2FC or logfoldchange (FC) on the second column.
+
+Read in mRNA DE information (only going to try 3 conditions before trying them all). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP5_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of mRNA dfs 
+```{r}
+mrna_files <- list(TP0_v_5_amb_df, TP0_v_7_amb_df, TP5_v_7_amb_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mrna <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)
+
+mrna$foldchanges
+mrna$pvalues
+```
+
+
+
 
 
