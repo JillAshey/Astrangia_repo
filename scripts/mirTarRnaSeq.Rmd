@@ -510,11 +510,11 @@ For this example, I will use the TP0 v TP5 ambient data. mRNA data is `TP0_v_5_a
 Get mRNAs and miRNAs with particular fold change and pvalue
 ```{r}
 # mRNA
-mrna_files <- list(TP0_v_7_amb_df)
+mrna_files <- list(TP0_v_5_amb_df)
 mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
 
 # miRNA
-mirna_files <- list(TP0_v_7_amb_miRNA_df)
+mirna_files <- list(TP0_v_5_amb_miRNA_df)
 mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
 ```
 
@@ -551,12 +551,372 @@ drawInterPlots(mrna_data, mirna_data, final_results_test)
 
 Make heatmap for significant relationships
 ```{r}
-mirRnaHeatmapDiff(results_blah$corrs)
+mirRnaHeatmapDiff(results_blah$corrs, fontsize = 10)
 ```
 
 - Low Absolute Difference Value: When the absolute difference value is low, it suggests that the miRNA and mRNA expression levels are close to each other. This could indicate potential regulatory interactions between the miRNA and mRNA. Low absolute differences might imply that the miRNA is not exerting a strong regulatory effect on the mRNA, or that the regulatory effect is being buffered or compensated by other factors.
 
 - High Absolute Difference Value: Conversely, when the absolute difference value is high, it suggests that the miRNA and mRNA expression levels are substantially different. This might indicate that the miRNA is playing a regulatory role in controlling the expression of the mRNA. High absolute differences might suggest a strong regulatory effect of the miRNA on the mRNA expression level, potentially implicating the miRNA in the regulation of biological processes associated with the mRNA's function.
+
+Let's look at specific interactions and see if the relationship is correct. 
+
+Read in counts data and manipulate data for count comparison
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv") %>%
+  pivot_longer(cols = -X, names_to = "Sample_ID", values_to = "Gene_Count")
+colnames(mrna_counts)[1] <- "gene_id"
+
+# Change . to - in Sample_ID
+mrna_counts$Sample_ID <- sub("\\.", "-", mrna_counts$Sample_ID)
+
+mirna_counts <- read_csv("../output/Molecular/smRNA/filtered_miRNA_counts.csv") %>%
+  pivot_longer(cols = -"...1", names_to = "Sample_ID", values_to = "miRNA_Count")
+colnames(mirna_counts)[1] <- "mirna"
+```
+
+Select genes/miRNAs of interest 
+```{r}
+mrna_counts_filt <- mrna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(gene_id == "evm.TU.chromosome_6.1434") 
+
+mirna_counts_filt <- mirna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(mirna == "chromosome_10_400118")
+```
+
+Join filtered gene and mirna dfs
+```{r}
+full <- mrna_counts_filt %>%
+  inner_join(mirna_counts_filt, by = "Sample_ID")
+
+head(full)
+```
+
+Bring in metadata
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv") %>% 
+  filter(ID != "AST-1105")
+```
+
+Join meta with full and log transform counts data. 
+```{r}
+full <- full %>%
+  inner_join(meta, by = c("Sample_ID" = "ID")) %>%
+  mutate(Gene_Count_log = log(Gene_Count)) %>%
+  mutate(miRNA_Count_log = log(miRNA_Count)) 
+```
+
+Remove unneeded data (this will depend on what comparisons are being looked at). In this example, I only want to keep TP0 and TP5 ambient 
+```{r}
+filt <- full %>%
+  filter(Treatment %in% c("Acclimation", "Ambient"), Timepoint %in% c("TP0", "TP5"))
+
+cor(filt$Gene_Count, filt$miRNA_Count)
+```
+
+Plot data 
+```{r}
+ggplot(filt, aes(x = miRNA_Count, y = Gene_Count, shape = Timepoint, color = Treatment)) +
+  geom_point(size = 6) +
+  #geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Part 2 - Identify miRNA mRNA correlations across all time points in my data
+
+Read in mRNA DE information from all comparisons. I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP5_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_5_heat_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_heat_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_heat_v_7_heat_df <- read.csv("../output/Molecular/mRNA/TP5_heat_v_7_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_amb_v_TP5_heat_df <- read.csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP7_amb_v_TP7_heat_df <- read.csv("../output/Molecular/mRNA/TP7_amb_v_TP7_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_heat_v_TP7_amb_df <- read.csv("../output/Molecular/mRNA/TP5_heat_v_TP7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of mRNA dfs 
+```{r}
+mrna_files <- list(TP0_v_5_amb_df, 
+                   TP0_v_7_amb_df, 
+                   TP5_v_7_amb_df, 
+                   TP0_v_5_heat_df, 
+                   TP0_v_7_heat_df,
+                   TP5_heat_v_7_heat_df,
+                   TP5_amb_v_TP5_heat_df,
+                   TP7_amb_v_TP7_heat_df,
+                   TP5_heat_v_TP7_amb_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Read in miRNA DE information from all comparisons. I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_5_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_heat_v_7_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_heat_v_7_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_amb_v_TP5_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_amb_v_TP5_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP7_amb_v_TP7_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP7_amb_v_TP7_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_heat_v_TP7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_heat_v_TP7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of miRNA dfs 
+```{r}
+mirna_files <- list(TP0_v_5_amb_miRNA_df, 
+                    TP0_v_7_amb_miRNA_df, 
+                    TP5_v_7_amb_miRNA_df,
+                    TP0_v_5_heat_miRNA_df,
+                    TP0_v_7_heat_miRNA_df,
+                    TP5_heat_v_7_heat_miRNA_df,
+                    TP5_amb_v_TP5_heat_miRNA_df,
+                   TP7_amb_v_TP7_heat_miRNA_df,
+                   TP5_heat_v_TP7_amb_miRNA_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Change data in mRNA and miRNA dfs from double to numeric 
+```{r}
+mrna_data$FC1 <- as.numeric(mrna_data$FC1)
+mrna_data$FC2 <- as.numeric(mrna_data$FC2)
+mrna_data$FC3 <- as.numeric(mrna_data$FC3)
+mrna_data$FC4 <- as.numeric(mrna_data$FC4)
+mrna_data$FC5 <- as.numeric(mrna_data$FC5)
+mrna_data$FC6 <- as.numeric(mrna_data$FC6)
+mrna_data$FC7 <- as.numeric(mrna_data$FC7)
+mrna_data$FC8 <- as.numeric(mrna_data$FC8)
+mrna_data$FC9 <- as.numeric(mrna_data$FC9)
+
+mirna_data$FC1 <- as.numeric(mirna_data$FC1)
+mirna_data$FC2 <- as.numeric(mirna_data$FC2)
+mirna_data$FC3 <- as.numeric(mirna_data$FC3)
+mirna_data$FC4 <- as.numeric(mirna_data$FC4)
+mirna_data$FC5 <- as.numeric(mirna_data$FC5)
+mirna_data$FC6 <- as.numeric(mirna_data$FC6)
+mirna_data$FC7 <- as.numeric(mirna_data$FC7)
+mirna_data$FC8 <- as.numeric(mirna_data$FC8)
+mirna_data$FC9 <- as.numeric(mirna_data$FC9)
+```
+
+Get mRNA miRNA correlation
+```{r}
+corr_0 <- corMirnaRna(mrna_data, mirna_data, method = "pearson")
+```
+
+Pearson correlation coefficient (the value in the resulting df) is calculated by taking the sum of the products of the differences of each data point from their respective means, divided by the product of the standard deviations of each variable.
+
+Make background distribution correlation
+```{r, }
+outs_corr <- sampCorRnaMirna(mrna_data, mirna_data, method = "pearson", Shrounds = 100, Srounds = 1000)
+```
+
+Make density plots for background and actual correlations in data
+```{r}
+mirRnaDensityCor(corr_0, outs_corr)
+```
+
+The background correlation does not match the actual correlation...going to continue but come back to this. This may be because I am incorporating 9 different comparisons, all of which are pretty variable. 
+
+Identify correlations below specific threshold
+```{r}
+sig_corrs <- threshSig(corr_0, outs_corr, pvalue = 0.05)
+
+min(sig_corrs$value)
+max(sig_corrs$value)
+mean(sig_corrs$value)
+```
+
+Similar to above, all negative significant correlation values. 
+
+Read in miranda data 
+```{r}
+miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6
+```{r}
+# Select specific columns
+miranda_data_filt <- miranda_data %>%
+  dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+
+# Remove any duplicate rows
+miranda_data_filt <- unique(miranda_data_filt)
+
+# Rearrange columns
+miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
+
+# Rename columns V1-6
+miranda_data_filt <- miranda_data_filt %>%    
+  rename(V1 = mirna, 
+         V2 = gene_id,
+         V3 = Score,
+         V4 = Energy_kcal_mol, 
+         V5 = Subject_Identity,
+         V6 = Query_Identity)
+```
+
+Make a mRNA miRNA correlation heatmap w/ all correlations 
+```{r}
+results_test <- miRandaIntersect(corr_0, outs_corr, mrna_data, mirna_data, miranda_data_filt)
+mirRnaHeatmap(results_test$corrs)
+```
+
+Make a mRNA miRNA correlation heatmap w/ significant correlations 
+```{r}
+results_test <- miRandaIntersect(sig_corrs, outs_corr, mrna_data, mirna_data, miranda_data_filt)
+mirRnaHeatmap(results_test$corrs)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/all_comparisons_sigcorr.pdf", width = 20, height = 15)
+mirRnaHeatmap(results_test$corrs)
+dev.off() # Close the PDF device
+```
+
+Look at results
+```{r}
+head(results_test$corrs)
+tail(results_test$corrs)
+```
+
+I want to see if there is actually a correlation with the counts data. I will take `chromosome_5_147390` and `evm.TU.chromosome_11.1878`, which has a correlation value of -0.9000069 as an example.
+
+Read in counts data and manipulate data for count comparison
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv") %>%
+  pivot_longer(cols = -X, names_to = "Sample_ID", values_to = "Gene_Count")
+colnames(mrna_counts)[1] <- "gene_id"
+
+# Change . to - in Sample_ID
+mrna_counts$Sample_ID <- sub("\\.", "-", mrna_counts$Sample_ID)
+
+mirna_counts <- read_csv("../output/Molecular/smRNA/filtered_miRNA_counts.csv") %>%
+  pivot_longer(cols = -"...1", names_to = "Sample_ID", values_to = "miRNA_Count")
+colnames(mirna_counts)[1] <- "mirna"
+```
+
+Select genes/miRNAs of interest 
+```{r}
+mrna_counts_filt <- mrna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(gene_id == "evm.TU.chromosome_1.1665") 
+
+mirna_counts_filt <- mirna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(mirna == "chromosome_4_131843")
+```
+
+Join filtered gene and mirna dfs
+```{r}
+full <- mrna_counts_filt %>%
+  inner_join(mirna_counts_filt, by = "Sample_ID")
+
+head(full)
+```
+
+Bring in metadata
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv") %>% 
+  filter(ID != "AST-1105")
+```
+
+Join meta with full 
+```{r}
+full <- full %>%
+  inner_join(meta, by = c("Sample_ID" = "ID"))
+```
+
+Plot data 
+```{r}
+ggplot(full, aes(x = miRNA_Count, y = Gene_Count, shape = Timepoint, color = Treatment)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+```
+
+The program seems to be basing the correlations off of all of the information and not taking into account the comparisons or timepoints. Or it is, but there is no way to differentiate between them if that makes sense. Its just taking all of the FC info and producing correlations. The correlations seem to be accurate based on all the data together but when Timepoint and Treatment are added as factors, the ggplot looks totally different in terms of correlation. Maybe my best bet is to use the portion of the program that compares two time points?
+
+My thoughts now (5/7/24): I'm not sure whether to use the 3+ time point comparison or the 2 time point...I need to talk to Hollie or Zoe. 
+
+
 
 
 

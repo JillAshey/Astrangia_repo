@@ -75,9 +75,10 @@ sum(filt_outrm_poa) #count number of genes left
 filt_outrm_poa <- counts[filt_outrm_poa,] #keep only rows that passed filter
 
 all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
+write.csv(filt_outrm_poa, file = "../output/Molecular/smRNA/filtered_miRNA_counts.csv")
 ```
 
-I am left with 226 miRNAs. Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
+Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
 
 Merge Treatment and Timepoint into a single column 
 ```{r}
