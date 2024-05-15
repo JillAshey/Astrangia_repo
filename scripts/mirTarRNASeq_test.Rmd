@@ -1,0 +1,504 @@
+---
+title: "mirTarRnaSeq test analysis"
+author: "Jill Ashey"
+date: "2024-05-13"
+output: html_document
+---
+
+This script will test out the R package [mirTarRnaSeq](https://bioconductor.org/packages/3.13/bioc/html/mirTarRnaSeq.html), which an be used for interactive mRNA miRNA sequencing statistical analysis. This package utilizes expression or differential expression mRNA and miRNA sequencing results and performs correlation and various analyses between mRNA and miRNA expriments. These experiments can be time point experiments, and or condition expriments.
+
+The methods from the [2022 paper](https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-022-08558-w) are split into 3 parts: 
+
+- Part 1: Regression analysis (univariate and multivariate modeling). The main question we aim to answer in this section is, if there is statistical evidence for miRNA-mRNA relationship across the matched cohort. 
+- Part 2: Correlation and sparse partial correlation analysis. Assessing the correlation between miRNAs and mRNAs across three or more time points. 
+- Part 3: Differential fold-change analysis. Assessing the miRNA and mRNA interactions at two time points.
+
+Supplementary table 2 from the paper summarizes each part nicely: 
+
+![stable2](https://raw.githubusercontent.com/JillAshey/Astrangia_repo/main/images/Movassahg_et_al_2022_SuppTable2.png)
+
+The paper and [vignette](https://bioconductor.org/packages/3.13/bioc/vignettes/mirTarRnaSeq/inst/doc/mirTarRnaSeq.pdf) detail the methods for each part and provide example data/code to familarize oneself with the package. In this script, I will go through each part with my own data to evaluate what analyses would be best moving forward. 
+
+### Load packages 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#BiocManager::install("mirTarRnaSeq")
+
+library(tidyverse)
+library(mirTarRnaSeq)
+```
+
+## Part 1 
+
+Part 1 determines the miRNA:mRNA relationship using three types of regression analyses (univariate, multivariate, interaction/synergistic) across samples. mRNA and miRNA counts data is needed as input. 
+
+Load filtered mRNA and miRNA counts
+```{r}
+# mRNA
+mrna_matrix <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv") %>%
+    rename(gene_id = X) %>%
+    dplyr::select(-"AST.1105") # Remove AST-1105 from mRNA df due to low counts
+
+# miRNA
+mirna_matrix <- read.csv("../output/Molecular/smRNA/filtered_miRNA_counts.csv") %>%
+    rename(mirna_id = X)
+
+blah <- list(mirna_matrix$mirna_id)
+
+## AST-1105 already removed pre-filtering
+```
+
+Make gene and mirna ids the row names in each df 
+```{r}
+# mRNA
+rownames(mrna_matrix) <- mrna_matrix[,1] #set first column that contains gene names as rownames
+mrna_matrix <- mrna_matrix[,-1] # remove column w/ gene names 
+
+# miRNA
+rownames(mirna_matrix) <- mirna_matrix[,1] #set first column that contains gene names as rownames
+mirna_matrix <- mirna_matrix[,-1] # remove column w/ gene names 
+```
+
+Load miranda file, which contains information about putative miRNA:mRNA interactions. This file is so large, I need to store it on my local computer. 
+```{r}
+miranda <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+Select specific miRNA
+```{r}
+mirna_select <- c("chromosome_7_266539")
+```
+
+Combine miRNA and mRNA files and define boundaries
+```{r}
+combine_data <- combiner(mrna_matrix, mirna_matrix, mirna_select)
+
+gene_variant <- geneVari(combine_data, mirna_select)
+```
+
+Run multi model 
+```{r}
+MultiModel <- runModels(combine_data, 
+                       gene_variant,
+                       mirna_select, 
+                       family = glm_multi(), 
+                       mode = "multi", 
+                       scale = 10)
+
+print(table(unlist(lapply(MultiModel$all_models, modelModelName))))
+```
+
+What does this mean...lots of NAs produced. glm_gaussian had 21417 counts, glm_nb had 31, and glm_zeroinfl_negbin had 332. Is this referring to which model would best fit specific genes or miRNAs?
+
+Gaussian model 
+```{r}
+blaGaus <- runModels(combine_data,
+                     gene_variant, 
+                     mirna_select,
+                     family = glm_gaussian(),
+                     scale = 100)
+par(oma=c(2,2,2,2))
+par(mfrow=c(2,3),mar=c(4,3,3,2))
+plot(blaGaus[["all_models"]][["BHLF1"]])
+plot(modelData(blaGaus[["all_models"]][["BHLF1"]]))
+#To test AIC model performance
+G <- do.call(rbind.data.frame, blaGaus[["AICvalues"]])
+names(G) <- c("AIC_G")
+#Low values seems like a reasonable model
+plot(density(G$AIC_G))
+```
+
+
+
+## Part 2 
+
+Part 2 identifies miRNA mRNA correlations across 3+ time points using the estimate fold change of differential expression analysis. It allows for prediction of miRNA mRNA correlations based on inversely correlated expressions in all included time points. 
+
+From the vignette: "Note for this analysis we need fold change data for time points or control versus condition. Hence, a differential expression (DE) analysis needs to be performed before proceeding this analysis (These values should be provided for all miRNA and mRNA in the DE expression and not only the significantly DE miRNAs/mRNAs). Here we are looking at differential expression (DE) files between three time points. The format of each timepoint/control vs condition file needs to be Gene/miRNA names as the first column, log2FC or logfoldchange (FC), (or any other FC metrics as long as for both miRNA, and mRNA the same metrics is used) for column two. The pvalue assigned to the gene(mRNA) expression after the differential expression analysis on the third column.For the miRNA file, the user needs to assign Gene names on the first column and the representative log2FC or logfoldchange (FC) on the second column."
+
+Read in mRNA DE information (only going to try 3 conditions: TP0 v TP5 amb, TP0 v TP7 amb, and TP5 amb v TP7 amb). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP5_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of mRNA dfs 
+```{r}
+mrna_files <- list(TP0_v_5_amb_df, TP0_v_7_amb_df, TP5_v_7_amb_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)
+
+mrna_data_fc <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchange
+
+mrna_data_p <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$pvalues
+```
+
+The `one2OneRnaMiRNA` function grabs the gene name, FC and pvalue information from each df to produce a set of genes that are significant in any of the gene lists. It then filters each df to extract the FC and pvalues of the significant genes present in all input dfs. 
+
+Read in miRNA DE information (only going to try 3 conditions: TP0 v TP5 amb, TP0 v TP7 amb, and TP5 amb v TP7 amb). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
+```{r}
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+
+TP5_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Make a list of miRNA dfs 
+```{r}
+mirna_files <- list(TP0_v_5_amb_miRNA_df, TP0_v_7_amb_miRNA_df, TP5_v_7_amb_miRNA_df)
+```
+
+Get mRNAs with particular fold change and pvalue
+```{r}
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)
+
+mirna_data_fc <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchange
+
+mirna_data_p <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$pvalues
+```
+
+Change data in mRNA and miRNA dfs from double to numeric 
+```{r}
+# FC
+mrna_data_fc$FC1 <- as.numeric(mrna_data_fc$FC1)
+mrna_data_fc$FC2 <- as.numeric(mrna_data_fc$FC2)
+mrna_data_fc$FC3 <- as.numeric(mrna_data_fc$FC3)
+
+mirna_data_fc$FC1 <- as.numeric(mirna_data_fc$FC1)
+mirna_data_fc$FC2 <- as.numeric(mirna_data_fc$FC2)
+mirna_data_fc$FC3 <- as.numeric(mirna_data_fc$FC3)
+```
+
+Get mRNA miRNA correlation
+```{r}
+corr_0 <- corMirnaRna(mrna_data_fc, mirna_data_fc, method = "pearson")
+```
+
+This function is calculating the Pearson correlation coefficient for each miRNA mRNA combination. Pearson correlation coefficient (the value in the resulting df) is calculated by taking the sum of the products of the differences of each data point from their respective means, divided by the product of the standard deviations of each variable.
+
+Keep in mind that this correlation is being calculated with FC values from TP0 v TP5 amb, TP0 v TP7 amb, and TP5 amb v TP7 amb. 
+
+Make background distribution correlation
+```{r}
+outs_corr <- sampCorRnaMirna(mrna_data_fc, mirna_data_fc, method = "pearson", Shrounds = 100, Srounds = 1000)
+```
+
+Make density plots for background and actual correlations in data
+```{r}
+mirRnaDensityCor(corr_0, outs_corr)
+```
+
+This plot shows that the correlations are mostly around -1 and 1. 
+
+Identify correlations below specific threshold
+```{r}
+sig_corrs <- threshSig(corr_0, outs_corr, pvalue = 0.05)
+```
+
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+
+Read in miranda data 
+```{r}
+miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+The vignette includes the following information for the example mouse miranda data:  
+```{r}
+head(miRanda)
+```
+
+V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6
+```{r}
+# Select specific columns
+miranda_data_filt <- miranda_data %>%
+  dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+
+# Remove any duplicate rows
+miranda_data_filt <- unique(miranda_data_filt)
+
+# Rearrange columns
+miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
+
+# Rename columns V1-6
+miranda_data_filt <- miranda_data_filt %>%    
+  rename(V1 = mirna, 
+         V2 = gene_id,
+         V3 = Score,
+         V4 = Energy_kcal_mol, 
+         V5 = Subject_Identity,
+         V6 = Query_Identity)
+```
+
+Make a correlation heatmap using the miranda data. This is plotting all data
+```{r}
+newcorr <- corMirnaRnaMiranda(mrna_data_fc, mirna_data_fc, -0.7, miranda_data_filt)
+mirRnaHeatmap(newcorr)
+mirRnaHeatmap(newcorr, upper_bound = -0.6)
+```
+
+Obtain significant values from the correlations and pair with miranda data. Make a significant correlation heatmap 
+```{r}
+results <- miRandaIntersect(sig_corrs, outs_corr, mrna_data_fc, mirna_data_fc, miranda_data_filt)
+
+mirRnaHeatmap(results$corrs)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/subset_comparisons_sigcorr.pdf", width = 20, height = 15)
+mirRnaHeatmap(results$corrs)
+dev.off() # Close the PDF device
+```
+
+Are these correlations accurate? Let's look at a pairing to find out. 
+
+Read in counts data and manipulate data for count comparison
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv") %>%
+  pivot_longer(cols = -X, names_to = "Sample_ID", values_to = "Gene_Count")
+colnames(mrna_counts)[1] <- "gene_id"
+
+# Change . to - in Sample_ID
+mrna_counts$Sample_ID <- sub("\\.", "-", mrna_counts$Sample_ID)
+
+mirna_counts <- read_csv("../output/Molecular/smRNA/filtered_miRNA_counts.csv") %>%
+  pivot_longer(cols = -"...1", names_to = "Sample_ID", values_to = "miRNA_Count")
+colnames(mirna_counts)[1] <- "mirna"
+```
+
+Select genes/miRNAs of interest 
+```{r}
+mrna_counts_filt <- mrna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(gene_id == "evm.TU.chromosome_1.997") 
+
+mirna_counts_filt <- mirna_counts %>%
+  filter(Sample_ID != "AST-1105") %>%
+  filter(mirna == "chromosome_5_173097")
+```
+
+Join filtered gene and mirna dfs
+```{r}
+full <- mrna_counts_filt %>%
+  inner_join(mirna_counts_filt, by = "Sample_ID")
+
+head(full)
+```
+
+Bring in metadata
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv") %>% 
+  filter(ID != "AST-1105")
+```
+
+Join meta with full 
+```{r}
+full <- full %>%
+  inner_join(meta, by = c("Sample_ID" = "ID"))
+```
+
+Plot data 
+```{r}
+ggplot(full, aes(x = miRNA_Count, y = Gene_Count, shape = Timepoint, color = Treatment)) +
+  geom_point() +
+  #geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+```
+
+One acclimation sample is a clear outlier when comparing the gene evm.TU.chromosome_8.57 and the miRNA chromosome_5_168528. The acclimation samples are all over the place when comparing the gene evm.TU.chromosome_4.287 and the miRNA chromosome_4_131810. 
+
+The correlations are based off of all of the FC data for TP0 v TP5 amb, TP0 v TP7 amb, and TP5 amb v TP7 amb. 
+
+## Part 3
+
+Part 3 identifies significant miRNA mRNA relationships for two time points. 
+
+For this example, I will use the TP0 v TP5 ambient data. mRNA data is `TP0_v_5_amb_df` and miRNA data is `TP0_v_5_amb_miRNA_df`. Miranda data (in correct format for this package) is `miranda_data_filt`. 
+
+Get mRNAs and miRNAs with particular fold change and pvalue
+```{r}
+# mRNA
+mrna_files <- list(TP0_v_5_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# miRNA
+mirna_files <- list(TP0_v_5_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0_test <- twoTimePoint(mrna_data, mirna_data)
+```
+
+I don't think its a correlation because the values are from 0-28. Looking at the source code, it seems like it is calculating the absolute difference between expression values (ie FC) of every mRNA miRNA combo. It represents the magnitude of difference between expression levels of a mRNA and miRNA.
+
+Make background distribution
+```{r}
+outs_test <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0_test, outs_test)
+```
+
+Intersect miranda data with significant relationships
+```{r}
+results_blah <- mirandaIntersectInter(sig_interRel, outs_test, mrna_data, mirna_data, miranda_data_filt)
+```
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+final_results_test <- finInterResult(results_blah)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, final_results_test)
+```
+
+Make heatmap for significant relationships
+```{r}
+mirRnaHeatmapDiff(results_blah$corrs, fontsize = 10)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/TP0_v_TP5_amv_comparisons_sigcorr.pdf", width = 20, height = 15)
+mirRnaHeatmapDiff(results_blah$corrs, fontsize = 10)
+dev.off() # Close the PDF device
+```
+
+what does low v high mean?
+
+Plot mRNA and miRNA FC against one another. 
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_blah$mirna, results_blah$mrna, results_blah$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mRNA_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+```
+
+Plot FCs
+```{r}
+ggplot(combined_df, aes(x = mirna_FC, y = mRNA_FC)) +
+  geom_point(size = 6) +
+  geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+```
+
+Now I will use the TP0 v TP7 ambient data. mRNA data is `TP0_v_7_amb_df` and miRNA data is `TP0_v_7_amb_miRNA_df`. Miranda data (in correct format for this package) is `miranda_data_filt`. 
+
+Get mRNAs and miRNAs with particular fold change and pvalue
+```{r}
+# mRNA
+mrna_files <- list(TP0_v_7_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# miRNA
+mirna_files <- list(TP0_v_7_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0_test <- twoTimePoint(mrna_data, mirna_data)
+```
+
+Make background distribution
+```{r}
+outs_test <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0_test, outs_test)
+```
+
+Intersect miranda data with significant relationships
+```{r}
+results_blah <- mirandaIntersectInter(sig_interRel, outs_test, mrna_data, mirna_data, miranda_data_filt)
+```
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+final_results_test <- finInterResult(results_blah)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, final_results_test)
+```
+
+Make heatmap for significant relationships
+```{r}
+mirRnaHeatmapDiff(results_blah$corrs, fontsize = 10)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr.pdf", width = 20, height = 15)
+mirRnaHeatmapDiff(results_blah$corrs, fontsize = 10)
+dev.off() # Close the PDF device
+```
+
+Plot mRNA and miRNA FC against one another. 
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_blah$mirna, results_blah$mrna, results_blah$corrs)
+
+# Rename columns
+colnames(combined_df) <- c("mirna_FC", "mRNA_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+```
+
+Plot FCs
+```{r}
+ggplot(combined_df, aes(x = mirna_FC, y = mRNA_FC)) +
+  geom_point(size = 6) +
+  geom_smooth(method = "lm", se = T) +  # Add regression line
+  ggtitle("Scatter Plot of Gene Counts")
+```
+
+Now I will use the TP0 v TP7 ambient data. mRNA data is `TP5_v_7_amb_df` and miRNA data is `TP5_v_7_amb_miRNA_df`. Miranda data (in correct format for this package) is `miranda_data_filt`. 
+
+Get mRNAs and miRNAs with particular fold change and pvalue
+```{r}
+# mRNA
+mrna_files <- list(TP5_v_7_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# miRNA
+mirna_files <- list(TP5_v_7_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0_test <- twoTimePoint(mrna_data, mirna_data)
+```
+
+No interrelation detected. Interesting! This makes sense since there were no DE miRNAs and few DE mRNAs. 
+
+
+
+
+
+
+
+

@@ -1,0 +1,468 @@
+---
+title: "mirtarrnaseq across time point and treatment"
+author: "Jill Ashey"
+date: "2024-05-15"
+output: html_document
+---
+
+This script will use the R package [mirTarRnaSeq](https://bioconductor.org/packages/3.13/bioc/html/mirTarRnaSeq.html), which an be used for interactive mRNA miRNA sequencing statistical analysis, to assess coexpression between mRNAs and miRNAs. This package utilizes differential expression mRNA and miRNA sequencing results and performs correlation and various analyses between mRNA and miRNA expriments. These experiments can be time point experiments, and or condition expriments.
+
+I will be using Part 3 of their workflow (see [vignette](https://bioconductor.org/packages/3.13/bioc/vignettes/mirTarRnaSeq/inst/doc/mirTarRnaSeq.pdf)) to assess is there are significant miRNA mRNA interrelationships between time points and/or conditions. The required input is fold change and p-value information on the genes and miRNAs, which I obtained from running DESeq2. In that code, I used pairwise comparisons to compare 'condition' (ie a combo of the timepoint and treatment). I may pivot to using the log ratio method or glmmseq(). 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#BiocManager::install("mirTarRnaSeq")
+
+library(tidyverse)
+library(mirTarRnaSeq)
+library(goseq)
+```
+
+I will be initially comparing TP0 amb v TP5 amb, TP0 amb v TP7 amb, TP0 amb v TP5 heat, and TP0 amb v TP7 heat 
+
+Read in mRNA file of interest. In this first iteration, I'm interested in TP0 amb v TP5 amb. 
+```{r}
+TP0_v_5_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Get mRNAs with particular fold change and pvalues 
+```{r}
+mrna_files <- list(TP0_v_5_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Read in miRNA file of interest
+```{r}
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Get miRNAs with particular fold change and pvalues 
+```{r}
+mirna_files <- list(TP0_v_5_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0 <- twoTimePoint(mrna_data, mirna_data)
+```
+
+This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
+
+Make background distribution
+```{r}
+outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0, outs_background)
+```
+
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+
+Read in miranda data 
+```{r}
+miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+The vignette includes the following information for the example mouse miranda data:  
+```{r}
+head(miRanda)
+```
+
+V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6. This will allow the following functions to properly read the miranda file. 
+```{r}
+# Select specific columns
+miranda_data_filt <- miranda_data %>%
+  dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+
+# Remove any duplicate rows
+miranda_data_filt <- unique(miranda_data_filt)
+
+# Rearrange columns
+miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
+
+# Rename columns V1-6
+miranda_data_filt <- miranda_data_filt %>%    
+  rename(V1 = mirna, 
+         V2 = gene_id,
+         V3 = Score,
+         V4 = Energy_kcal_mol, 
+         V5 = Subject_Identity,
+         V6 = Query_Identity)
+```
+
+Intersect miranda data with significant relationships
+```{r}
+results_TP0_v_TP5_amb <- mirandaIntersectInter(sig_interRel, outs_background, mrna_data, mirna_data, miranda_data_filt)
+```
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+results_TP0_v_TP5_amb_df <- finInterResult(results_TP0_v_TP5_amb)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, results_TP0_v_TP5_amb_df)
+```
+
+Make heatmap for significant relationships
+```{r}
+mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
+
+# Save plot as PDF
+#pdf("../output/Molecular/interactions/TP0_v_TP5_amv_comparisons_sigcorr.pdf")
+#mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
+#dev.off() # Close the PDF device
+
+# Save plot as png
+png("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr.png")
+mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
+dev.off() # Close the png device
+```
+
+When I save the plot as a PDF, it usually doesn't work--when I try to open it, it fails. Successfully saves as png but the quality isn't as good. 
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_TP0_v_TP5_amb$mirna, results_TP0_v_TP5_amb$mrna, results_TP0_v_TP5_amb$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+
+length(unique(combined_df$mrna))
+unique(combined_df$mrna)
+
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+```
+
+Plot FCs
+```{r}
+ggplot(combined_df, aes(x = mrna_FC, y = mirna_FC)) +
+  geom_point(size = 6) +
+  geom_smooth(method = "lm", se = T) # Add regression line
+```
+
+I'm interested in the functions of these genes that are correlated with specific miRNAs. Perform GOSeq to identify any functional enrichment
+
+Read in expressed genes post-filtering
+```{r}
+mrna_matrix <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv") %>%
+    rename(gene_id = X) %>%
+    dplyr::select(-"AST.1105") # Remove AST-1105 from mRNA df due to low counts
+```
+
+Read in gene lengths
+```{r}
+length <- read.csv("../output/Molecular/mRNA/gene_length.txt", header = F)
+
+length <- length %>%
+  separate(V1, into = c("gene_id", "length"), sep = " ", remove = FALSE) %>%
+  dplyr::select(-V1)
+
+str(length)
+
+length$gene_id <- gsub("model", "TU", length$gene_id)
+```
+
+Merge length data with filtered count data
+```{r}
+length_merge <- left_join(mrna_matrix, length, by = "gene_id") %>%
+  na.omit()
+
+str(length_merge)
+```
+
+GOseq requires a vector of all genes, all differentially expressed genes, and gene lengths. Make vectors 
+```{r}
+# Make DEG vector
+cor_gene <- length_merge[length_merge$gene_id %in% combined_df$mrna, ]
+cor_gene_names <- as.vector(combined_df$mrna)
+gene_vector <- as.integer(length_merge$gene_id%in%cor_gene_names)
+names(gene_vector) <- length_merge$gene_id
+
+# Make ID vector
+ID_vector <- as.vector(length_merge$gene_id)
+
+# Make length vector
+length_vector <- as.numeric(length_merge$length)
+```
+
+Calculate probability weighting function 
+```{r}
+DEG.pwf <- nullp(gene_vector, ID_vector, bias.data = length_vector)
+
+str(DEG.pwf)
+```
+
+Code above giving me this warning: Warning: initial point very close to some inequality constraintsWarning: collapsing to unique 'x' values
+
+Read in GO annotation information (annotation from Kate)
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+```
+
+This annot file has annotation information from SwissProt, Trembl, and NCBI but only presents GO information for SwissProt and Trembl. 
+
+Unite the GO terms from SwissProt and Trembl, select GO terms, and split so there is only one GO term per row. 
+```{r}
+annot_GO <- annot %>%
+  unite("GOs", GO_Swiss.Prot, GO_Trembl, sep = ";", na.rm = TRUE) %>%
+  dplyr::select(Protein_ID, GOs) %>%
+  separate_rows(GOs, sep = ";") %>%
+  rename(gene_id = Protein_ID,
+          GO.ID = GOs) %>%
+  filter(GO.ID != "")
+
+# Remove leading and trailing whitespaces
+annot_GO$GO.ID <- trimws(annot_GO$GO.ID)
+
+# Set gene and go ids as factors 
+annot_GO$gene_id <- as.factor(annot_GO$gene_id)
+annot_GO$GO.ID <- as.factor(annot_GO$GO.ID)
+
+# Select only unique rows
+annot_GO <- unique(annot_GO)
+
+# Look at unique gene and go ids 
+length(unique(annot_GO$gene_id)) # 31823 genes have GO annotations
+length(unique(annot_GO$GO.ID)) # there are 14581 unique GO annotations 
+
+# Swap model with TU
+annot_GO$gene_id <- gsub("model", "TU", annot_GO$gene_id)
+
+# Look at unique gene and go ids that are present in this dataset 
+length(unique(filt_annot_GO$gene_id))
+length(unique(filt_annot_GO$GO.ID))
+
+str(filt_annot_GO)
+
+# Convert filt_annot_GO from tibble to df 
+filt_annot_GO <-as.data.frame(filt_annot_GO)
+```
+
+Perform GOSeq
+```{r}
+GO.wall<-goseq::goseq(DEG.pwf, ID_vector, gene2cat=filt_annot_GO, method="Wallenius", use_genes_without_cat=T)
+
+GO <- GO.wall[order(GO.wall$over_represented_pvalue),]
+#write.csv(GO, file = "../output/Molecular/functional_enrichment/GOSeq_GO_all.csv")
+```
+
+Filter by significantly enriched GO terms (p < 0.05)
+```{r}
+GO_05 <- GO %>%
+  dplyr::filter(over_represented_pvalue<0.05) %>%
+        dplyr::arrange(., ontology, over_represented_pvalue)
+
+#write.csv(GO_05, file = "../output/Molecular/functional_enrichment/GOSeq_GO_05.csv")
+```
+
+All GO terms in the original list were significantly over-represented. 
+
+Plot all ontologies (BP, CC, MF) and order by p-value 
+```{r}
+GO_05_plot <- GO_05 %>% drop_na(ontology) %>% mutate(term = fct_reorder(term, numDEInCat)) %>%
+  mutate(term = fct_reorder(term, ontology)) %>%
+  ggplot( aes(x=term, y=numDEInCat) ) +
+  geom_segment( aes(x=term ,xend=term, y=0, yend=numDEInCat), color="grey") +
+  geom_text(aes(label = over_represented_pvalue), hjust = -1, vjust = 0, size = 2) +
+  geom_point(size=1, aes(colour = ontology)) +
+  coord_flip() +
+  ylim(0,10) +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position="bottom"
+  ) +
+  xlab("") +
+  ylab("") +
+  theme_bw() + #Set background color 
+  theme(panel.border = element_blank(), # Set border
+        panel.grid.major = element_blank(), #Set major gridlines
+        panel.grid.minor = element_blank(), #Set minor gridlines
+        axis.line = element_line(colour = "black"), #Set axes color
+        plot.background=element_blank()); GO_05_plot #Set the plot background #set title attributes
+
+#ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05.pdf", GO_05_plot, width = 20, height = 10)
+#ggsave("../output/Molecular/functional_enrichment/GOSeq_GO_05.png", GO_05_plot, width = 20, height = 10)
+```
+
+Merge significant GO terms and annot list together 
+```{r}
+GO_genes <- annot_GO %>%
+  inner_join(GO_05, by = c("GO.ID" = "category"))
+
+length(unique(GO_genes$gene_id))
+```
+
+Merge correlated genes with significant GO terms 
+```{r}
+GO_cor <- GO_genes %>%
+  inner_join(combined_df, by = c("gene_id" = "mrna"))
+
+length(unique(GO_cor$gene_id)) 
+unique(GO_cor$gene_id)
+
+
+#write.csv(GO_deg, file = "../output/Molecular/functional_enrichment/DEG_GO.csv")
+```
+
+Do we care about significantly enriched genes? Do we need goseq at all? Or do we just need to know the gene function?
+
+Look at the next comparison: TP0 amb v TP7 amb 
+
+Read in mRNA file of interest
+```{r}
+TP0_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Get mRNAs with particular fold change and pvalues 
+```{r}
+mrna_files <- list(TP0_v_7_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Read in miRNA file of interest
+```{r}
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  rename(gene_id = X, pvalue = padj)
+```
+
+Get miRNAs with particular fold change and pvalues 
+```{r}
+mirna_files <- list(TP0_v_7_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0 <- twoTimePoint(mrna_data, mirna_data)
+```
+
+This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
+
+Make background distribution
+```{r}
+outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0, outs_background)
+```
+
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+
+Read in miranda data (doesn't need to be read in again if it was already read in above)
+```{r}
+#miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+```
+
+The vignette includes the following information for the example mouse miranda data:  
+```{r}
+#head(miRanda)
+```
+
+V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6. This will allow the following functions to properly read the miranda file. 
+```{r}
+# Select specific columns
+# miranda_data_filt <- miranda_data %>%
+#   dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+# 
+# # Remove any duplicate rows
+# miranda_data_filt <- unique(miranda_data_filt)
+# 
+# # Rearrange columns
+# miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
+# 
+# # Rename columns V1-6
+# miranda_data_filt <- miranda_data_filt %>%    
+#   rename(V1 = mirna, 
+#          V2 = gene_id,
+#          V3 = Score,
+#          V4 = Energy_kcal_mol, 
+#          V5 = Subject_Identity,
+#          V6 = Query_Identity)
+```
+
+Intersect miranda data with significant relationships
+```{r}
+results_TP0_v_TP7_amb <- mirandaIntersectInter(sig_interRel, outs_background, mrna_data, mirna_data, miranda_data_filt)
+```
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+results_TP0_v_TP7_amb_df <- finInterResult(results_TP0_v_TP7_amb)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, results_TP0_v_TP7_amb_df)
+```
+
+Make heatmap for significant relationships
+```{r}
+mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
+
+# Save plot as PDF
+#pdf("../output/Molecular/interactions/TP0_v_TP5_amv_comparisons_sigcorr.pdf")
+#mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
+#dev.off() # Close the PDF device
+
+# Save plot as png
+png("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr.png")
+mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
+dev.off() # Close the png device
+```
+
+When I save the plot as a PDF, it usually doesn't work--when I try to open it, it fails. Successfully saves as png but the quality isn't as good. 
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_TP0_v_TP7_amb$mirna, results_TP0_v_TP7_amb$mrna, results_TP0_v_TP7_amb$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+
+length(unique(combined_df$mrna))
+unique(combined_df$mrna)
+
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_7_amb_miRNA_mRNA_correlations.csv")
+```
+
+Look at similarities between the two results
+```{r}
+blah <- read.csv("../output/Molecular/interactions/TP0_v_7_amb_miRNA_mRNA_correlations.csv")
+
+yay <- read.csv("../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+```
+
+Join dfs? 
+```{r}
+all <- yay %>%
+  inner_join(blah, by = "mrna") %>%
+  dplyr::select(mirna_FC.x, mrna_FC.x, mirna.x, mrna, pvalue.x, mirna_FC.y, mrna_FC.y, mirna.y, pvalue.y)
+
+length(unique(all$mrna))
+```
+
+Looking at the `all` df and the heatmaps, I am seeing that gene is being regulated by one miRNA during one time point and another miRNA during a different timepoint. 
+
+
+
+
+
+
+
+
+
+
+
+
