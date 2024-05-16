@@ -44,7 +44,7 @@ sessionInfo()
 
 Read in raw count data for mRNA 
 ```{r}
-raw_counts <- read.csv("../data/Molecular/mRNA/Apoc_gene_count_matrix.csv")
+raw_counts <- read.csv("../data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.csv")
 rownames(raw_counts) <- raw_counts[,1] #set first column that contains gene names as rownames
 raw_counts <- raw_counts[,-1] #remove the column with gene names
 ```
@@ -55,6 +55,7 @@ colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_001
 colnames(raw_counts)<-gsub("_[^_]+$", "",colnames(raw_counts)) #get rid of "_R1"
 colnames(raw_counts)<-gsub("trimmed.", "",colnames(raw_counts)) #get rid of "trimmed."
 colnames(raw_counts)<-gsub("AST.", "AST-",colnames(raw_counts)) # replace "AST." with "AST-"
+colnames(raw_counts)<-gsub("align.", "", colnames(raw_counts)) #get rid of "align."
 ```
 
 Read in metadata 
@@ -64,7 +65,7 @@ meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in desce
 
 # Set variables as factors 
 meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
-meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation","Ambient", "Heat"))
 ```
 
 Data sanity checks!
@@ -73,23 +74,34 @@ all(rownames(meta$ID)) %in% colnames(raw_counts) #are all of the sample names (r
 all(rownames(meta$ID) == colnames(raw_counts)) #are they the same in the same order? Should be TRUE
 ```
 
+Remove AST-1105 from the data, as it did not have good mapping and has basically no counts. 
+```{r}
+# Remove column from gene count matrix 
+raw_counts <- raw_counts %>%
+  dplyr::select(-"AST-1105")
+  
+# Remove row from metadata
+meta <- meta %>% 
+  filter(ID != "AST-1105")
+
+all(rownames(meta$ID) %in% colnames(raw_counts)) # must come out TRUE
+```
+
 ## Filter dataset 
 
 Use filtered data instead of raw counts as input
 ```{r}
-filt_outrm <- raw_counts[rowSums(!as.matrix(raw_counts)) < ncol(raw_counts), ] #here we remove all genes that were not expressed in any of our samples- we are left with 41,393 genes.
+filt_outrm <- raw_counts[rowSums(!as.matrix(raw_counts)) < ncol(raw_counts), ] #here we remove all genes that were not expressed in any of our samples
 ```
 
 Use pOverA filtering to reduce the dataset 
 ```{r}
-ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.5,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((filt_outrm), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
 filt_outrm_poa <- filt_outrm[filt_outrm_poa,] #keep only rows that passed filter
 ```
-
-After pOverA filtering, we now have 23,236 genes in the dataset. 
 
 Data sanity checks!
 ```{r}
@@ -158,7 +170,7 @@ vst <- assay(vst) # call only the transformed counts
 vst <- as.data.frame(vst)
 vst <- tibble::rownames_to_column(vst, var = "Gene")
 
-write.csv(vst, "../output/vst_mRNA.csv") #save this as csv for downstream analysis
+#write.csv(vst, "../output/vst_mRNA.csv") #save this as csv for downstream analysis
 ```
 
 There is also an option to include size factors for each gene.
@@ -170,11 +182,13 @@ sizeFactors_filt <- estimateSizeFactorsForMatrix(filt_outrm_poa)
 
 ## Fit models 
 
-We want to use the timepoint and treatment as fixed effect and site as the random effect: gene expression ~ Treatment * Timepoint + (1|Site). Is there a way to run it without a random effect because all of the samples came from the same site?
+To fit a model for one gene over time we use a formula such as: gene expression ~ fixed effects + random effects
+
+We want to use the treatment as fixed effect and timepoint as the random effect: gene expression ~ Treatment + (1|Timepoint).
 
 To fit this model for all genes we can use the glmmSeq function.
 ```{r, eval=FALSE}
-results <- glmmSeq(~ Treatment + Timepoint +1,
+results <- glmmSeq(~ Treatment + (1|Timepoint),
                    countdata = filt_outrm_poa,
                    metadata = meta,
                    dispersion = dispersions_filt_outrm,
@@ -182,10 +196,37 @@ results <- glmmSeq(~ Treatment + Timepoint +1,
 
 #this fitting takes a while, so I save it as an RDS and load this in when needed instead of re-running everytime (unless something upstream of here changes)
 
-saveRDS(results, file = "glmmSeq.rds")  #save RDS
+saveRDS(results, file = "../output/Molecular/mRNA/glmmSeq.rds")  #save RDS
 ```
 
-Won't let me fit a model without specifying a random effect. May not be able to use glmmSeq 
+Look at output 
+```{r}
+names(attributes(results))
+
+results@modelData
+results@errors
+summary(results@stats)
+
+summary(results, gene = "evm.TU.chromosome_10.776 ")
+```
+
+Obtain Q values
+```{r}
+results <- glmmQvals(results)
+
+# Treatment
+# ---------
+# Not Significant     Significant 
+#           19116            2664 
+```
+
+Only has information on 
+
+Model fit stats
+```{r}
+stats <- summary(results)
+```
+
 
 
 
