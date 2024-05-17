@@ -758,21 +758,31 @@ length(unique(test4$mirna))
 length(unique(test4$mrna))
 ```
 
-Extract column of interest (miRNAs)
+Extract column of interest (mRNAs)
 ```{r}
-col1 <- test1$mirna
-col2 <- test2$mirna
-col3 <- test3$mirna
-col4 <- test4$mirna
+col1 <- test1$mrna
+col2 <- test2$mrna
+col3 <- test3$mrna
+col4 <- test4$mrna
 ```
 
-Identify miRNA overlaps 
+Bind together and save as csv 
 ```{r}
-common_elements <- Reduce(intersect, list(col1, col2, col3, col4))
-length(common_elements)
-print(common_elements)
+# Use `list` and then bind the rows
+result_list <- list(col1, col2, col3, col4)
+
+# To bind rows, you can convert them to a data frame first
+result_df <- do.call(rbind, lapply(result_list, function(x) data.frame(value = x, stringsAsFactors = FALSE)))
+
+# Remove duplicates
+result_df <- unique(result_df)
+
+# Save as csv 
+write.csv(result_df, "../output/Molecular/interactions/all_sigcorr.csv")
+write_delim(result_df, "../output/Molecular/interactions/all_sigcorr.txt")
 ```
 
+I need to subset the genes of interest and blast them!
 
 
 
