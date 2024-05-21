@@ -121,17 +121,15 @@ Make heatmap for significant relationships
 mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
 
 # Save plot as PDF
-#pdf("../output/Molecular/interactions/TP0_v_TP5_amv_comparisons_sigcorr.pdf")
-#mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
-#dev.off() # Close the PDF device
+pdf("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr.pdf", height = 20, width = 25)
+mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 25)
+dev.off() # Close the PDF device
 
 # Save plot as png
-png("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr.png")
-mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
-dev.off() # Close the png device
+#png("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr.png", height = 500, width = 500)
+#mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
+#dev.off() # Close the png device
 ```
-
-When I save the plot as a PDF, it usually doesn't work--when I try to open it, it fails. Successfully saves as png but the quality isn't as good. 
 
 Combine results data into a single df 
 ```{r}
@@ -142,7 +140,24 @@ colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "sco
 length(unique(combined_df$mrna))
 unique(combined_df$mrna)
 
-write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+#write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+```
+
+Some of the mRNA FC are really high (low 20s) relative to the other ones, which is driving up the value calculation for the miRNA mRNA combo. I might filter out the extremely high mRNA FCs...
+```{r}
+# Have to rename the cols in combined_df so that it matches the column name that the mirRnaHeatmapDiff function is expecting 
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "V1", "V2", "value", "V3", "V4", "V5", "V6", "pvalue")
+
+# Remove any mRNA FC values that are >15 or <-15
+combined_df_subset <- combined_df %>%
+  dplyr::filter(value >= -15 & value <= 15)
+
+mirRnaHeatmapDiff(combined_df_subset, fontsize = 10)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
+mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
+dev.off() # Close the PDF device
 ```
 
 Plot FCs
@@ -150,6 +165,28 @@ Plot FCs
 ggplot(combined_df, aes(x = mrna_FC, y = mirna_FC)) +
   geom_point(size = 6) +
   geom_smooth(method = "lm", se = T) # Add regression line
+
+# Better plot
+plot1 <- ggplot(combined_df_subset, aes(x = mrna_FC, y = mirna_FC)) +
+  geom_point(size = 4, shape = 21, color = "black", fill = "black") +  # Customize points
+  #geom_vline(xintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add vertical line at x = 0
+  #geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add horizontal line at y = 0
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1) +  # Customize regression line
+  labs(
+    x = "mRNA Fold Change",
+    y = "miRNA Fold Change"
+  ) +  # Add titles and labels
+  theme_minimal() +  # Use a minimal theme for a clean look
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style title
+    axis.title = element_text(size = 14, face = "bold"),  # Style axis titles
+    axis.text = element_text(size = 12)  # Style axis text
+    #panel.grid.major = element_line(color = "grey80")  # Customize grid lines
+    #panel.grid.minor = element_blank()  # Remove minor grid lines
+  ); plot1
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.pdf", plot1, width = 10, height = 8)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.png", plot1, width = 10, height = 8)
 ```
 
 I'm interested in the functions of these genes that are correlated with specific miRNAs. Perform GOSeq to identify any functional enrichment
@@ -415,18 +452,15 @@ Make heatmap for significant relationships
 ```{r}
 mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
 
-# Save plot as PDF
-#pdf("../output/Molecular/interactions/TP0_v_TP5_amv_comparisons_sigcorr.pdf")
-#mirRnaHeatmapDiff(results_TP0_v_TP5_amb$corrs, fontsize = 10)
-#dev.off() # Close the PDF device
+pdf("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr.pdf", height = 20, width = 25)
+mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 20)
+dev.off() # Close the PDF device
 
 # Save plot as png
-png("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr.png")
-mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
-dev.off() # Close the png device
+#png("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr.png")
+#mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
+#dev.off() # Close the png device
 ```
-
-When I save the plot as a PDF, it usually doesn't work--when I try to open it, it fails. Successfully saves as png but the quality isn't as good. 
 
 Combine results data into a single df 
 ```{r}
@@ -437,8 +471,59 @@ colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "sco
 length(unique(combined_df$mrna))
 unique(combined_df$mrna)
 
-write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_7_amb_miRNA_mRNA_correlations.csv")
+#write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_7_amb_miRNA_mRNA_correlations.csv")
 ```
+
+Some of the mRNA FC are really high (low 20s) relative to the other ones, which is driving up the value calculation for the miRNA mRNA combo. I might filter out the extremely high mRNA FCs...
+```{r}
+# Have to rename the cols in combined_df so that it matches the column name that the mirRnaHeatmapDiff function is expecting 
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "V1", "V2", "value", "V3", "V4", "V5", "V6", "pvalue")
+
+# Remove any mRNA FC values that are >15 or <-15. Also remove Ser gene because it is likely an ncRNA
+combined_df_subset <- combined_df %>%
+  dplyr::filter(value >= -15 & value <= 15) %>%
+  dplyr::filter(!V2 == "Ser_4434")
+
+mirRnaHeatmapDiff(combined_df_subset, fontsize = 10)
+
+# Save plot as PDF
+pdf("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
+mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
+dev.off() # Close the PDF device
+```
+
+Plot FCs
+```{r}
+ggplot(combined_df, aes(x = mrna_FC, y = mirna_FC)) +
+  geom_point(size = 6) +
+  geom_smooth(method = "lm", se = T) # Add regression line
+
+# Better plot
+plot2 <- ggplot(combined_df_subset, aes(x = mrna_FC, y = mirna_FC)) +
+  geom_point(size = 4, shape = 21, color = "black", fill = "black") +  # Customize points
+  #geom_vline(xintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add vertical line at x = 0
+  #geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add horizontal line at y = 0
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1) +  # Customize regression line
+  labs(
+    x = "mRNA Fold Change",
+    y = "miRNA Fold Change"
+  ) +  # Add titles and labels
+  theme_minimal() +  # Use a minimal theme for a clean look
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style title
+    axis.title = element_text(size = 14, face = "bold"),  # Style axis titles
+    axis.text = element_text(size = 12)  # Style axis text
+    #panel.grid.major = element_line(color = "grey80")  # Customize grid lines
+    #panel.grid.minor = element_blank()  # Remove minor grid lines
+  ); plot2
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.pdf", plot2, width = 10, height = 8)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.png", plot2, width = 10, height = 8)
+```
+
+
+
+
 
 Look at similarities between the two results
 ```{r}
@@ -461,6 +546,25 @@ poo <- yay %>%
   dplyr::select(mirna_FC.x, mrna_FC.x, mirna, mrna.x, pvalue.x, mirna_FC.y, mrna_FC.y, mrna.y, pvalue.y)
 
 length(unique(poo$mirna))
+unique(poo$mirna)
+```
+
+```{r}
+blah$comparison <- "TP0_v_TP7_amb"
+yay$comparison <- "TP0_v_TP5_amb"
+
+all <- rbind(blah, yay)
+length(unique(all$mirna))
+unique(all$mirna)
+
+# Remove high mRNA FC and Ser gene 
+all_subset <- all %>%
+  dplyr::filter(value >= -15 & value <= 15) %>%
+  dplyr::filter(!mrna == "Ser_4434")
+
+length(unique(all_subset$mirna))
+unique(all_subset$mirna)
+length(unique(all_subset$mrna))
 ```
 
 Should we be more interested in the gene overlap or the miRNA overlap between comparisons? 
@@ -784,8 +888,28 @@ write_delim(result_df, "../output/Molecular/interactions/all_sigcorr.txt")
 
 I need to subset the genes of interest and blast them!
 
+Identify unique miRNAs. First extract miRNAs from dfs
+```{r}
+col1 <- test1$mirna
+col2 <- test2$mirna
+col3 <- test3$mirna
+col4 <- test4$mirna
+```
 
+Bind together and save as csv 
+```{r}
+# Use `list` and then bind the rows
+result_list <- list(col1, col2, col3, col4)
 
+# To bind rows, you can convert them to a data frame first
+result_df <- do.call(rbind, lapply(result_list, function(x) data.frame(value = x, stringsAsFactors = FALSE)))
 
+# Remove duplicates
+result_df <- unique(result_df)
+
+# Save as csv 
+write.csv(result_df, "../output/Molecular/interactions/all_sigcorr.csv")
+write_delim(result_df, "../output/Molecular/interactions/all_sigcorr.txt")
+```
 
 

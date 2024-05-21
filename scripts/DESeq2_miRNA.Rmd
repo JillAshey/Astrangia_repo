@@ -103,7 +103,7 @@ head(TP0_v_5_amb)
 
 # Save results for all miRNAs 
 TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
-write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv")
+#write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
@@ -132,17 +132,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_amb_DEM.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_amb_DEM.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_amb_DEM.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_amb_DEM.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_amb_DEM.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_5_amb.sig <- as.data.frame(TP0_v_5_amb.sig)
 TP0_v_5_amb.sig.list <- as.data.frame(counts(TP0_v_5_amb.sig.list))
 TP0_v_5_amb.sig.list.full <- cbind(TP0_v_5_amb.sig, TP0_v_5_amb.sig.list)
-write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP5_amb_DEM.csv")
+#write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP5_amb_DEM.csv")
 ```
 
 TP0 v TP7 Ambient
@@ -153,7 +153,7 @@ head(TP0_v_7_amb)
 
 # Save results for all miRNAs 
 TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
-write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv")
+#write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
@@ -182,17 +182,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_amb_DEM.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_amb_DEM.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_amb_DEM.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_amb_DEM.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_amb_DEM.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_amb_DEM.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_7_amb.sig <- as.data.frame(TP0_v_7_amb.sig)
 TP0_v_7_amb.sig.list <- as.data.frame(counts(TP0_v_7_amb.sig.list))
 TP0_v_7_amb.sig.list.full <- cbind(TP0_v_7_amb.sig, TP0_v_7_amb.sig.list)
-write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP7_amb_DEM.csv")
+#write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP7_amb_DEM.csv")
 ```
 
 TP5 v TP7 Ambient 
@@ -203,7 +203,7 @@ head(TP5_v_7_amb)
 
 # Save results for all miRNAs 
 TP5_v_7_amb_df <- as.data.frame(TP5_v_7_amb)
-write.csv(TP5_v_7_amb_df, file = "../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv")
+#write.csv(TP5_v_7_amb_df, file = "../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot<- plotMA(TP5_v_7_amb); ma_plot
@@ -220,7 +220,7 @@ head(TP0_v_5_heat)
 
 # Save results for all miRNAs 
 TP0_v_5_heat_df <- as.data.frame(TP0_v_5_heat)
-write.csv(TP0_v_5_heat_df, file = "../output/Molecular/smRNA/TP0_v_5_heat_miRNA.csv")
+#write.csv(TP0_v_5_heat_df, file = "../output/Molecular/smRNA/TP0_v_5_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_heat); ma_plot
@@ -249,17 +249,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_heat_DEM.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_heat_DEM.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_heat_DEM.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP5_heat_DEM.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP5_heat_DEM.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP5_heat_DEM.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_5_heat.sig <- as.data.frame(TP0_v_5_heat.sig)
 TP0_v_5_heat.sig.list <- as.data.frame(counts(TP0_v_5_heat.sig.list))
 TP0_v_5_heat.sig.list.full <- cbind(TP0_v_5_heat.sig, TP0_v_5_heat.sig.list)
-write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP5_heat_DEM.csv")
+#write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP5_heat_DEM.csv")
 ```
 
 TP0 v TP7 Heat
@@ -270,7 +270,7 @@ head(TP0_v_7_heat)
 
 # Save results for all miRNAs 
 TP0_v_7_heat_df <- as.data.frame(TP0_v_7_heat)
-write.csv(TP0_v_7_heat_df, file = "../output/Molecular/smRNA/TP0_v_7_heat_miRNA.csv")
+#write.csv(TP0_v_7_heat_df, file = "../output/Molecular/smRNA/TP0_v_7_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_heat); ma_plot
@@ -299,17 +299,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_heat_DEM.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_heat_DEM.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_heat_DEM.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/smRNA/ma_plot_TP0_amb_v_TP7_heat_DEM.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/smRNA/pca_plot_TP0_amb_v_TP7_heat_DEM.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/smRNA/heatmap_TP0_amb_v_TP7_heat_DEM.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_7_heat.sig <- as.data.frame(TP0_v_7_heat.sig)
 TP0_v_7_heat.sig.list <- as.data.frame(counts(TP0_v_7_heat.sig.list))
 TP0_v_7_heat.sig.list.full <- cbind(TP0_v_7_heat.sig, TP0_v_7_heat.sig.list)
-write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP7_heat_DEM.csv")
+#write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/TP0_amb_v_TP7_heat_DEM.csv")
 ```
 
 TP5 Heat v TP7 Heat
@@ -320,7 +320,7 @@ head(TP5_heat_v_7_heat)
 
 # Save results for all miRNAs 
 TP5_heat_v_7_heat_df <- as.data.frame(TP5_heat_v_7_heat)
-write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/smRNA/TP5_heat_v_7_heat_miRNA.csv")
+#write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/smRNA/TP5_heat_v_7_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
@@ -337,7 +337,7 @@ head(TP5_amb_v_TP5_heat)
 
 # Save results for all miRNAs 
 TP5_amb_v_TP5_heat_df <- as.data.frame(TP5_amb_v_TP5_heat)
-write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/smRNA/TP5_amb_v_TP5_heat_miRNA.csv")
+#write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/smRNA/TP5_amb_v_TP5_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_amb_v_TP5_heat)
@@ -354,7 +354,7 @@ head(TP7_amb_v_TP7_heat)
 
 # Save results for all miRNAs 
 TP7_amb_v_TP7_heat_df <- as.data.frame(TP7_amb_v_TP7_heat)
-write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/smRNA/TP7_amb_v_TP7_heat_miRNA.csv")
+#write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/smRNA/TP7_amb_v_TP7_heat_miRNA.csv")
 
 # Volcano plot for LFC
 plotMA(TP7_amb_v_TP7_heat)
@@ -371,7 +371,7 @@ head(TP5_heat_v_TP7_amb)
 
 # Save results for all miRNAs 
 TP5_heat_v_TP7_amb_df <- as.data.frame(TP5_heat_v_TP7_amb)
-write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/smRNA/TP5_heat_v_TP7_amb_miRNA.csv")
+#write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/smRNA/TP5_heat_v_TP7_amb_miRNA.csv")
 
 # Volcano plot for LFC
 ma_plot <- plotMA(TP5_heat_v_TP7_amb)
@@ -415,10 +415,10 @@ length(unique(DEMs.all$DEMs))
 
 Unique.sig.list <- data[which(rownames(data) %in% DEMs.all$DEMs),] #subset list of sig transcripts from original count data
 Unique.rsig <- rlog(Unique.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-write.csv(counts(Unique.sig.list), file="../output/Molecular/smRNA/Unique_DEMs.csv")
+#write.csv(counts(Unique.sig.list), file="../output/Molecular/smRNA/Unique_DEMs.csv")
 ```
 
-There are 26 unique differentially expressed miRNAs. Visualize the differentially expressed miRNAs. 
+There are 37 unique differentially expressed miRNAs. Visualize the differentially expressed miRNAs. 
 
 PCA with DEMs
 ```{r}
@@ -497,3 +497,9 @@ list <- as.character(DEMs.list$X)
 
 writeLines(list, "../output/Molecular/smRNA/DEM_list.txt")
 ```
+
+
+
+
+
+
