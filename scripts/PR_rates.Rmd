@@ -1009,7 +1009,9 @@ all <- all %>%
     Light_Value == "334" ~ "P",
     Light_Value == "366" ~ "P",
     Light_Value == "358" ~ "P",
-    Light_Value == "342" ~ "P"))
+    Light_Value == "342" ~ "P")) %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
+
 
 # all <- all %>% 
 #   mutate(Assay = case_when(
@@ -1018,7 +1020,6 @@ all <- all %>%
 #     Treatment == "Field-TP2" ~ "Field",
 #     Treatment == "Field-TP3" ~ "Field",
 #     Treatment == "Field-TP4" ~ "Field"))
-
 ```  
 
 Remove P assay because most colonies were aposymbiotic 
@@ -1030,73 +1031,67 @@ all_rd <- all %>%
 Remove any values that were greater than 0, as positive values should not have occurred during the dark respiration run, as well as the acclimatization period (TP0) and field data.
 ```{r}
 all_rd <- all_rd %>%
-  filter(!micromol.cm2.h > 0) %>%
+  #filter(!micromol.cm2.h > 0) %>%
   filter(!micromol.cm2.h < -10) %>%
-  filter(!Treatment == "Acclimatization") %>%
+  #filter(!Treatment == "Acclimatization") %>%
   filter(!Treatment == "Field")
 ```
 
 Set levels for plotting by month 
 ```{r}
-all_rd$Month <- factor(all_rd$Month, levels = c("March", "Early April", "Late April", "May", "June", "July", "August"))
+all_rd$Month <- factor(all_rd$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
 ```
 
 Plot
 ```{r}
 plot <- ggplot(all_rd, aes(x = Month, y = micromol.cm2.h, colour = Treatment)) +
-  geom_boxplot(aes(colour=Treatment), lwd=1) +
-  geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
-  scale_fill_manual(values = c("blue", "red")) +
-  scale_colour_manual(values = c("blue", "red")) +
+  geom_boxplot(aes(colour=Treatment), lwd=2) +
+  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
+  #geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey", "blue", "red")) +
   xlab("") +
   #hjust(x = 0) +
   #facet_wrap(~Assay, ncol = 2) +
   theme_classic() +
-  theme(
-      legend.position="right",
-      axis.title=element_text(face="bold", size=14),
-      axis.text=element_text(size=12, color="black"), 
-      legend.title=element_text(face="bold", size=14), 
-      legend.text=element_text(size=12), 
-      axis.text.x=element_text(angle=45, hjust=1)
-      ); plot
+    theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
 
-## Likely have to remove May, as there are only 2 points for Heat trt 
-
-ggsave("../output/Physiology/PR/R_Treatment_20240108.pdf", plot, width = 10, height = 8)
-ggsave("../output/Physiology/PR/R_Treatment_20240108.png", plot, width = 10, height = 8)
+ggsave("../output/Physiology/PR/R_Treatment_20240521.pdf", plot, width = 15, height = 10)
+ggsave("../output/Physiology/PR/R_Treatment_20240521.png", plot, width = 15, height = 10)
 ```
 
-Summarize data 
+Summarize data
 ```{r}
-summary <- all_rd %>% 
-  group_by(Timepoint, Treatment) %>%
-  select(micromol.cm2.h) %>%
-  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary
-
-summary_tp <- all_rd %>% 
-  group_by(Timepoint) %>%
-  select(micromol.cm2.h) %>%
-  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary_tp
+## Summarize data w/o field 
+mean.r_exp <- summarySE(all_rd, measurevar = "micromol.cm2.h", groupvars = c("Treatment", "Timepoint"))
+#mean.r_site_exp <- summarySE(carb, measurevar = "micromol.cm2.h", groupvars = c("Site", "Treatment", "Timepoint"))
 ```
 
-
-Stats!
+Going to do stats just for Temperate coral conference 
 ```{r}
-## Need to remove May, as there are only two points there after filtering 
-all_rd <- all_rd %>% 
-  filter(!Month == "May")
-
-## Change all values to positive (aka inverse)
-all_rd <- all_rd %>%
-  mutate(micromol.cm2.h_inverse = micromol.cm2.h*(-1))
-
-## Compute two-way ANOVA test 
-model <- aov(micromol.cm2.h_inverse ~ Treatment*Timepoint, data = all_rd)
+model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = all_rd)
 summary(model)
 
-## Slight significance by time point 
+#                      Df Sum Sq Mean Sq F value   Pr(>F)    
+# Treatment             2  10.87   5.436   3.027   0.0524 .  
+# Timepoint             6  87.07  14.512   8.081 2.92e-07 ***
+# Treatment:Timepoint   6  60.81  10.135   5.644 3.76e-05 ***
+# Residuals           112 201.13   1.796                     
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 ## Check ANOVA assumptions 
 # ANOVA assumes data is normally distributed and variance across groups is homogenous 
@@ -1106,7 +1101,7 @@ plot(model, 1)
 
 # b. Levene's test 
 leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
-## p-value is  less than 0.05, so variance is not homogenous 
+## p-value is less than 0.05, so variance is not homogeneous 
 
 # 2. Check normality assumption 
 # a. Normality plot of residuals 
@@ -1118,125 +1113,119 @@ aov_residuals <- residuals(object = model)
 shapiro.test(x = aov_residuals)
 # pvalue is less than 0.05, normality is violated
 
-
-
-
-## Data transformation using log 
-## Compute two-way ANOVA test 
-model <- aov(log(micromol.cm2.h_inverse) ~ Treatment*Timepoint, data = all_rd)
-summary(model)
-
 ## Compute summary stats 
 model.tables(model, type = "means", se = T)
 
 ## Multiple pairwise-comparisons between the means of groups 
 # Tukey HSD 
 TukeyHSD(model, which = "Timepoint")
+## TP1 differs from TP6; TP2, TP3, TP5, TP6 and TP7 differs from TP4
 
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test -- cant run with log, produces an error
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is greater than 0.05, normality attained
-
-
-
-
-
-## Data transformation using sqrt
-## Compute two-way ANOVA test 
-model <- aov(sqrt(micromol.cm2.h_inverse) ~ Treatment*Timepoint, data = all_rd)
-summary(model)
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test -- cant run with sqrt, produces an error
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is greater than 0.05, normality attained
-
-
-
-
-
-## Data transformation using square 
-## Compute two-way ANOVA test 
-model <- aov((micromol.cm2.h_inverse)^2 ~ Treatment*Timepoint, data = all_rd)
-summary(model)
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test -- cant run with sqrt, produces an error
-#leveneTest(sqrt(micromol.cm2.h) ~ Timepoint*Treatment, data = all_rd)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality violated
+TukeyHSD(model, which = "Treatment")
+## Ambient and acclimation differed
 ```
 
-Log and sqrt both seem like good potential transformations for this data
+Probably need to do data transformations 
 
-Remove outliers 
+It is weird that there are positive values in the R data since the corals were in the dark. 
+
+Check out P
 ```{r}
-#set quantile values
-q <- c(0.25, 0.75)
+all_p <- all %>%
+  filter(Assay == "P")
+```
 
-# calculate quantile values by Temperature and Treatment groups
-Quants <- all_rd %>%
-  group_by(Treatment, Timepoint) %>%
-  summarize(quant25 = quantile(all_rd, probs = q[1]),
-            quant75 = quantile(all_rd, probs = q[2]),
-            IQRbyGroup=IQR(all_rd))
+Remove field data.
+```{r}
+all_p <- all_p %>%
+  #filter(!micromol.cm2.h > 0) %>%
+  #filter(!micromol.cm2.h < -10) %>%
+  #filter(!Treatment == "Acclimatization") %>%
+  filter(!Treatment == "Field")
+```
+
+Set levels for plotting by month 
+```{r}
+all_p$Month <- factor(all_p$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
+```
+
+Plot
+```{r}
+plot <- ggplot(all_p, aes(x = Month, y = micromol.cm2.h, colour = Treatment)) +
+  geom_boxplot(aes(colour=Treatment), lwd=2) +
+  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
+  #geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey", "blue", "red")) +
+  xlab("") +
+  #ylab("Carbohydrates (mg/cm²)") +
+  #hjust(x = 0) +
+  #facet_wrap(~Assay, ncol = 2) +
+  theme_classic() +
+    theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
+
+ggsave("../output/Physiology/PR/P_Treatment_20240521.pdf", plot, width = 15, height = 10)
+ggsave("../output/Physiology/PR/P_Treatment_20240521.png", plot, width = 15, height = 10)
+```
+
+Summarize data
+```{r}
+## Summarize data w/o field 
+mean.p_exp <- summarySE(all_p, measurevar = "micromol.cm2.h", groupvars = c("Treatment", "Timepoint"))
+#mean.r_site_exp <- summarySE(carb, measurevar = "micromol.cm2.h", groupvars = c("Site", "Treatment", "Timepoint"))
+```
+
+Going to do stats just for Temperate coral conference 
+```{r}
+model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = all_p)
+summary(model)
+
+#                      Df Sum Sq Mean Sq F value   Pr(>F)    
+# Treatment             2     11    5.29   0.166 0.846917    
+# Timepoint             6    906  151.02   4.747 0.000239 ***
+# Treatment:Timepoint   6    137   22.89   0.719 0.634742    
+# Residuals           113   3595   31.82                     
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_p)
+## p-value is greater than 0.05, so variance is homogeneous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is less than 0.05, normality is violated
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+## TP2 differs from TP4 and TP6; TP3 differs from TP4
 ```

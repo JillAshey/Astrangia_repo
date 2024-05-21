@@ -19,6 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mirTarRnaSeq)
 library(goseq)
+library(pheatmap)
 ```
 
 I will be initially comparing TP0 amb v TP5 amb, TP0 amb v TP7 amb, TP0 amb v TP5 heat, and TP0 amb v TP7 heat 
@@ -566,6 +567,81 @@ length(unique(all_subset$mirna))
 unique(all_subset$mirna)
 length(unique(all_subset$mrna))
 ```
+
+Save all_subset as csv
+```{r}
+write.csv(all_subset, file = "../output/Molecular/interactions/sigcorr_amb_all.csv")
+```
+
+Create a new column called "pattern" and use conditional statements to determine its values
+```{r}
+all_subset$pattern <- ifelse(all_subset$mirna_FC > 0 & all_subset$mrna_FC < 0, "negative regulation",
+                     ifelse(all_subset$mirna_FC < 0 & all_subset$mrna_FC > 0, "inverse regulation",
+                            ifelse(all_subset$mirna_FC > 0 & all_subset$mrna_FC > 0, "coregulation increase",
+                                   ifelse(all_subset$mirna_FC < 0 & all_subset$mrna_FC < 0, "coregulation decrease", NA))))
+```
+
+Subset only negative regulation
+```{r}
+neg_reg <- all_subset %>%
+  dplyr::filter(pattern == "negative regulation")
+
+unique(neg_reg$mirna)
+```
+
+Read in blast results
+```{r}
+blast <- read.csv("../output/Molecular/interactions/sigcorr_blast_AST2021.csv")
+```
+
+Join neg reg with blast 
+```{r}
+neg_reg <- neg_reg %>%
+  inner_join(blast, by = "mrna")
+```
+
+
+```{r}
+# Create a binary indicator for presence or absence of pattern
+neg_reg$presence <- ifelse(!is.na(neg_reg$pattern), 1, 0)
+
+# Reorder the dataframe based on mirna_FC and mrna_FC
+neg_reg <- neg_reg[order(neg_reg$mirna_FC, neg_reg$mrna_FC),]
+
+# Create the heatmap using ggplot2
+heatmap <- ggplot(neg_reg, aes(x = function., y = mirna, fill = presence)) +
+  geom_tile(color = "white") +
+  #scale_fill_manual(values = c("white", "blue"), labels = c("Absent", "Present")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "mRNA", y = "miRNA", title = "Presence of Pattern in miRNA-mRNA Interactions"); heatmap
+
+
+
+presence_matrix <- as.matrix(table(neg_reg$mirna, neg_reg$mrna))
+presence_df <- as.data.frame.matrix(presence_matrix)
+
+# Create the heatmap using pheatmap
+heatmap <- pheatmap(
+  presence_df,
+  cluster_rows = F,  # Disable row clustering
+  cluster_cols = FALSE,  # Disable column clustering
+  color = c("white", "blue"),  # Set color palette
+  border_color = "black",  # Remove border color
+  fontsize_row = 10,  # Set font size for row labels
+  fontsize_col = 10,  # Set font size for column labels
+  main = "Presence of Pattern in miRNA-mRNA Interactions",  # Set main title
+  angle_col = 45,  # Rotate x-axis labels
+  cellwidth = 5,  # Set width of each cell
+  cellheight = 5  # Set height of each cell
+)
+# not showing all of the interactions with the presence matrix or df...
+```
+
+
+
+
+
 
 Should we be more interested in the gene overlap or the miRNA overlap between comparisons? 
 

@@ -117,9 +117,9 @@ test <- test %>%
 
 # Select specific columns 
 my.data_amb <- test %>% 
-  select(Date.Time, Temp_Amb, Temp_Amb_StdDev, upper, lower) %>%
-  rename("Temperature" = "Temp_Amb") %>%
-  rename("sd" = "Temp_Amb_StdDev") %>%
+  dplyr::select(Date.Time, Temp_Amb, Temp_Amb_StdDev, upper, lower) %>%
+  dplyr::rename("Temperature" = "Temp_Amb") %>%
+  dplyr::rename("sd" = "Temp_Amb_StdDev") %>%
   #separate(col = Date.Time, into = c("Date", "Time"), sep = " ") %>%
   na.omit()
 my.data_amb$Treatment <- "Ambient"
@@ -200,9 +200,9 @@ test2 <- test2 %>%
 
 # Select specific columns 
 my.data_heat <- test2 %>% 
-  select(Date.Time, Temp_Heat, Temp_Heat_StdDev, upper, lower) %>%
-  rename("Temperature" = "Temp_Heat") %>%
-  rename("sd" = "Temp_Heat_StdDev") %>%
+  dplyr::select(Date.Time, Temp_Heat, Temp_Heat_StdDev, upper, lower) %>%
+  dplyr::rename("Temperature" = "Temp_Heat") %>%
+  dplyr::rename("sd" = "Temp_Heat_StdDev") %>%
   #separate(col = Date.Time, into = c("Date", "Time"), sep = " ") %>%
   na.omit()
 my.data_heat$Treatment <- "Heat"
@@ -282,11 +282,11 @@ combined_data$fake.year <- "2021"
 combined_data$Date.Time <- as.POSIXct(paste(combined_data$fake.year, combined_data$Date, sep = "-"), format = "%Y-%m-%d")
 
 noaa_data <- combined_data %>%
-  group_by(Date.Time) %>%
-  summarize(
+  dplyr::group_by(Date.Time) %>%
+  dplyr::summarize(
     Temperature = mean(WTMP, na.rm = TRUE),
     sd = sd(WTMP, na.rm = TRUE)) %>%
-  mutate(upper = Temperature+sd,
+  dplyr::mutate(upper = Temperature+sd,
          lower = Temperature-sd, 
          Treatment = "NOAA")
 ```
@@ -294,7 +294,7 @@ noaa_data <- combined_data %>%
 Remove unneeded columns
 ```{r}
 noaa_data <- noaa_data %>%
-  select(Date.Time, Temperature, sd, upper, lower, Treatment)
+  dplyr::select(Date.Time, Temperature, sd, upper, lower, Treatment)
 ```
 
 Bind dfs together 
@@ -307,28 +307,35 @@ Plot
 temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
   #geom_line()+
   geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
-  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE) +
-  geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP2
-  geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black")+ # TP3
-  geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP4
-  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP5 
-  geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP6
-  geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black")+ # TP7
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE, size = 3) +
+  geom_vline(xintercept=as.POSIXct("2021-02-04 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP0
+  geom_vline(xintercept=as.POSIXct("2021-03-04 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP1
+  geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP2
+  geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP3
+  geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP4
+  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP5 
+  geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP6
+  geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP7
   #ylim(26, 30)+
   ylab("Temperature (°C)")+
-  #xlab("Date")+
+  xlab("")+
   scale_colour_manual(values=c("blue", "red", "black"), name="Temperature")+
   scale_fill_manual(values=c("blue", "red", "black"), name="Temperature")+
   scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
   theme_classic()+
-  theme(
-    axis.text=element_text(color="black", size=11),
-    axis.title=element_text(color="black", size=14),
-    legend.position="right"
-  ); temp_plot
+    theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right") +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
 
-ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.png", temp_plot, width=6, height=4)
-ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.pdf", temp_plot, width=6, height=4)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.png", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.pdf", temp_plot, width=20, height=13)
 ```
 
 BEAUTIFUL!!!!!!!!! Still need to QC my temp data to get rid of the weird spikes. 

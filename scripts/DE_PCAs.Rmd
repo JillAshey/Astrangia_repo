@@ -71,25 +71,41 @@ custom_colors <- c("Heat" = "red", "Acclimation" = "grey", "Ambient" = "blue")
 pca_data <- plotPCA(vsd, intgroup = c("Timepoint", "Treatment"), returnData = TRUE)
 percentVar <- round(100 * attr(pca_data, "percentVar"))
 
+# Assign month for TPs
+pca_data <- pca_data %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Set levels
+pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August"))
+
 # Plot with ggplot2
-mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Timepoint)) +
-  geom_point(size = 6) +
+mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
+  geom_point(size = 10) +
   labs(
     x = paste0("PC1: ", percentVar[1], "% variance"),
     y = paste0("PC2: ", percentVar[2], "% variance")
   ) +
     scale_color_manual(values = custom_colors) +  # Set custom colors
   theme_bw() +
-  theme(
-    axis.title = element_text(size = 14, face = "bold"),
-    axis.text = element_text(size = 12),
-        legend.text = element_text(size = 12),       # Change legend text font size
-    legend.title = element_text(size = 14, face = "bold")  # Change legend title font size
-  ); mrna_plot
+      theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black",
+                                   hjust = 1)) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); mrna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 15, height = 10)
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 15, height = 10)
 ```
 
 
@@ -154,25 +170,41 @@ custom_colors <- c("Heat" = "red", "Acclimation" = "grey", "Ambient" = "blue")
 pca_data <- plotPCA(vsd, intgroup = c("Timepoint", "Treatment"), returnData = TRUE)
 percentVar <- round(100 * attr(pca_data, "percentVar"))
 
+# Assign month for TPs
+pca_data <- pca_data %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Set levels
+pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August"))
+
 # Plot with ggplot2
 mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Timepoint)) +
-  geom_point(size = 6) +
+  geom_point(size = 10) +
   labs(
     x = paste0("PC1: ", percentVar[1], "% variance"),
     y = paste0("PC2: ", percentVar[2], "% variance")
   ) +
     scale_color_manual(values = custom_colors) +  # Set custom colors
   theme_bw() +
-  theme(
-    axis.title = element_text(size = 14, face = "bold"),
-    axis.text = element_text(size = 12),
-        legend.text = element_text(size = 12),       # Change legend text font size
-    legend.title = element_text(size = 14, face = "bold")  # Change legend title font size
-  ); mirna_plot
+      theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black",
+                                   hjust = 1)) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); mirna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/smRNA/pca_plot_DEMs.pdf", mirna_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/pca_plot_DEMs.png", mirna_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/pca_plot_DEMs.pdf", mirna_plot, width = 15, height = 10)
+ggsave("../output/Molecular/smRNA/pca_plot_DEMs.png", mirna_plot, width = 15, height = 10)
 ```
 
 
