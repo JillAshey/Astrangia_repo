@@ -20,6 +20,7 @@ library(tidyverse)
 library(mirTarRnaSeq)
 library(goseq)
 library(pheatmap)
+library(viridis)
 ```
 
 I will be initially comparing TP0 amb v TP5 amb, TP0 amb v TP7 amb, TP0 amb v TP5 heat, and TP0 amb v TP7 heat 
@@ -570,7 +571,7 @@ length(unique(all_subset$mrna))
 
 Save all_subset as csv
 ```{r}
-write.csv(all_subset, file = "../output/Molecular/interactions/sigcorr_amb_all.csv")
+#write.csv(all_subset, file = "../output/Molecular/interactions/sigcorr_amb_all.csv")
 ```
 
 Create a new column called "pattern" and use conditional statements to determine its values
@@ -581,10 +582,11 @@ all_subset$pattern <- ifelse(all_subset$mirna_FC > 0 & all_subset$mrna_FC < 0, "
                                    ifelse(all_subset$mirna_FC < 0 & all_subset$mrna_FC < 0, "coregulation decrease", NA))))
 ```
 
-Subset only negative regulation
+Subset negative regulation and TP0 amb v TP5 amb
 ```{r}
 neg_reg <- all_subset %>%
-  dplyr::filter(pattern == "negative regulation")
+  dplyr::filter(pattern == "negative regulation") %>%
+  dplyr::filter(comparison == "TP0_v_TP5_amb")
 
 unique(neg_reg$mirna)
 ```
@@ -600,46 +602,145 @@ neg_reg <- neg_reg %>%
   inner_join(blast, by = "mrna")
 ```
 
-
+Plot
 ```{r}
-# Create a binary indicator for presence or absence of pattern
-neg_reg$presence <- ifelse(!is.na(neg_reg$pattern), 1, 0)
+plot1 <- ggplot(neg_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+  geom_point() +
+  scale_color_viridis(option="D", name="p-value") +
+    scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
+  labs(x="Function", y="miRNA", color="p-value", size="Value") +
+  theme_classic() +
+  theme(
+    legend.title = element_text(size=40, face="bold"),
+    legend.text = element_text(size=38),
+    legend.position = "right",
+    legend.key.size = unit(3, "lines"),
+    axis.title = element_text(size = 45, face = "bold"),
+    axis.text.x = element_text(size=41, color="black", angle=45, hjust=1),
+    axis.text.y = element_text(size=41, color="black"),
+    axis.line = element_line(linewidth = 2, color = "black"),
+    panel.grid.major = element_line(linewidth = 1.25, color = "black")  # Increase major grid line thickness
+  ); plot1
 
-# Reorder the dataframe based on mirna_FC and mrna_FC
-neg_reg <- neg_reg[order(neg_reg$mirna_FC, neg_reg$mrna_FC),]
-
-# Create the heatmap using ggplot2
-heatmap <- ggplot(neg_reg, aes(x = function., y = mirna, fill = presence)) +
-  geom_tile(color = "white") +
-  #scale_fill_manual(values = c("white", "blue"), labels = c("Absent", "Present")) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "mRNA", y = "miRNA", title = "Presence of Pattern in miRNA-mRNA Interactions"); heatmap
-
-
-
-presence_matrix <- as.matrix(table(neg_reg$mirna, neg_reg$mrna))
-presence_df <- as.data.frame.matrix(presence_matrix)
-
-# Create the heatmap using pheatmap
-heatmap <- pheatmap(
-  presence_df,
-  cluster_rows = F,  # Disable row clustering
-  cluster_cols = FALSE,  # Disable column clustering
-  color = c("white", "blue"),  # Set color palette
-  border_color = "black",  # Remove border color
-  fontsize_row = 10,  # Set font size for row labels
-  fontsize_col = 10,  # Set font size for column labels
-  main = "Presence of Pattern in miRNA-mRNA Interactions",  # Set main title
-  angle_col = 45,  # Rotate x-axis labels
-  cellwidth = 5,  # Set width of each cell
-  cellheight = 5  # Set height of each cell
-)
-# not showing all of the interactions with the presence matrix or df...
+ggsave("../output/Molecular/interactions/sigcorr_downreg_TP0vTP5amb.pdf", plot1, width = 30, height = 18)
+ggsave("../output/Molecular/interactions/sigcorr_downreg_TP0vTP5amb.png", plot1, width = 30, height = 18)
 ```
 
+Subset negative regulation and TP0 amb v TP7 amb
+```{r}
+neg_reg <- all_subset %>%
+  dplyr::filter(pattern == "negative regulation") %>%
+  dplyr::filter(comparison == "TP0_v_TP7_amb")
 
+unique(neg_reg$mirna)
+```
 
+Join neg reg with blast 
+```{r}
+neg_reg <- neg_reg %>%
+  inner_join(blast, by = "mrna")
+```
+
+Plot
+```{r}
+plot2 <- ggplot(neg_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+  geom_point() +
+  scale_color_viridis(option="D", name="p-value") +
+    scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
+  labs(x="Function", y="miRNA", color="p-value", size="Value") +
+  theme_classic() +
+  theme(
+    legend.title = element_text(size=40, face="bold"),
+    legend.text = element_text(size=38),
+    legend.position = "right",
+    legend.key.size = unit(3, "lines"),
+    axis.title = element_text(size = 45, face = "bold"),
+    axis.text.x = element_text(size=41, color="black", angle=45, hjust=1),
+    axis.text.y = element_text(size=41, color="black"),
+    axis.line = element_line(linewidth = 2, color = "black"),
+    panel.grid.major = element_line(linewidth = 1.25, color = "black")  # Increase major grid line thickness
+  ); plot2
+
+ggsave("../output/Molecular/interactions/sigcorr_downreg_TP0vTP7amb.pdf", plot2, width = 30, height = 18)
+ggsave("../output/Molecular/interactions/sigcorr_downreg_TP0vTP7amb.png", plot2, width = 30, height = 18)
+```
+
+Subset inverse regulation and TP0 amb v TP5 amb
+```{r}
+inv_reg <- all_subset %>%
+  dplyr::filter(pattern == "inverse regulation") %>%
+  dplyr::filter(comparison == "TP0_v_TP5_amb")
+unique(inv_reg$mirna)
+```
+
+Join inverse reg with blast 
+```{r}
+inv_reg <- inv_reg %>%
+  inner_join(blast, by = "mrna")
+```
+
+Plot
+```{r}
+plot3 <- ggplot(inv_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+  geom_point() +
+  scale_color_viridis(option="D", name="p-value") +
+    scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
+  labs(x="Function", y="miRNA", color="p-value", size="Value") +
+  theme_classic() +
+  theme(
+    legend.title = element_text(size=40, face="bold"),
+    legend.text = element_text(size=38),
+    legend.position = "right",
+    legend.key.size = unit(3, "lines"),
+    axis.title = element_text(size = 45, face = "bold"),
+    axis.text.x = element_text(size=41, color="black", angle=45, hjust=1),
+    axis.text.y = element_text(size=41, color="black"),
+    axis.line = element_line(linewidth = 2, color = "black"),
+    panel.grid.major = element_line(linewidth = 1.25, color = "black")  # Increase major grid line thickness
+  ); plot3
+
+ggsave("../output/Molecular/interactions/sigcorr_upreg_TP0vTP5amb.pdf", plot3, width = 30, height = 25)
+ggsave("../output/Molecular/interactions/sigcorr_upreg_TP0vTP5amb.png", plot3, width = 30, height = 25)
+```
+
+Subset inverse regulation and TP0 amb v TP7 amb
+```{r}
+inv_reg <- all_subset %>%
+  dplyr::filter(pattern == "inverse regulation") %>%
+  dplyr::filter(comparison == "TP0_v_TP7_amb")
+
+unique(inv_reg$mirna)
+```
+
+Join inverse reg with blast 
+```{r}
+inv_reg <- inv_reg %>%
+  inner_join(blast, by = "mrna")
+```
+
+Plot
+```{r}
+plot4 <- ggplot(inv_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+  geom_point() +
+  scale_color_viridis(option="D", name="p-value") +
+    scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
+  labs(x="Function", y="miRNA", color="p-value", size="Value") +
+  theme_classic() +
+  theme(
+    legend.title = element_text(size=40, face="bold"),
+    legend.text = element_text(size=38),
+    legend.position = "right",
+    legend.key.size = unit(3, "lines"),
+    axis.title = element_text(size = 45, face = "bold"),
+    axis.text.x = element_text(size=41, color="black", angle=45, hjust=1),
+    axis.text.y = element_text(size=41, color="black"),
+    axis.line = element_line(linewidth = 2, color = "black"),
+    panel.grid.major = element_line(linewidth = 1.25, color = "black")  # Increase major grid line thickness
+  ); plot4
+
+ggsave("../output/Molecular/interactions/sigcorr_upreg_TP0vTP7amb.pdf", plot4, width = 30, height = 25)
+ggsave("../output/Molecular/interactions/sigcorr_upreg_TP0vTP7amb.png", plot4, width = 30, height = 25)
+```
 
 
 
