@@ -308,9 +308,45 @@ temp_plot <- ggplot(data = noaa_data, aes(x=Date.Time, y=Temperature))+
   #geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP2
   #geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP3
   #geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP4
-  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="lightgrey", size = 4)+ # TP5 
+  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP5 
   #geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP6
   geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP7
+  #ylim(26, 30)+
+  ylab("Temperature (°C)")+
+  xlab("")+
+  scale_colour_manual(values=c("black"), name="Temperature")+
+  scale_fill_manual(values=c("black"), name="Temperature")+
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_classic()+
+  theme(legend.position = "none") +
+     theme(legend.title = element_text(size = 28, face = "bold"),
+           legend.text = element_text(size = 25),
+           legend.position = "right") +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
+
+ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.png", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.pdf", temp_plot, width=20, height=13)
+```
+
+Make NOAA plot for 2021 histology field samples
+```{r}
+temp_plot <- ggplot(data = noaa_data, aes(x=Date.Time, y=Temperature))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE, size = 3) +
+  geom_vline(xintercept=as.POSIXct("2021-02-25 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP0
+  geom_vline(xintercept=as.POSIXct("2021-04-11 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP2
+  geom_vline(xintercept=as.POSIXct("2021-04-29 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP3
+  geom_vline(xintercept=as.POSIXct("2021-06-04 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP4
+    geom_vline(xintercept=as.POSIXct("2021-06-26 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP5
+  geom_vline(xintercept=as.POSIXct("2021-07-24 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP6
+  geom_vline(xintercept=as.POSIXct("2021-09-02 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP7
   #ylim(26, 30)+
   ylab("Temperature (°C)")+
   xlab("")+
@@ -330,8 +366,8 @@ temp_plot <- ggplot(data = noaa_data, aes(x=Date.Time, y=Temperature))+
                                     face = "bold",
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
 
-ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_7.png", temp_plot, width=20, height=13)
-ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_7.pdf", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/NOAA_temperature_smooth_field_histology.png", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/NOAA_temperature_smooth_field_histology.pdf", temp_plot, width=20, height=13)
 ```
 
 Bind dfs together 
@@ -377,6 +413,35 @@ ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_TP0_5_7.pdf", tem
 
 BEAUTIFUL!!!!!!!!! Still need to QC my temp data to get rid of the weird spikes. 
 
+Make NOAA plot for 2021 histology experimental samples
 ```{r}
-```
+temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE, size = 3) +
+  geom_vline(xintercept=as.POSIXct("2021-02-25 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP0
+  geom_vline(xintercept=as.POSIXct("2021-04-02 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP2
+  geom_vline(xintercept=as.POSIXct("2021-06-02 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP4
+  geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP6
+  geom_vline(xintercept=as.POSIXct("2021-08-25 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP7
+  #ylim(26, 30)+
+  ylab("Temperature (°C)")+
+  xlab("")+
+  scale_colour_manual(values=c("blue", "red", "black"), name="Temperature")+
+  scale_fill_manual(values=c("blue", "red", "black"), name="Temperature")+
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_classic()+
+    theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = "right") +
+  theme(axis.text.x = element_text(size = 30,
+                                   color = "black")) +
+   theme(axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
 
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_exp_histology.png", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_exp_histology.pdf", temp_plot, width=20, height=13)
+```

@@ -525,7 +525,24 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.png", plot2, 
 
 
 
+Read in annotation information (annotation from Kate)
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
 
+head(annot)
+
+# Swap model out for TU in gene ids 
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+```
+
+Remove extra info from NCBI gene descriptions
+```{r}
+annot <- annot %>%
+  mutate(NCBI_Description = str_replace(NCBI_Description, "\\s*\\[.*\\]", "")) %>%
+  mutate(NCBI_Description = str_replace(NCBI_Description, "LOC\\S+", "")) %>%
+  mutate(NCBI_Description = str_replace(NCBI_Description, "PREDICTED:\\s*", "")) %>%
+  mutate(NCBI_Description = str_trim(NCBI_Description))  # Trim any leading or trailing whitespace
+```
 
 Look at similarities between the two results
 ```{r}
@@ -591,20 +608,15 @@ neg_reg <- all_subset %>%
 unique(neg_reg$mirna)
 ```
 
-Read in blast results
-```{r}
-blast <- read.csv("../output/Molecular/interactions/sigcorr_blast_AST2021.csv")
-```
-
-Join neg reg with blast 
+Join neg reg with annotation info 
 ```{r}
 neg_reg <- neg_reg %>%
-  inner_join(blast, by = "mrna")
+  inner_join(annot, by = c("mrna" = "Protein_ID"))
 ```
 
 Plot
 ```{r}
-plot1 <- ggplot(neg_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+plot1 <- ggplot(neg_reg, aes(x=NCBI_Description, y=mirna, color=pvalue, size=value)) +
   geom_point() +
   scale_color_viridis(option="D", name="p-value") +
     scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
@@ -638,12 +650,12 @@ unique(neg_reg$mirna)
 Join neg reg with blast 
 ```{r}
 neg_reg <- neg_reg %>%
-  inner_join(blast, by = "mrna")
+  inner_join(annot, by = c("mrna" = "Protein_ID"))
 ```
 
 Plot
 ```{r}
-plot2 <- ggplot(neg_reg, aes(x=function., y=mirna, color=pvalue, size=value)) +
+plot2 <- ggplot(neg_reg, aes(x=NCBI_Description, y=mirna, color=pvalue, size=value)) +
   geom_point() +
   scale_color_viridis(option="D", name="p-value") +
     scale_size_continuous(name="Value", range=c(15, 25)) +  # Adjust the range to make points larger
@@ -745,6 +757,30 @@ ggsave("../output/Molecular/interactions/sigcorr_upreg_TP0vTP7amb.png", plot4, w
 
 
 Should we be more interested in the gene overlap or the miRNA overlap between comparisons? 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Next comparison: TP0 amb v TP5 heat
 
