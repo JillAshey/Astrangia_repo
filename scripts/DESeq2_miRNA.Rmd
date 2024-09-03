@@ -503,3 +503,147 @@ writeLines(list, "../output/Molecular/smRNA/DEM_list.txt")
 
 
 
+
+
+
+20240901
+Also ran shortstack as an miRNA identifier. Look at miRNA DEGs with shortstack output 
+
+Read in data and select only counts data 
+```{r}
+counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
+
+Select only miRNAs with a Y in MIRNA column 
+```{r}
+counts <- counts %>%
+  dplyr::filter(MIRNA == "Y")
+```
+
+Should be 51 miRNAs.
+
+Combine Name and Coords columns for miRNA name. Remove MIRNA column 
+```{r}
+counts <- counts %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+```
+
+Make miRNA_name the row names and remove it as a column 
+```{r}
+rownames(counts) <- counts$miRNA_name
+counts <- counts %>%
+  dplyr::select(-miRNA_name)
+```
+
+Remove extra info from column names
+```{r}
+colnames(counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(counts))
+colnames(counts) <- gsub("AST.", "AST-", colnames(counts))
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) #%>% # rearrange metadata so IDs are sorted in descending order 
+  #mutate(Treatment = ifelse(Treatment == "Acclimation", "Ambient", Treatment))
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation","Ambient", "Heat"))
+
+# Remove sample that did not sequence well 
+meta <- meta %>%
+  dplyr::filter(ID != "AST-1105")
+```
+
+Data sanity checks!
+```{r}
+meta$ID %in% colnames(counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta$ID) == colnames(counts)) #are they the same in the same order? Should be TRUE
+```
+
+Data sanity checks!
+```{r}
+meta$ID %in% colnames(counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta$ID) == colnames(counts)) #are they the same in the same order? Should be TRUE
+```
+
+Typically, I filter reads by a proportion of samples containing cutoff value. Because I only have 51 miRNAs, I am not going to filter initially. 
+
+Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
+
+Merge Treatment and Timepoint into a single column 
+```{r}
+meta$Condition <- paste(meta$Timepoint, meta$Treatment, sep = "_")
+meta$Condition <- factor(meta$Condition, levels = c("TP0_Acclimation", "TP5_Ambient", "TP5_Heat", "TP7_Ambient", "TP7_Heat"))
+```
+
+Run DESeq2
+```{r}
+data <- DESeqDataSetFromMatrix(countData = counts, colData = meta, design = ~Condition)
+dds <- DESeq(data)
+resultsNames(dds)
+```
+
+TP0 v TP5 Ambient
+```{r}
+# Look at results 
+TP0_v_5_amb <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP5_Ambient"))
+head(TP0_v_5_amb)
+
+# Save results for all miRNAs 
+TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
+#write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv")
+
+# Volcano plot for LFC 
+ma_plot <- plotMA(TP0_v_5_amb); ma_plot
+
+# Subset miRNAs with significant padj values
+sum(TP0_v_5_amb$padj <0.05, na.rm=T) # miRNA with significant p-values
+TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # miRNAs downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # miRNAs upregulated in TP5 ambient relative to TP0 ambient
+TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
+```
+
+TP0 v TP7 Ambient
+```{r}
+# Look at results 
+TP0_v_7_amb <- results(dds, contrast=c("Condition", "TP0_Acclimation" , "TP7_Ambient"))
+head(TP0_v_7_amb)
+
+# Save results for all miRNAs 
+TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
+#write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv")
+
+# Volcano plot for LFC 
+ma_plot <- plotMA(TP0_v_7_amb); ma_plot
+
+# Subset miRNAs with significant padj values
+sum(TP0_v_7_amb$padj <0.05, na.rm=T) # miRNAs with significant p-values
+TP0_v_7_amb.sig <- subset(TP0_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
+sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # miRNAs downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # miRNAs upregulated in TP5 ambient relative to TP0 ambient
+TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig)),] #subset list of sig transcripts from original count data
+```
+
+TP5 v TP7 Ambient 
+```{r}
+# Look at results 
+TP5_v_7_amb <- results(dds, contrast=c("Condition", "TP5_Ambient" , "TP7_Ambient"))
+head(TP5_v_7_amb)
+
+# Save results for all miRNAs 
+TP5_v_7_amb_df <- as.data.frame(TP5_v_7_amb)
+#write.csv(TP5_v_7_amb_df, file = "../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv")
+
+# Volcano plot for LFC 
+ma_plot<- plotMA(TP5_v_7_amb); ma_plot
+
+# Subset miRNAs with significant padj values
+sum(TP5_v_7_amb$padj <0.05, na.rm=T) # no miRNAs with significant p-values
+```
+
+
+
