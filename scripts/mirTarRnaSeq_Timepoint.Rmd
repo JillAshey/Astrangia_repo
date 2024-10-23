@@ -40,7 +40,7 @@ mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = 
 
 Read in miRNA file of interest
 ```{r}
-TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/mirdeep2/TP0_v_5_amb_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   dplyr::rename(gene_id = X, pvalue = padj)
 ```
@@ -157,9 +157,9 @@ combined_df_subset <- combined_df %>%
 mirRnaHeatmapDiff(combined_df_subset, fontsize = 10)
 
 # Save plot as PDF
-pdf("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
-mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
-dev.off() # Close the PDF device
+#pdf("../output/Molecular/interactions/TP0_v_TP5_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
+#mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
+#dev.off() # Close the PDF device
 ```
 
 Plot FCs
@@ -187,8 +187,8 @@ plot1 <- ggplot(combined_df_subset, aes(x = mrna_FC, y = mirna_FC)) +
     #panel.grid.minor = element_blank()  # Remove minor grid lines
   ); plot1
 
-ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.pdf", plot1, width = 10, height = 8)
-ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.png", plot1, width = 10, height = 8)
+#ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.pdf", plot1, width = 10, height = 8)
+#ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.png", plot1, width = 10, height = 8)
 ```
 
 I'm interested in the functions of these genes that are correlated with specific miRNAs. Perform GOSeq to identify any functional enrichment
