@@ -126,6 +126,44 @@ tail(results_TP0_v_TP5_amb$corrs)
 
 High pvalues...
 
+Join miranda data with inter0 and FC data 
+```{r}
+# mrna FC data 
+mrna_data$gene <- row.names(mrna_data)
+
+inter0_fc <- inter0 %>%
+  full_join(mrna_data, by = c("V2" = "gene"))
+
+# mirna FC data 
+mirna_data$mirna <- row.names(mirna_data)
+
+inter0_fc <- inter0_fc %>%
+  full_join(mirna_data, by = c("V1" = "mirna"))
+
+# Rename 
+colnames(inter0_fc) <- c("mirna", "gene", "value", "mRNA_FC", "miRNA_FC")
+```
+
+Plot
+```{r}
+ggplot(inter0_fc, aes(x = miRNA_FC, y = mRNA_FC)) +
+  geom_point(alpha = 0.5) +  # Add points with some transparency
+  theme_minimal() +  # Use a minimal theme
+  labs(
+    x = "miRNA Fold Change",
+    y = "mRNA Fold Change"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +  # Add a horizontal line at y = 0
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray")    # Add a vertical line at x = 0
+```
+
+the two miRNAs are essentially regulating the same things...
+
+
+
+
+
+
 Make plots showing miRNA and mRNA FC relationships 
 ```{r}
 # Create results file for plotting 
@@ -847,6 +885,9 @@ Get miRNAs with particular fold change and pvalues
 ```{r}
 mirna_files <- list(TP0_v_5_heat_miRNA_df)
 mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# Remove bp info 
+rownames(mirna_data) <- sub(":.*", "", rownames(mirna_data))
 ```
 
 Produce a mRNA miRNA interrelation df 
@@ -859,6 +900,11 @@ This function is calculating the absolute value of the difference between the mR
 Make background distribution
 ```{r}
 outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
 ```
 
 Read in miranda data (doesn't need to be read in again if it was already read in above)
@@ -899,6 +945,7 @@ results_TP0_v_TP5_heat <- mirandaIntersectInter(sig_interRel, outs_background, m
 
 head(results_TP0_v_TP5_heat$mirna)
 head(results_TP0_v_TP5_heat$mrna)
+tail(results_TP0_v_TP5_heat$corrs)
 ```
 
 There are lots of NAs in the data. I need to get rid of those before plotting. I usually combine and save the df after I plot but I will 
@@ -911,6 +958,16 @@ colnames(combined_df) <- c("mirna_FC", "mrna_FC", "V1", "V2", "value", "V3", "V4
 
 # Remove NAs
 combined_df <- na.omit(combined_df)
+
+ggplot(inter0_fc, aes(x = miRNA_FC, y = mRNA_FC)) +
+  geom_point(alpha = 0.5) +  # Add points with some transparency
+  theme_minimal() +  # Use a minimal theme
+  labs(
+    x = "miRNA Fold Change",
+    y = "mRNA Fold Change"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +  # Add a horizontal line at y = 0
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray")    # Add a vertical line at x = 0
 ```
 
 I needed to label some columns V1, V2, etc in order for the plotting functions to understand the input. The functions are looking for columns named V1, V2, etc 
