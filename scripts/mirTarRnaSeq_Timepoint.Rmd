@@ -40,7 +40,7 @@ mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = 
 
 Read in miRNA file of interest
 ```{r}
-TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/mirdeep2/TP0_v_5_amb_miRNA.csv") %>%
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   dplyr::rename(gene_id = X, pvalue = padj)
 ```
@@ -49,30 +49,36 @@ Get miRNAs with particular fold change and pvalues
 ```{r}
 mirna_files <- list(TP0_v_5_amb_miRNA_df)
 mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# Remove bp info 
+rownames(mirna_data) <- sub(":.*", "", rownames(mirna_data))
 ```
 
 Produce a mRNA miRNA interrelation df 
 ```{r}
 inter0 <- twoTimePoint(mrna_data, mirna_data)
+
+length(unique(inter0$V1))
+length(unique(inter0$V2))
 ```
 
 This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
 
 Make background distribution
-```{r, echo=F}
+```{r, warning=F}
 outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
 ```
 
 Identify relationships below specific threshold
 ```{r}
-sig_interRel <- threshSigInter(inter0, outs_background)
+sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
 ```
 
 This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
 
 Read in miranda data 
 ```{r}
-miranda_data <- read.csv("~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_gene_ids_all.csv", header = T)
+miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
 ```
 
 The vignette includes the following information for the example mouse miranda data:  
@@ -80,27 +86,36 @@ The vignette includes the following information for the example mouse miranda da
 head(miRanda)
 ```
 
-V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. Select these columns from my data, rearrange columns, and rename columns to V1-6. This will allow the following functions to properly read the miranda file. 
+In the example data, V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is the subject % identify, and V6 is the query % identity. In my miranda data, V1 is the miRNA id, V2 is the gene id, V3 is the score, V4 is energy in kcal/mol, V5 is start and end miRNA, V6 is start and end mRNA, V7 is the total number of bp overlap, V8 is the subject % identify, and V9 is the query % identity.
+
+Select these columns from my data, rearrange columns, and rename columns to V1-6. This will allow the following functions to properly read the miranda file. 
 ```{r}
 # Select specific columns
 miranda_data_filt <- miranda_data %>%
-  dplyr::select(mirna, Score, Energy_kcal_mol, Subject_Identity, Query_Identity, gene_id)
+  dplyr::select(V1, V2, V3, V4, V8, V9)
 
 # Remove any duplicate rows
 miranda_data_filt <- unique(miranda_data_filt)
 
-# Rearrange columns
-miranda_data_filt <- miranda_data_filt[,c("mirna", "gene_id", "Score", "Energy_kcal_mol", "Subject_Identity", "Query_Identity")]
-
-# Rename columns V1-6
-miranda_data_filt <- miranda_data_filt %>%    
-  rename(V1 = mirna, 
-         V2 = gene_id,
-         V3 = Score,
-         V4 = Energy_kcal_mol, 
-         V5 = Subject_Identity,
-         V6 = Query_Identity)
+# Rename columns
+colnames(miranda_data_filt) <- c("V1", "V2", "V3", "V4", "V5", "V6")
 ```
+
+Edit miRNA and mRNA names to remove extra information. 
+```{r}
+# mirna names 
+miranda_data_filt$V1 <- miranda_data_filt$V1 %>%
+  str_remove("^>") %>%                  # Remove ">" at the beginning
+  str_replace("\\.mature::", "_") %>%   # Replace ".mature::" with "_"
+  str_remove(":.*$")                     # Remove everything after and including ":"
+
+# mrna names 
+miranda_data_filt$V2 <- miranda_data_filt$V2 %>%
+  str_remove("ID=") %>%          # Remove "ID="
+  str_remove(";.*$")             # Remove everything after and including the first ";"
+```
+
+Should I be removing the bp? ie the bp range of miRNAs 
 
 Intersect miranda data with significant relationships
 ```{r}
@@ -108,6 +123,8 @@ results_TP0_v_TP5_amb <- mirandaIntersectInter(sig_interRel, outs_background, mr
 
 tail(results_TP0_v_TP5_amb$corrs)
 ```
+
+High pvalues...
 
 Make plots showing miRNA and mRNA FC relationships 
 ```{r}
@@ -357,6 +374,23 @@ unique(GO_cor$gene_id)
 
 Do we care about significantly enriched genes? Do we need goseq at all? Or do we just need to know the gene function?
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Look at the next comparison: TP0 amb v TP7 amb 
 
 Read in mRNA file of interest
@@ -374,15 +408,20 @@ mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = 
 
 Read in miRNA file of interest
 ```{r}
-TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
-  dplyr::select(X, log2FoldChange, padj) %>%
-  rename(gene_id = X, pvalue = padj)
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj)# %>%
+  #rename("gene_id" = "X", "pvalue" = "padj")
+
+colnames(TP0_v_7_amb_miRNA_df) <- c("gene_id", "log2FoldChange", "pvalue")
 ```
 
 Get miRNAs with particular fold change and pvalues 
 ```{r}
 mirna_files <- list(TP0_v_7_amb_miRNA_df)
 mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# Remove bp info 
+rownames(mirna_data) <- sub(":.*", "", rownames(mirna_data))
 ```
 
 Produce a mRNA miRNA interrelation df 
@@ -399,7 +438,7 @@ outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Sroun
 
 Identify relationships below specific threshold
 ```{r}
-sig_interRel <- threshSigInter(inter0, outs_background)
+sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
 ```
 
 This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
@@ -489,9 +528,9 @@ combined_df_subset <- combined_df %>%
 mirRnaHeatmapDiff(combined_df_subset, fontsize = 10)
 
 # Save plot as PDF
-pdf("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
-mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
-dev.off() # Close the PDF device
+#pdf("../output/Molecular/interactions/TP0_v_TP7_amb_comparisons_sigcorr_subset.pdf", height = 20, width = 25)
+#mirRnaHeatmapDiff(combined_df_subset, fontsize = 25)
+#dev.off() # Close the PDF device
 ```
 
 Plot FCs
@@ -519,8 +558,8 @@ plot2 <- ggplot(combined_df_subset, aes(x = mrna_FC, y = mirna_FC)) +
     #panel.grid.minor = element_blank()  # Remove minor grid lines
   ); plot2
 
-ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.pdf", plot2, width = 10, height = 8)
-ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.png", plot2, width = 10, height = 8)
+#ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.pdf", plot2, width = 10, height = 8)
+#ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.png", plot2, width = 10, height = 8)
 ```
 
 
@@ -799,7 +838,7 @@ mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = 
 
 Read in miRNA file of interest
 ```{r}
-TP0_v_5_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_heat_miRNA.csv") %>%
+TP0_v_5_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_5_heat_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   dplyr::rename(gene_id = X, pvalue = padj)
 ```

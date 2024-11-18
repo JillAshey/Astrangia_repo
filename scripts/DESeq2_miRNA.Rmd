@@ -615,7 +615,7 @@ head(TP0_v_7_amb)
 
 # Save results for all miRNAs 
 TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
-write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack.TP0_v_7_amb_miRNA.csv")
+write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
