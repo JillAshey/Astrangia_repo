@@ -9,7 +9,7 @@ This script will use the R package [mirTarRnaSeq](https://bioconductor.org/packa
 
 I will be using Part 3 of their workflow (see [vignette](https://bioconductor.org/packages/3.13/bioc/vignettes/mirTarRnaSeq/inst/doc/mirTarRnaSeq.pdf)) to assess is there are significant miRNA mRNA interrelationships between time points and/or conditions. The required input is fold change and p-value information on the genes and miRNAs, which I obtained from running DESeq2. In that code, I used pairwise comparisons to compare 'condition' (ie a combo of the timepoint and treatment). I may pivot to using the log ratio method or glmmseq(). 
 
-The comparisons I can analyze are TP0_v_5_amb, TP0_v_7_amb, TP0_v_5_heat, and TP0_v_7_heat because these were the only comparisons that had differentially expressed miRNAs. 
+The comparisons I can analyze are TP0_v_5_amb, TP0_v_7_amb, TP0_v_5_heat, and TP0_v_7_heat because these were the only comparisons that had differentially expressed miRNAs. The following analysis uses the short stack data. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -23,7 +23,9 @@ library(pheatmap)
 library(viridis)
 ```
 
-I will be initially comparing TP0 amb v TP5 amb, TP0 amb v TP7 amb, TP0 amb v TP5 heat, and TP0 amb v TP7 heat 
+I will be initially comparing TP0 amb v TP5 amb, TP0 amb v TP7 amb, TP0 amb v TP5 heat, and TP0 amb v TP7 heat -- these were the only comparisons that had both DEGs and DEMs
+
+## TP0 amb v TP5 amb
 
 Read in mRNA file of interest. In this first iteration, I'm interested in TP0 amb v TP5 amb. 
 ```{r}
@@ -62,10 +64,10 @@ length(unique(inter0$V1))
 length(unique(inter0$V2))
 ```
 
-This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
+This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. A higher value means a greater difference. 
 
 Make background distribution
-```{r, warning=F}
+```{r, warning=F, message=F}
 outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
 ```
 
@@ -74,7 +76,7 @@ Identify relationships below specific threshold
 sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
 ```
 
-This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column. Usually, the pvalue is set to 0.05, but I set it to 1 here to capture all possible relationships, regardless of significance. 
 
 Read in miranda data 
 ```{r}
@@ -115,16 +117,290 @@ miranda_data_filt$V2 <- miranda_data_filt$V2 %>%
   str_remove(";.*$")             # Remove everything after and including the first ";"
 ```
 
-Should I be removing the bp? ie the bp range of miRNAs 
-
 Intersect miranda data with significant relationships
 ```{r}
 results_TP0_v_TP5_amb <- mirandaIntersectInter(sig_interRel, outs_background, mrna_data, mirna_data, miranda_data_filt)
-
 tail(results_TP0_v_TP5_amb$corrs)
 ```
 
-High pvalues...
+Here, the putative interactions as predicted by miranda are used to filter down the initial correlations. We are left with 1 miRNA that binds with 2 different genes, but these interactions were not significant, as calculated by mirtarrnaseq. 
+
+I can't plot using `mirRnaHeatmapDiff`, as there must be greater than 2 objects to properly cluster. 
+
+Combine results data into a single df and write as csv 
+```{r}
+combined_df <- cbind(results_TP0_v_TP5_amb$mirna, results_TP0_v_TP5_amb$mrna, results_TP0_v_TP5_amb$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+```
+
+Plot FCs
+```{r}
+ggplot(combined_df, aes(x = mrna_FC, y = mirna_FC)) +
+  geom_point(size = 6) +
+  geom_smooth(method = "lm", se = T) # Add regression line
+
+# Better plot
+plot1 <- ggplot(combined_df_subset, aes(x = mirna_FC, y = mrna_FC)) +
+  geom_point(size = 4, shape = 21, color = "black", fill = "black") +  # Customize points
+  #geom_vline(xintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add vertical line at x = 0
+  #geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add horizontal line at y = 0
+  #geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1) +  # Customize regression line
+  labs(
+    x = "miRNA Fold Change",
+    y = "mRNA Fold Change"
+  ) +  # Add titles and labels
+  theme_minimal() +  # Use a minimal theme for a clean look
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style title
+    axis.title = element_text(size = 14, face = "bold"),  # Style axis titles
+    axis.text = element_text(size = 12)  # Style axis text
+    #panel.grid.major = element_line(color = "grey80")  # Customize grid lines
+    #panel.grid.minor = element_blank()  # Remove minor grid lines
+  ); plot1
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.pdf", plot1, width = 10, height = 8)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_FC_plot.png", plot1, width = 10, height = 8)
+```
+
+## TP0 amb v TP7 amb
+
+Read in mRNA file of interest
+```{r}
+TP0_v_7_amb_df <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) #%>%
+  #rename(gene_id = X, pvalue = padj)
+
+colnames(TP0_v_7_amb_df) <- c("gene_id", "log2FoldChange", "pvalue")
+```
+
+Get mRNAs with particular fold change and pvalues 
+```{r}
+mrna_files <- list(TP0_v_7_amb_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Read in miRNA file of interest
+```{r}
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj)# %>%
+  #rename("gene_id" = "X", "pvalue" = "padj")
+
+colnames(TP0_v_7_amb_miRNA_df) <- c("gene_id", "log2FoldChange", "pvalue")
+```
+
+Get miRNAs with particular fold change and pvalues 
+```{r}
+mirna_files <- list(TP0_v_7_amb_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# Remove bp info 
+rownames(mirna_data) <- sub(":.*", "", rownames(mirna_data))
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0 <- twoTimePoint(mrna_data, mirna_data)
+```
+
+This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
+
+Make background distribution
+```{r, warning=F, message=F}
+outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
+```
+
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+
+Miranda data already read in above.
+
+Intersect miranda data with significant relationships
+```{r}
+results_TP0_v_TP7_amb <- mirandaIntersectInter(sig_interRel, outs_background, mrna_data, mirna_data, miranda_data_filt)
+tail(results_TP0_v_TP7_amb$corrs)
+```
+
+Still no significant pvalues. Maybe if I change the background distribution?
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+results_TP0_v_TP7_amb_df <- finInterResult(results_TP0_v_TP7_amb)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, results_TP0_v_TP7_amb_df)
+```
+
+Make heatmap for  relationships
+```{r}
+mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 10)
+
+pdf("../output/Molecular/interactions/TP0_v_TP7_amb_interactions.pdf")
+mirRnaHeatmapDiff(results_TP0_v_TP7_amb$corrs, fontsize = 20)
+dev.off() # Close the PDF device
+```
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_TP0_v_TP7_amb$mirna, results_TP0_v_TP7_amb$mrna, results_TP0_v_TP7_amb$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_7_amb_miRNA_mRNA_correlations.csv")
+```
+
+Plot FCs
+```{r}
+plot2 <- ggplot(combined_df, aes(x = mirna_FC, y = mrna_FC)) +
+  geom_point(size = 4, shape = 21, color = "black", fill = "black") +  # Customize points
+  #geom_vline(xintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add vertical line at x = 0
+  #geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add horizontal line at y = 0
+  #geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1) +  # Customize regression line
+  labs(
+    x = "miRNA Fold Change",
+    y = "mRNA Fold Change"
+  ) +  # Add titles and labels
+  theme_minimal() +  # Use a minimal theme for a clean look
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style title
+    axis.title = element_text(size = 14, face = "bold"),  # Style axis titles
+    axis.text = element_text(size = 12)  # Style axis text
+    #panel.grid.major = element_line(color = "grey80")  # Customize grid lines
+    #panel.grid.minor = element_blank()  # Remove minor grid lines
+  ); plot2
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.pdf", plot2, width = 10, height = 8)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_FC_plot.png", plot2, width = 10, height = 8)
+```
+
+## TP0 amb v TP5 heat 
+
+Read in mRNA file of interest
+```{r}
+TP0_v_5_heat_df <- read.csv("../output/Molecular/mRNA/TP0_v_5_heat.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  dplyr::rename(gene_id = X, pvalue = padj)
+```
+
+Get mRNAs with particular fold change and pvalues 
+```{r}
+mrna_files <- list(TP0_v_5_heat_df)
+mrna_data <- one2OneRnaMiRNA(mrna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+```
+
+Read in miRNA file of interest
+```{r}
+TP0_v_5_heat_miRNA_df <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_5_heat_miRNA.csv") %>%
+  dplyr::select(X, log2FoldChange, padj) %>%
+  dplyr::rename(gene_id = X, pvalue = padj)
+```
+
+Get miRNAs with particular fold change and pvalues 
+```{r}
+mirna_files <- list(TP0_v_5_heat_miRNA_df)
+mirna_data <- one2OneRnaMiRNA(mirna_files, gene_colname = "gene_id", fc_colname = "log2FoldChange", pthreshold = 0.05)$foldchanges
+
+# Remove bp info 
+rownames(mirna_data) <- sub(":.*", "", rownames(mirna_data))
+```
+
+Produce a mRNA miRNA interrelation df 
+```{r}
+inter0 <- twoTimePoint(mrna_data, mirna_data)
+```
+
+This function is calculating the absolute value of the difference between the mRNA and miRNA fold changes for each potential miRNA mRNA combo. 
+
+Make background distribution
+```{r}
+outs_background <- twoTimePointSamp(mrna_data, mirna_data, Shrounds = 100, Srounds = 1000)
+```
+
+Identify relationships below specific threshold
+```{r}
+sig_interRel <- threshSigInter(inter0, outs_background, pvalue = 1)
+```
+
+This function uses the background distribution to set a pvalue threshold, which is then applied to the value column.
+
+Miranda data already read in above.
+
+Intersect miranda data with significant relationships
+```{r}
+results_TP0_v_TP5_heat <- mirandaIntersectInter(sig_interRel, outs_background, mrna_data, mirna_data, miranda_data_filt)
+tail(results_TP0_v_TP5_heat$corrs)
+```
+
+No significant pvalues. 
+
+Make plots showing miRNA and mRNA FC relationships 
+```{r}
+# Create results file for plotting 
+results_TP0_v_TP5_heat_df <- finInterResult(results_TP0_v_TP5_heat)
+
+par(mar=c(4,4,2,1))
+drawInterPlots(mrna_data, mirna_data, results_TP0_v_TP5_heat_df)
+```
+
+Make heatmap for  relationships
+```{r}
+mirRnaHeatmapDiff(results_TP0_v_TP5_heat$corrs, fontsize = 10)
+```
+
+Combine results data into a single df 
+```{r}
+combined_df <- cbind(results_TP0_v_TP5_heat$mirna, results_TP0_v_TP5_heat$mrna, results_TP0_v_TP5_heat$corrs)
+
+colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "score", "energy", "subj_identity", "query_identity", "pvalue")
+
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_heat_miRNA_mRNA_correlations.csv")
+```
+
+Plot FCs
+```{r}
+plot3 <- ggplot(combined_df, aes(x = mirna_FC, y = mrna_FC)) +
+  geom_point(size = 4, shape = 21, color = "black", fill = "black") +  # Customize points
+  #geom_vline(xintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add vertical line at x = 0
+  #geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 0.5) +  # Add horizontal line at y = 0
+  #geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1) +  # Customize regression line
+  labs(
+    x = "miRNA Fold Change",
+    y = "mRNA Fold Change"
+  ) +  # Add titles and labels
+  theme_minimal() +  # Use a minimal theme for a clean look
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and style title
+    axis.title = element_text(size = 14, face = "bold"),  # Style axis titles
+    axis.text = element_text(size = 12)  # Style axis text
+    #panel.grid.major = element_line(color = "grey80")  # Customize grid lines
+    #panel.grid.minor = element_blank()  # Remove minor grid lines
+  ); plot3
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_FC_plot.pdf", plot3, width = 10, height = 8)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_FC_plot.png", plot3, width = 10, height = 8)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+OLD CODE as of 11/18/24
 
 Join miranda data with inter0 and FC data 
 ```{r}
@@ -197,7 +473,7 @@ colnames(combined_df) <- c("mirna_FC", "mrna_FC", "mirna", "mrna", "value", "sco
 length(unique(combined_df$mrna))
 unique(combined_df$mrna)
 
-#write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
+write.csv(combined_df, file = "../output/Molecular/interactions/TP0_v_5_amb_miRNA_mRNA_correlations.csv")
 ```
 
 Some of the mRNA FC are really high (low 20s) relative to the other ones, which is driving up the value calculation for the miRNA mRNA combo. I might filter out the extremely high mRNA FCs...

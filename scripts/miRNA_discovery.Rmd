@@ -20,7 +20,7 @@ length(unique(novel$provisional.id)) # 1841 unique genomic ids
 length(unique(novel$consensus.mature.sequence)) # 1389 unique miRNA sequences
 ```
 
-Filter so that mirdeep2 score >10, no rfam info, at least 10 reads in mature and star read count, and significant randfold p-value. These filtering parameters are based on XXXXXXX
+Filter so that mirdeep2 score >10, no rfam info, at least 10 reads in mature and star read count, and significant randfold p-value. 
 ```{r}
 novel_filt <- novel %>%
   filter(miRDeep2.score > 10) %>%
@@ -29,6 +29,9 @@ novel_filt <- novel %>%
   filter(star.read.count >10) %>%
   filter(significant.randfold.p.value == "yes") #%>%
   #na.omit()
+
+length(unique(novel_filt$provisional.id))
+length(unique(novel_filt$consensus.mature.sequence))
 
 # Save csv 
 #write.csv(novel_filt, "../data/Molecular/smRNA/novel_filt.csv")
