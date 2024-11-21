@@ -5,7 +5,7 @@ date: "2024-03-06"
 output: html_document
 ---
 
-I ran mirdeep2 on R1 reads from the Astrangia 2021 experiment. The output was files with novel and known miRNAs. In this code, I filter the results to identify putative miRNAs and combine those with miRNA counts for each sample. 
+I ran mirdeep2 on R1 reads from the Astrangia 2021 experiment. The output was files with novel and known miRNAs. In this code, I filter the results to identify putative miRNAs.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -15,12 +15,12 @@ library(tidyverse)
 
 Load the novel miRNAs
 ```{r}
-novel <- read.csv("../data/Molecular/smRNA/all_novel.csv")
-length(unique(novel$provisional.id)) # 1841 unique genomic ids
-length(unique(novel$consensus.mature.sequence)) # 1389 unique miRNA sequences
+novel <- read.csv("../data/Molecular/smRNA/all_novel_20241121.csv")
+length(unique(novel$provisional.id))
+length(unique(novel$consensus.mature.sequence)) 
 ```
 
-Filter so that mirdeep2 score >10, no rfam info, at least 10 reads in mature and star read count, and significant randfold p-value. 
+Filter so that mirdeep2 score >100, no rfam info, at least 10 reads in mature and star read count, and significant randfold p-value. 
 ```{r}
 novel_filt <- novel %>%
   filter(miRDeep2.score > 10) %>%
@@ -37,20 +37,13 @@ length(unique(novel_filt$consensus.mature.sequence))
 #write.csv(novel_filt, "../data/Molecular/smRNA/novel_filt.csv")
 ```
 
-Select specific columns for downstream analysis
-```{r}
-novel_filt <- novel_filt %>%
-    rename("provisional.id" = "ID",                                                  
-            "estimated.probability.that.the.miRNA.candidate.is.a.true.positive" = "estimated_true_positive" , 
-             "miRBase.miRNA" = "miRBase") %>%
-    mutate(Type = "Novel")
-```
+Will need to go through each pdf to determine putative miRNAs. 
 
 Load the known miRNAs
 ```{r}
-known <- read.csv("../data/Molecular/smRNA/all_known.csv")
-length(unique(known$tag.id)) # 16 unique genomic ids
-length(unique(known$consensus.mature.sequence)) # 14 unique miRNA sequences
+known <- read.csv("../data/Molecular/smRNA/all_known_20241121.csv")
+length(unique(known$tag.id)) 
+length(unique(known$consensus.mature.sequence)) 
 ```
 
 Because we can see some mapping to known miRNAs in cnidarians, I'm going to filter so that mirdeep2 score >0, no rfam info, at least 10 reads in mature read count, and significant ranfold p-value
@@ -63,131 +56,12 @@ known_filt <- known %>%
   filter(significant.randfold.p.value == "yes") #%>%
   #na.omit()
 
+length(unique(known_filt$tag.id)) 
+length(unique(known_filt$consensus.mature.sequence)) 
+
 # Save csv 
 #write.csv(known_filt, "../data/Molecular/smRNA/known_filt.csv")
 ```
 
-Select specific columns for downstream analysis
-```{r}
-known_filt <- known_filt %>%
-    rename("tag.id" = "ID",                                                  
-            "estimated.probability.that.the.miRNA.is.a.true.positive" = "estimated_true_positive", 
-            "mature.miRBase.miRNA" = "miRBase") %>%
-    mutate(Type = "Known")
-```
-
-Bind filtered known and novel miRNAs
-```{r}
-all_miRNA_filt <- rbind(novel_filt, known_filt) %>%
-  select(c("ID", "miRDeep2.score", "estimated_true_positive", "rfam.alert", "total.read.count", "mature.read.count", "loop.read.count", "star.read.count", "significant.randfold.p.value", "consensus.mature.sequence", "consensus.star.sequence", "consensus.precursor.sequence", "precursor.coordinate", "Type"))
-```
-
-Read in miRNA counts from each sample
-```{r}
-# Define a function to read and process CSV files
-process_csv <- function(file_path, suffix) {
-  df <- read.csv(file_path, sep = "\t", header = TRUE) %>%
-    dplyr::select(X.miRNA, read_count) %>%
-    dplyr::rename(!!paste0("read_count_AST-", suffix) := read_count)
-  
-  return(df)
-}
-
-# List of file paths and corresponding suffixes
-file_paths <- c(
-  "../data/Molecular/smRNA/quantifier/AST-1065_miRNAs_expressed_all_samples_1709048527.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1147_miRNAs_expressed_all_samples_1709052026.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1412_miRNAs_expressed_all_samples_1709053021.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1560_miRNAs_expressed_all_samples_1709054526.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1567_miRNAs_expressed_all_samples_1709053231.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1617_miRNAs_expressed_all_samples_1709055134.csv",
-  "../data/Molecular/smRNA/quantifier/AST-1722_miRNAs_expressed_all_samples_1709055319.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2000_miRNAs_expressed_all_samples_1709055397.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2007_miRNAs_expressed_all_samples_1709055480.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2302_miRNAs_expressed_all_samples_1709055687.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2360_miRNAs_expressed_all_samples_1709055924.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2398_miRNAs_expressed_all_samples_1709055986.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2404_miRNAs_expressed_all_samples_1709057037.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2412_miRNAs_expressed_all_samples_1709057124.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2512_miRNAs_expressed_all_samples_1709057192.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2523_miRNAs_expressed_all_samples_1709057251.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2563_miRNAs_expressed_all_samples_1709057330.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2729_miRNAs_expressed_all_samples_1709057412.csv",
-  "../data/Molecular/smRNA/quantifier/AST-2755_miRNAs_expressed_all_samples_1709057479.csv"
-)
-
-suffixes <- c(
-  "1065",
-  "1147", 
-  "1412",
-  "1560",
-  "1567",
-  "1617",
-  "1722",
-  "2000",
-  "2007",
-  "2302",
-  "2360",
-  "2398",
-  "2404",
-  "2412",
-  "2512",
-  "2523",
-  "2563",
-  "2729",
-  "2755"
-)
-
-# Initialize an empty list to store data frames
-dfs <- list()
-
-# Iterate through the file paths and process each CSV file
-for (i in seq_along(file_paths)) {
-  df <- process_csv(file_paths[i], suffixes[i])
-  dfs[[i]] <- df
-}
-
-# Check if columns are the same across data frames
-identical_columns <- map_lgl(dfs[-1], ~identical(dfs[[1]]$X.miRNA, .x$X.miRNA))
-
-# If all columns are the same, bind the data frames together
-if (all(identical_columns)) {
-  mirna_counts <- Reduce(function(x, y) cbind(x, y), dfs)
-  # Remove the extra miRNA columns
-  #all <- select(all, -contains("X.miRNA"))
-} else {
-  print("Columns are not identical across data frames.")
-}
-```
-
-miRNA counts for all samples are in one df but there are still a bunch of extra miRNA id columns. Put the miRNAs in a separate df, remove the miRNA id columns, and then bind the miRNA id df back so there is only one miRNA id column 
-```{r}
-miRNA <- as.data.frame(mirna_counts$X.miRNA)
-
-mirna_counts <- mirna_counts %>%
-  select(-contains("miRNA"))
-
-mirna_counts <- cbind(miRNA, mirna_counts) %>%
-    dplyr::rename("ID" = "mirna_counts$X.miRNA")
-```
-
-Remove miRNAs that have <2 samples with counts and write to csv
-```{r}
-mirna_counts <- mirna_counts %>%
-  mutate(zeros = rowSums(select(., starts_with("read_count")) == 0)) %>% # sum how many zeros are in each row
-  filter(zeros < 17) %>% # Filter out rows with more than 17 zeros (these represent miRNAs that are not expressed in more than 2 samples)
-  select(-zeros) # remove zeros column 
-```
-
-Join counts matrix with miRNA df to select only rows that have putative miRNAs
-```{r}
-mirna_counts_info <- inner_join(all_miRNA_filt, mirna_counts, by = "ID")
-
-write.csv(mirna_counts_info, "../data/Molecular/smRNA/miRNA_count_info.csv")
-```
-
-!!!!!!! the putative/known miRNAs joined with the count matrix!!!!!!!!!! 
-
-
-
+Bind novel and known miRNAs. 
 
