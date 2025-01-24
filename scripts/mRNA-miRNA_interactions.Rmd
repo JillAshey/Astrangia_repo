@@ -1,0 +1,602 @@
+---
+title: "mRNA-miRNA interactions"
+author: "Jill Ashey"
+date: "2025-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+#library(mirTarRnaSeq)
+library(reshape2)
+#library(SPONGE)
+library(pheatmap)
+library(energy)
+library(parallel)
+library(ggraph)
+library(tidygraph)
+library(igraph)
+library(genefilter)
+library(gridExtra)
+```
+
+Read in mRNA count data 
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+
+# Set row names
+rownames(mrna_counts) <- mrna_counts[,1] #set first column that contains gene names as rownames
+mrna_counts <- mrna_counts[,-1] # remove column w/ gene names 
+```
+
+Read in miRNA count data
+```{r}
+mirna_counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
+
+Select only miRNAs with a Y in MIRNA column. Combine Name and Coords columns for miRNA name. Remove MIRNA column 
+```{r}
+mirna_counts <- mirna_counts %>%
+  dplyr::filter(MIRNA == "Y") %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+
+# Set row names 
+rownames(mirna_counts) <- mirna_counts[,20] #set column that contains names as rownames
+mirna_counts <- mirna_counts[,-20] # remove column w/ gene names 
+```
+
+Remove extra info from column names
+```{r}
+colnames(mirna_counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(mirna_counts))
+colnames(mirna_counts) <- gsub("AST.", "AST-", colnames(mirna_counts))
+colnames(mrna_counts) <- gsub("AST.", "AST-", colnames(mrna_counts))
+```
+
+Remove sample that did not sequence well
+```{r}
+mrna_counts <- mrna_counts %>%
+    dplyr::select(-"AST-1105")
+```
+
+Normalize counts
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_counts)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_counts)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Save as csv
+write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_interactions.csv")
+```
+
+Format miRNA names
+```{r}
+pcc_results <- pcc_results %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+Read in miranda data 
+```{r}
+miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
+miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
+miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+```
+
+Merge with miranda data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Investigate data 
+```{r}
+# How many p-values are < 0.05 or < 0.1?
+pvalue_summary_pcc <- combined_data_pcc %>%
+  summarise(
+    pvalue_0.05 = sum(p_value < 0.05),
+    pvalue_0.1 = sum(p_value < 0.1),
+  )
+print(pvalue_summary_pcc)
+
+# How many pairs have a PCC correlation > |0.5|?
+corr_0.5 <- sum(abs(combined_data_pcc$PCC.cor) > 0.5)
+cat("\nPairs with Pearson Correlation > 0.5:", corr_0.5, "\n")
+
+# Are there any pairs that have a p-value < 0.05?
+pairs_of_interest_pcc <- combined_data_pcc %>%
+  filter(p_value < 0.05 )
+cat("p-value < 0.05:", nrow(pairs_of_interest_pcc), "\n")
+
+# How many unique miRNAs and mRNAs have a PCC correlation > |0.5| and a p-value < 0.05?
+length(unique(pairs_of_interest_pcc$miRNA))
+length(unique(pairs_of_interest_pcc$mRNA))
+```
+
+Select pvalue < 0.05
+```{r}
+combined_data_pcc_sig <- combined_data_pcc %>%
+  dplyr::filter(p_value < 0.05)
+dim(combined_data_pcc_sig)
+
+write.csv(combined_data_pcc_sig, "../output/Molecular/interactions/miRNA_mRNA_sig_interactions.csv")
+```
+
+Plot using igraph 
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_sig, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_sig$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+```
+Interesting that so many of the significant correlations are positive. A [study](https://www.thelancet.com/journals/ebiom/article/PIIS2352-3964(19)30227-0/fulltext) that examined positive correlations in miRNA and gene expression found: 
+
+"We found that positive miRNA-gene correlations are surprisingly prevalent and consistent across cancer types, and show distinct patterns than negative correlations. The top-ranked positive correlations are significantly involved in the immune cell differentiation and cell membrane signaling related processes, and display strong power in stratifying patients in terms of survival rate. Although intragenic miRNAs generally tend to co-express with their host genes, a substantial portion of miRNAs shows no obvious correlation with their host gene plausibly due to non-conservation. A miRNA can upregulate a gene by inhibiting its upstream suppressor, or shares transcription factors with that gene, both leading to positive correlation. The miRNA/gene sites associated with the top-ranked positive correlations are more likely to form super-enhancers compared to randomly chosen pairs. Wet-lab experiments revealed that positive correlations partially remain in in vitro condition."
+
+Other studies that have found positive correlations: 
+- [Laxman et al. 2015](https://pmc.ncbi.nlm.nih.gov/articles/PMC4509933/)
+- [Vasdevan et al. 2007](https://www.science.org/doi/full/10.1126/science.1149460)
+- [Nunez-Iglesias et al. 2010](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008898) - " Using a non-parametric analysis, we showed that the levels of many miRNAs can be either positively or negatively correlated with those of their target mRNAs. Comparative analysis with independent cancer datasets showed that such miRNA-mRNA expression correlations are not static, but rather context-dependent."
+
+Read in all DEG df 
+```{r}
+uniq_deg <- read.csv("../output/Molecular/mRNA/Unique_DEGs.csv")
+colnames(uniq_deg)[colnames(uniq_deg) == "X"] <- "mRNA"
+```
+
+Merge pairs of interest with DEGs 
+```{r}
+deg_pairs <- pairs_of_interest_pcc %>%
+  left_join(uniq_deg, by = "mRNA") %>%
+  rowwise() %>%
+  mutate(DEG = if(any(is.na(c_across(starts_with("AST"))))) "N" else "Y") %>%
+  ungroup() #%>%
+  #na.omit()
+
+# Save as csv 
+write.csv(deg_pairs, "../output/Molecular/interactions/miRNA_DEG_interactions.csv")
+```
+
+```{r}
+# Create the graph
+g <- graph_from_data_frame(deg_pairs, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% deg_pairs$miRNA, "miRNA", "mRNA")
+V(g)$shape <- ifelse(V(g)$type == "miRNA", "circle", "triangle")
+V(g)$color <- ifelse(V(g)$type == "miRNA", "purple", 
+                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "orange", "gray"))
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = color, shape = shape), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3, na.rm = TRUE) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_shape_manual(values = c("circle" = 16, "triangle" = 17)) +
+  scale_color_identity() +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+
+ggsave("../output/Molecular/interactions/miRNA_DEG_interaction_network.png", p, width = 20, height = 15, dpi = 300)
+```
+
+Read in annotation info
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+```
+
+Merge with deg_pairs df to examine function 
+```{r}
+deg_pairs_annot <- deg_pairs %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  filter(DEG == "Y")
+```
+
+```{r}
+# Create the graph
+g <- graph_from_data_frame(deg_pairs_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% deg_pairs$miRNA, "miRNA", "mRNA")
+V(g)$shape <- ifelse(V(g)$type == "miRNA", "circle", "triangle")
+V(g)$color <- ifelse(V(g)$type == "miRNA", "purple", 
+                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "orange", "gray"))
+V(g)$label <- ifelse(V(g)$type == "miRNA", V(g)$name, 
+                     deg_pairs_annot$NCBI_Description[match(V(g)$name, deg_pairs_annot$mRNA)])
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = color, shape = shape), size = 5) +
+  geom_node_text(aes(label = label), repel = TRUE, size = 3, na.rm = TRUE) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3, na.rm = TRUE) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_shape_manual(values = c("circle" = 16, "triangle" = 17)) +
+  scale_color_identity() +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+
+ggsave("../output/Molecular/interactions/miRNA_DEG_interaction_network_NCBI_descr.png", p, width = 20, height = 15, dpi = 300)
+```
+
+
+
+
+
+```{r}
+blahh <- combined_data_pcc %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  filter(miRNA == "Cluster_998")
+```
+
+Cluster_1765 is pos correlated with a gene that codes for HDAC and neg correlated with a gene that codes for GALR1. https://pmc.ncbi.nlm.nih.gov/articles/PMC3189853/
+
+Cluster_1453 is pos correlated with a gene that codes for Lectin - at SICB, I talked to Maria (postdoc in Weis lab) who hypothesized that this was potentially related to symbiont uptake. also pos correlated with gene that codes for AIF --> apotosis pathway 
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- meta %>%
+  dplyr::arrange(meta, ID) %>% # rearrange metadata so IDs are sorted in descending order 
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment)) %>%
+  dplyr::filter(ID != "AST-1105")
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "Heat"))
+```
+
+Read in annotation info
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+```
+
+## Examining DEGs in each comparison and the miRNAs that target them
+
+### TP0 v TP5 amb
+
+Read in DEG and DEM info for one comparison - in this case it will be TP0 and TP5 amb
+```{r}
+deg <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
+colnames(deg)[colnames(deg) == "X"] <- "mRNA"
+
+dem <- read.csv("../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_amb_DEM.csv")
+colnames(dem)[colnames(dem) == "X"] <- "miRNA"
+```
+
+Format miRNA names in dem df
+```{r}
+dem <- dem %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+Merge DEGs with pcc results  
+```{r}
+combined_data_pcc_sig_deg <- deg_pairs %>%
+  inner_join(deg, by = "mRNA")
+head(combined_data_pcc_sig_deg)
+```
+
+Merge DEMs
+```{r}
+combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+  inner_join(dem, by = "miRNA")
+head(combined_data_pcc_sig_deg_dem)
+```
+
+Cluster 4640 and evm.TU.chromosome_7.2395 are both upregulated in TP0. This pair has a positive correlation. 
+
+```{r}
+# Modify column names in combined_data_pcc_sig_deg
+combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+  rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
+
+# Modify miRNA names in mirna_counts
+mirna_counts <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1")) %>%
+  column_to_rownames("miRNA")
+
+# Step 1: Prepare the data
+
+# Reshape mRNA counts to long format
+mrna_long <- mrna_counts %>%
+  rownames_to_column("mRNA") %>%
+  pivot_longer(cols = -mRNA, names_to = "ID", values_to = "mRNA_count")
+
+# Reshape miRNA counts to long format
+mirna_long <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  pivot_longer(cols = -miRNA, names_to = "ID", values_to = "miRNA_count")
+
+# Combine mRNA and miRNA data
+combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
+
+# Add metadata
+combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
+
+# Filter for significant pairs
+sig_pairs <- combined_data_pcc_sig_deg %>%
+  select(miRNA, mRNA)
+
+plot_data <- combined_counts_meta %>%
+  inner_join(sig_pairs, by = c("miRNA", "mRNA"))
+
+# Define a custom color palette
+treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
+
+# Step 2: Create the plot
+ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+  geom_point(size = 2.5) +
+  scale_x_log10() +  # Use log scale for mRNA counts
+  scale_y_log10() +  # Use log scale for miRNA counts
+  facet_wrap(~miRNA + mRNA, scales = "free") +
+  scale_color_manual(values = treatment_colors) +  # Set custom colors
+  theme_bw() +
+  labs(x = "mRNA Count", y = "miRNA Count", 
+       title = "miRNA vs mRNA Counts for Significant Pairs",
+       color = "Treatment", shape = "Timepoint") +
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = "lightgrey"),
+        strip.text = element_text(size = 8))
+```
+
+### TP0 v TP7 amb
+
+Read in DEG and DEM info for one comparison - in this case it will be TP0 and TP5 amb
+```{r}
+deg <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
+colnames(deg)[colnames(deg) == "X"] <- "mRNA"
+
+dem <- read.csv("../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_amb_DEM.csv")
+colnames(dem)[colnames(dem) == "X"] <- "miRNA"
+```
+
+Format miRNA names in dem df
+```{r}
+dem <- dem %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+Merge DEGs with pcc results  
+```{r}
+combined_data_pcc_sig_deg <- combined_data_pcc_sig %>%
+  inner_join(deg, by = "mRNA")
+head(combined_data_pcc_sig_deg)
+```
+
+Merge DEMs
+```{r}
+combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+  inner_join(dem, by = "miRNA")
+head(combined_data_pcc_sig_deg_dem)
+```
+
+Interesting! Cluster 2003 (which is mir-100) is positively correlated with 2 genes. 
+
+Plot
+```{r}
+# Modify column names in combined_data_pcc_sig_deg
+combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+  rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
+
+# Modify miRNA names in mirna_counts
+mirna_counts <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1")) %>%
+  column_to_rownames("miRNA")
+
+# Step 1: Prepare the data
+
+# Reshape mRNA counts to long format
+mrna_long <- mrna_counts %>%
+  rownames_to_column("mRNA") %>%
+  pivot_longer(cols = -mRNA, names_to = "ID", values_to = "mRNA_count")
+
+# Reshape miRNA counts to long format
+mirna_long <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  pivot_longer(cols = -miRNA, names_to = "ID", values_to = "miRNA_count")
+
+# Combine mRNA and miRNA data
+combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
+
+# Add metadata
+combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
+
+# Filter for significant pairs
+sig_pairs <- combined_data_pcc_sig_deg %>%
+  select(miRNA, mRNA)
+
+plot_data <- combined_counts_meta %>%
+  inner_join(sig_pairs, by = c("miRNA", "mRNA"))
+
+# Define a custom color palette
+treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
+
+# Step 2: Create the plot
+ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+  geom_point(size = 2.5) +
+  scale_x_log10() +  # Use log scale for mRNA counts
+  scale_y_log10() +  # Use log scale for miRNA counts
+  facet_wrap(~miRNA + mRNA, scales = "free") +
+  scale_color_manual(values = treatment_colors) +  # Set custom colors
+  theme_bw() +
+  labs(x = "mRNA Count", y = "miRNA Count", 
+       title = "miRNA vs mRNA Counts for Significant Pairs",
+       color = "Treatment", shape = "Timepoint") +
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = "lightgrey"),
+        strip.text = element_text(size = 8))
+
+
+```
+
+### TP0 v TP7 heat
+
+Read in DEG and DEM info for one comparison - in this case it will be TP0 and TP5 amb
+```{r}
+deg <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
+colnames(deg)[colnames(deg) == "X"] <- "mRNA"
+
+dem <- read.csv("../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_heat_DEM.csv")
+colnames(dem)[colnames(dem) == "X"] <- "miRNA"
+```
+
+Format miRNA names in dem df
+```{r}
+dem <- dem %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+Merge DEGs with pcc results  
+```{r}
+combined_data_pcc_sig_deg <- combined_data_pcc_sig %>%
+  inner_join(deg, by = "mRNA")
+head(combined_data_pcc_sig_deg)
+```
+
+Merge DEMs
+```{r}
+combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+  inner_join(dem, by = "miRNA")
+head(combined_data_pcc_sig_deg_dem)
+```
+
+Interesting! Cluster 2003 (which is mir-100) is positively correlated with 2 genes. 
+
+Plot
+```{r}
+# Modify column names in combined_data_pcc_sig_deg
+combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+  rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
+
+# Modify miRNA names in mirna_counts
+mirna_counts <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1")) %>%
+  column_to_rownames("miRNA")
+
+# Step 1: Prepare the data
+
+# Reshape mRNA counts to long format
+mrna_long <- mrna_counts %>%
+  rownames_to_column("mRNA") %>%
+  pivot_longer(cols = -mRNA, names_to = "ID", values_to = "mRNA_count")
+
+# Reshape miRNA counts to long format
+mirna_long <- mirna_counts %>%
+  rownames_to_column("miRNA") %>%
+  pivot_longer(cols = -miRNA, names_to = "ID", values_to = "miRNA_count")
+
+# Combine mRNA and miRNA data
+combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
+
+# Add metadata
+combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
+
+# Filter for significant pairs
+sig_pairs <- combined_data_pcc_sig_deg %>%
+  select(miRNA, mRNA)
+
+plot_data <- combined_counts_meta %>%
+  inner_join(sig_pairs, by = c("miRNA", "mRNA"))
+
+# Define a custom color palette
+treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
+
+# Step 2: Create the plot
+ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+  geom_point(size = 2.5) +
+  scale_x_log10() +  # Use log scale for mRNA counts
+  scale_y_log10() +  # Use log scale for miRNA counts
+  facet_wrap(~miRNA + mRNA, scales = "free") +
+  scale_color_manual(values = treatment_colors) +  # Set custom colors
+  theme_bw() +
+  labs(x = "mRNA Count", y = "miRNA Count", 
+       title = "miRNA vs mRNA Counts for Significant Pairs",
+       color = "Treatment", shape = "Timepoint") +
+  theme(legend.position = "bottom",
+        strip.background = element_rect(fill = "lightgrey"),
+        strip.text = element_text(size = 8))
+
+
+```
+
+Still need to plot the rest of the comparisons as of 1/23/25. 
+
+
+

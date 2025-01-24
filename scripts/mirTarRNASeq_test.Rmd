@@ -151,15 +151,15 @@ The `one2OneRnaMiRNA` function grabs the gene name, FC and pvalue information fr
 
 Read in miRNA DE information (only going to try 3 conditions: TP0 v TP5 amb, TP0 v TP7 amb, and TP5 amb v TP7 amb). I need 3 columns: the gene name, the LFC, and the pvalue. Here, I'm using the padj value, but there might be issues since it contains NAs. 
 ```{r}
-TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_5_amb_miRNA.csv") %>%
+TP0_v_5_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/mirdeep2/TP0_v_5_amb_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   rename(gene_id = X, pvalue = padj)
 
-TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP0_v_7_amb_miRNA.csv") %>%
+TP0_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/mirdeep2/TP0_v_7_amb_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   rename(gene_id = X, pvalue = padj)
 
-TP5_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv") %>%
+TP5_v_7_amb_miRNA_df <- read.csv("../output/Molecular/smRNA/mirdeep2/TP5_v_7_amb_miRNA.csv") %>%
   dplyr::select(X, log2FoldChange, padj) %>%
   rename(gene_id = X, pvalue = padj)
 ```

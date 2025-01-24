@@ -1,0 +1,31 @@
+---
+title: "mRNA-miRNA_interactions"
+author: "Jill Ashey"
+date: "2025-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+#library(mirTarRnaSeq)
+library(reshape2)
+#library(SPONGE)
+library(pheatmap)
+library(energy)
+library(parallel)
+library(ggraph)
+library(tidygraph)
+library(igraph)
+library(genefilter)
+library(gridExtra)
+```
+
+Read in mRNA count data 
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+```
+
+
+

@@ -1,3 +1,5 @@
 "","mirna_FC","mrna_FC","mirna","mrna","value","score","energy","subj_identity","query_identity","pvalue"
-"Cluster_4640_chromosome_13",1.48294769202516,3.2353222712222,"Cluster_4640_chromosome_13","evm.TU.chromosome_7.2395",1.75237457919704,162,-22.07,"75.00%","80.00%",0.68521
-"Cluster_4640_chromosome_13.1",1.48294769202516,-2.19538815371661,"Cluster_4640_chromosome_13","evm.TU.chromosome_3.785",3.67833584574177,172,-20.38,"78.95%","84.21%",0.36035
+"Cluster_3037_chromosome_10",-1.43752424408771,-5.97958259481241,"Cluster_3037_chromosome_10","evm.TU.chromosome_11.1959",4.5420583507247,149,-20.12,"66.67%","76.19%",0.34676
+"Cluster_4640_chromosome_13",1.48294769202516,3.23620164847342,"Cluster_4640_chromosome_13","evm.TU.chromosome_7.2395",1.75325395644826,162,-22.07,"75.00%","80.00%",0.74261
+"Cluster_4640_chromosome_13.1",1.48294769202516,-6.41738983867491,"Cluster_4640_chromosome_13","evm.TU.chromosome_7.88",7.90033753070007,163,-20.17,"87.50%","87.50%",0.10075
+"Cluster_4640_chromosome_13.2",1.48294769202516,-2.19365778161418,"Cluster_4640_chromosome_13","evm.TU.chromosome_3.785",3.67660547363934,172,-20.38,"78.95%","84.21%",0.46393

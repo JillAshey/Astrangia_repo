@@ -412,13 +412,28 @@ bowtie_matrix <- read_csv("../data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.
 bowtie_matrix <- as.data.frame(bowtie_matrix)
 rownames(bowtie_matrix) <- bowtie_matrix[,1] #set first column that contains gene names as rownames
 bowtie_matrix <- bowtie_matrix[,-1] # remove column w/ gene names 
+dim(bowtie_matrix)
 ```
+
+There are 47156 genes total. 
 
 Remove extraneous info from sample names. 
 ```{r}
 colnames(bowtie_matrix) <- sub("align.trimmed.", "", colnames(bowtie_matrix))
 colnames(bowtie_matrix) <- sub("_R1_001.fastq.gz.bam.gtf", "", colnames(bowtie_matrix))
 ```
+
+Remove any genes that have 0 counts across all samples (ie these genes were not expressed)
+```{r}
+bowtie_matrix<-bowtie_matrix %>%
+     mutate(Total = rowSums(.[, 1:20]))%>%
+    filter(!Total==0)%>%
+    dplyr::select(!Total)
+
+dim(bowtie_matrix)
+```
+
+After removing genes with 0s across all samples, 43967 genes are left.
 
 Read in metadata 
 ```{r}
@@ -437,9 +452,9 @@ meta$ID %in% colnames(bowtie_matrix) #are all of the sample names (rows) in the 
 all(rownames(meta$ID) == colnames(bowtie_matrix)) #are they the same in the same order? Should be TRUE
 ```
 
-Filter reads by proportion of samples containing cutoff value 
+Filter data with pOverA. There are 20 samples with an n=4 samples per timepoint and treatment. Genes will pass filtering if they are present in 4/20=0.2 of the samples because we expect differential expression by timepoint and treatment. Also filtering for a minimum gene count of 10, such that ~20% of the samples must have a gene count of >10 in order for the gene to remain in the data set.  
 ```{r}
-ffun<-filterfun(pOverA(0.5,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
+ffun<-filterfun(pOverA(0.2,10))  #set up filtering parameters--LOOK INTO FILTERING PARAMETERS
 filt_outrm_poa <- genefilter((bowtie_matrix), ffun) #apply filter
 sum(filt_outrm_poa) #count number of genes left
 
@@ -449,6 +464,8 @@ all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
 
 write.csv(filt_outrm_poa, "../output/Molecular/mRNA/filtered_gene_counts.csv")
 ```
+
+28720 genes remain after filtering. 
 
 Remove AST-1105 from the data, as it did not have good mapping and has basically no counts. 
 ```{r}
@@ -495,8 +512,8 @@ ma_plot <- plotMA(TP0_v_5_amb); ma_plot
 
 # Subset genes with significant padj values
 sum(TP0_v_5_amb$padj <0.05, na.rm=T) # genes with significant p-values
-TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 ambient relative to TP0 ambient
+TP0_v_5_amb.sig <- subset(TP0_v_5_amb, padj<0.05,) #subset signficant pvalues with 5%FDR
+sum(TP0_v_5_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 ambient relative to TP0 ambient OR upregulated in TP0
 sum(TP0_v_5_amb.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig)),] #subset list of sig transcripts from original count data
 
@@ -546,7 +563,7 @@ ma_plot <- plotMA(TP0_v_7_amb); ma_plot
 # Subset genes with significant padj values
 sum(TP0_v_7_amb$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_7_amb.sig <- subset(TP0_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes are downregulated in TP5 ambient relative to TP0 ambient
+sum(TP0_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes are downregulated in TP5 ambient relative to TP0 ambient OR upregulated in TP0
 sum(TP0_v_7_amb.sig$log2FoldChange >0, na.rm=T) # genes are upregulated in TP5 ambient relative to TP0 ambient
 TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig)),] #subset list of sig transcripts from original count data
 
@@ -596,7 +613,7 @@ ma_plot<- plotMA(TP5_v_7_amb); ma_plot
 # Subset genes with significant padj values
 sum(TP5_v_7_amb$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_v_7_amb.sig <- subset(TP5_v_7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 ambient relative to TP5 ambient
+sum(TP5_v_7_amb.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 ambient relative to TP5 ambientn OR upregulated in TP5
 sum(TP5_v_7_amb.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 ambient relative to TP5 ambient
 TP5_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_v_7_amb.sig)),] #subset list of sig transcripts from original count data
 
@@ -646,7 +663,7 @@ ma_plot <- plotMA(TP0_v_5_heat); ma_plot
 # Subset genes with significant padj values
 sum(TP0_v_5_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_5_heat.sig <- subset(TP0_v_5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP0 ambient
+sum(TP0_v_5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP0 ambient OR upregulated in TP0
 sum(TP0_v_5_heat.sig$log2FoldChange >0, na.rm=T) # genes  upregulated in TP5 heat relative to TP0 ambient
 TP0_v_5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_heat.sig)),] #subset list of sig transcripts from original count data
 
@@ -696,7 +713,7 @@ ma_plot <- plotMA(TP0_v_7_heat); ma_plot
 # Subset genes with significant padj values
 sum(TP0_v_7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP0_v_7_heat.sig <- subset(TP0_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP0 ambient
+sum(TP0_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP0 ambient OR upregulated in TP0
 sum(TP0_v_7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP0 ambient
 TP0_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_heat.sig)),] #subset list of sig transcripts from original count data
 
@@ -746,7 +763,7 @@ ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
 # Subset genes with significant padj values
 sum(TP5_heat_v_7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_heat_v_7_heat.sig <- subset(TP5_heat_v_7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP5 heat
+sum(TP5_heat_v_7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP5 heat OR upregulated in TP5 heat
 sum(TP5_heat_v_7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP5 heat
 TP5_heat_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_7_heat.sig)),] #subset list of sig transcripts from original count data
 
@@ -796,7 +813,7 @@ ma_plot <- plotMA(TP5_amb_v_TP5_heat)
 # Subset genes with significant padj values
 sum(TP5_amb_v_TP5_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP5_amb_v_TP5_heat.sig <- subset(TP5_amb_v_TP5_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP5 amb
+sum(TP5_amb_v_TP5_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP5 heat relative to TP5 amb OR upregulated in TP5 amb
 sum(TP5_amb_v_TP5_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP5 heat relative to TP5 amb
 TP5_amb_v_TP5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP5_amb_v_TP5_heat.sig)),] #subset list of sig transcripts from original count data
 
@@ -846,7 +863,7 @@ plotMA(TP7_amb_v_TP7_heat)
 # Subset genes with significant padj values
 sum(TP7_amb_v_TP7_heat$padj <0.05, na.rm=T) # genes with significant p-values
 TP7_amb_v_TP7_heat.sig <- subset(TP7_amb_v_TP7_heat, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP7 amb
+sum(TP7_amb_v_TP7_heat.sig$log2FoldChange <0, na.rm=T) # genes downregulated in TP7 heat relative to TP7 amb OR upregulated in TP7 amb 
 sum(TP7_amb_v_TP7_heat.sig$log2FoldChange >0, na.rm=T) # genes upregulated in TP7 heat relative to TP7 amb
 TP7_amb_v_TP7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP7_amb_v_TP7_heat.sig)),] #subset list of sig transcripts from original count data
 
@@ -898,8 +915,8 @@ ma_plot <- plotMA(TP5_heat_v_TP7_amb)
 # Subset genes with significant padj values
 sum(TP5_heat_v_TP7_amb$padj <0.05, na.rm=T) 
 TP5_heat_v_TP7_amb.sig <- subset(TP5_heat_v_TP7_amb, padj<0.05,) #identify signficant pvalues with 5%FDR
-sum(TP5_heat_v_TP7_amb.sig$log2FoldChange <0, na.rm=T)
-sum(TP5_heat_v_TP7_amb.sig$log2FoldChange >0, na.rm=T)
+sum(TP5_heat_v_TP7_amb.sig$log2FoldChange <0, na.rm=T) # upregulated in TP7 amb
+sum(TP5_heat_v_TP7_amb.sig$log2FoldChange >0, na.rm=T) # upregulated in TP5 heat
 TP5_heat_v_TP7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP5_heat_v_TP7_amb.sig)),] #subset list of sig transcripts from original count data
 
 # Apply a regularized log transformation to minimize effects of small counts
