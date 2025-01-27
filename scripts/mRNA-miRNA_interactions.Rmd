@@ -116,6 +116,11 @@ miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
 miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
 miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
 miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+
+# Assess number of miRNA and mRNA in interactions
+dim(miranda_data)
+length(unique(miranda_data$V1))
+length(unique(miranda_data$V2))
 ```
 
 Merge with miranda data 
@@ -123,6 +128,13 @@ Merge with miranda data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+
+# Assess number of miRNA and mRNA in interactions coupled with PCC 
+dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
+
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_interactions.csv")
 ```
 
 Investigate data 
@@ -212,6 +224,7 @@ deg_pairs <- pairs_of_interest_pcc %>%
 write.csv(deg_pairs, "../output/Molecular/interactions/miRNA_DEG_interactions.csv")
 ```
 
+Create network plot 
 ```{r}
 # Create the graph
 g <- graph_from_data_frame(deg_pairs, directed = FALSE)
@@ -306,6 +319,9 @@ Cluster_1765 is pos correlated with a gene that codes for HDAC and neg correlate
 
 Cluster_1453 is pos correlated with a gene that codes for Lectin - at SICB, I talked to Maria (postdoc in Weis lab) who hypothesized that this was potentially related to symbiont uptake. also pos correlated with gene that codes for AIF --> apotosis pathway 
 
+
+
+
 Read in metadata 
 ```{r}
 meta <- read.csv("../data/Molecular/RNA_metadata.csv")
@@ -322,9 +338,15 @@ meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "H
 Read in annotation info
 ```{r}
 annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
 ```
 
 ## Examining DEGs in each comparison and the miRNAs that target them
+
+Read in pcc information again so I do not need to rerun the pcc calculations again
+```{r}
+combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions.csv")
+```
 
 ### TP0 v TP5 amb
 
@@ -345,23 +367,41 @@ dem <- dem %>%
 
 Merge DEGs with pcc results  
 ```{r}
-combined_data_pcc_sig_deg <- deg_pairs %>%
+combined_data_pcc_deg <- combined_data_pcc %>%
   inner_join(deg, by = "mRNA")
-head(combined_data_pcc_sig_deg)
+dim(combined_data_pcc_deg)
+head(combined_data_pcc_deg)
+```
+
+Merge with annotation data 
+```{r}
+combined_data_pcc_deg_annot <- combined_data_pcc_deg %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  select(-starts_with("AST"))
 ```
 
 Merge DEMs
 ```{r}
-combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+combined_data_pcc_deg_dem <- combined_data_pcc_deg %>%
   inner_join(dem, by = "miRNA")
-head(combined_data_pcc_sig_deg_dem)
+head(combined_data_pcc_deg_dem)
 ```
 
 Cluster 4640 and evm.TU.chromosome_7.2395 are both upregulated in TP0. This pair has a positive correlation. 
 
+Merge with annotation data 
 ```{r}
-# Modify column names in combined_data_pcc_sig_deg
-combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  select(-starts_with("AST"))
+
+# Save as csv 
+write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_annot.csv")
+```
+
+```{r}
+# Modify column names in combined_data_pcc_deg_dem
+combined_data_pcc_deg_dem <- combined_data_pcc_deg_dem %>%
   rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
 
 # Modify miRNA names in mirna_counts
@@ -372,12 +412,38 @@ mirna_counts <- mirna_counts %>%
 
 # Step 1: Prepare the data
 
+# Calculate z-score 
+# Calculate row means and standard deviations
+row_means <- rowMeans(mrna_counts)
+row_sds <- apply(mrna_counts, 1, sd)
+
+# Calculate z-scores
+mrna_z_scores <- t(apply(mrna_counts, 1, function(row) (row - mean(row)) / sd(row)))
+
 # Reshape mRNA counts to long format
+mrna_z_scores_df <- as.data.frame(mrna_z_scores)
+
 mrna_long <- mrna_counts %>%
   rownames_to_column("mRNA") %>%
   pivot_longer(cols = -mRNA, names_to = "ID", values_to = "mRNA_count")
 
+# Calculate z-score 
+# Calculate row means and standard deviations
+row_means <- rowMeans(mirna_counts)
+row_sds <- apply(mirna_counts, 1, sd)
+
+# Calculate z-scores
+mirna_z_scores <- t(apply(mirna_counts, 1, function(row) (row - mean(row)) / sd(row)))
+
 # Reshape miRNA counts to long format
+mirna_z_scores_df <- as.data.frame(mirna_z_scores)
+
+# Modify miRNA names in mirna_counts
+mirna_norm_df <- mirna_norm_df %>%
+  rownames_to_column("miRNA") %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1")) %>%
+  column_to_rownames("miRNA")
+
 mirna_long <- mirna_counts %>%
   rownames_to_column("miRNA") %>%
   pivot_longer(cols = -miRNA, names_to = "ID", values_to = "miRNA_count")
@@ -388,18 +454,18 @@ combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
 # Add metadata
 combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
 
-# Filter for significant pairs
-sig_pairs <- combined_data_pcc_sig_deg %>%
+# Filter for pairs
+pairs <- combined_data_pcc_deg_dem %>%
   select(miRNA, mRNA)
 
 plot_data <- combined_counts_meta %>%
-  inner_join(sig_pairs, by = c("miRNA", "mRNA"))
+  inner_join(pairs, by = c("miRNA", "mRNA"))
 
 # Define a custom color palette
 treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
 
 # Step 2: Create the plot
-ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+count_plot <- ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
   geom_point(size = 2.5) +
   scale_x_log10() +  # Use log scale for mRNA counts
   scale_y_log10() +  # Use log scale for miRNA counts
@@ -407,11 +473,14 @@ ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape 
   scale_color_manual(values = treatment_colors) +  # Set custom colors
   theme_bw() +
   labs(x = "mRNA Count", y = "miRNA Count", 
-       title = "miRNA vs mRNA Counts for Significant Pairs",
+       title = "miRNA vs mRNA Counts for Pairs",
        color = "Treatment", shape = "Timepoint") +
   theme(legend.position = "bottom",
         strip.background = element_rect(fill = "lightgrey"),
-        strip.text = element_text(size = 8))
+        strip.text = element_text(size = 8)); count_plot
+
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_counts.pdf", count_plot, width = 20, height = 15, dpi = 300)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_counts.png", count_plot, width = 20, height = 15, dpi = 300)
 ```
 
 ### TP0 v TP7 amb
@@ -446,6 +515,13 @@ head(combined_data_pcc_sig_deg_dem)
 ```
 
 Interesting! Cluster 2003 (which is mir-100) is positively correlated with 2 genes. 
+
+Merge with annotation data 
+```{r}
+combined_data_pcc_sig_deg_dem_annot <- combined_data_pcc_sig_deg_dem %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  select(-starts_with("AST"))
+```
 
 Plot
 ```{r}
