@@ -20,6 +20,7 @@ library(tidygraph)
 library(igraph)
 library(genefilter)
 library(gridExtra)
+library(ppcor)
 ```
 
 Read in mRNA count data 
@@ -117,10 +118,7 @@ miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything 
 miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
 miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
 
-# Assess number of miRNA and mRNA in interactions
 dim(miranda_data)
-length(unique(miranda_data$V1))
-length(unique(miranda_data$V2))
 ```
 
 Merge with miranda data 
@@ -305,10 +303,6 @@ p <- ggraph(g_tbl, layout = "fr") +
 ggsave("../output/Molecular/interactions/miRNA_DEG_interaction_network_NCBI_descr.png", p, width = 20, height = 15, dpi = 300)
 ```
 
-
-
-
-
 ```{r}
 blahh <- combined_data_pcc %>%
   left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
@@ -371,13 +365,6 @@ combined_data_pcc_deg <- combined_data_pcc %>%
   inner_join(deg, by = "mRNA")
 dim(combined_data_pcc_deg)
 head(combined_data_pcc_deg)
-```
-
-Merge with annotation data 
-```{r}
-combined_data_pcc_deg_annot <- combined_data_pcc_deg %>%
-  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
-  select(-starts_with("AST"))
 ```
 
 Merge DEMs
@@ -483,6 +470,12 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_counts.pd
 ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_counts.png", count_plot, width = 20, height = 15, dpi = 300)
 ```
 
+Plot fold changes against one another 
+```{r}
+ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
+  geom_point(size = 2)
+```
+
 ### TP0 v TP7 amb
 
 Read in DEG and DEM info for one comparison - in this case it will be TP0 and TP5 amb
@@ -502,31 +495,34 @@ dem <- dem %>%
 
 Merge DEGs with pcc results  
 ```{r}
-combined_data_pcc_sig_deg <- combined_data_pcc_sig %>%
+combined_data_pcc_deg <- combined_data_pcc %>%
   inner_join(deg, by = "mRNA")
-head(combined_data_pcc_sig_deg)
+head(combined_data_pcc_deg)
 ```
 
 Merge DEMs
 ```{r}
-combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+combined_data_pcc_deg_dem <- combined_data_pcc_deg %>%
   inner_join(dem, by = "miRNA")
-head(combined_data_pcc_sig_deg_dem)
+head(combined_data_pcc_deg_dem)
 ```
 
-Interesting! Cluster 2003 (which is mir-100) is positively correlated with 2 genes. 
+Interesting! Cluster 2003 (which is mir-100) is positively correlated with 3 genes. 
 
 Merge with annotation data 
 ```{r}
-combined_data_pcc_sig_deg_dem_annot <- combined_data_pcc_sig_deg_dem %>%
+combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
   left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
   select(-starts_with("AST"))
+
+# Save as csv 
+write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP7_amb_pcc_deg_dem_annot.csv")
 ```
 
 Plot
 ```{r}
-# Modify column names in combined_data_pcc_sig_deg
-combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+# Modify column names in combined_data_pcc_deg_dem
+combined_data_pcc_deg_dem <- combined_data_pcc_deg_dem %>%
   rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
 
 # Modify miRNA names in mirna_counts
@@ -554,7 +550,7 @@ combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
 combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
 
 # Filter for significant pairs
-sig_pairs <- combined_data_pcc_sig_deg %>%
+sig_pairs <- combined_data_pcc_deg_dem %>%
   select(miRNA, mRNA)
 
 plot_data <- combined_counts_meta %>%
@@ -564,7 +560,7 @@ plot_data <- combined_counts_meta %>%
 treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
 
 # Step 2: Create the plot
-ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+count_plot <- ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
   geom_point(size = 2.5) +
   scale_x_log10() +  # Use log scale for mRNA counts
   scale_y_log10() +  # Use log scale for miRNA counts
@@ -576,19 +572,26 @@ ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape 
        color = "Treatment", shape = "Timepoint") +
   theme(legend.position = "bottom",
         strip.background = element_rect(fill = "lightgrey"),
-        strip.text = element_text(size = 8))
+        strip.text = element_text(size = 8)); count_plot
 
-
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_pcc_deg_dem_counts.pdf", count_plot, width = 20, height = 15, dpi = 300)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_pcc_deg_dem_counts.png", count_plot, width = 20, height = 15, dpi = 300)
 ```
 
-### TP0 v TP7 heat
+Plot fold changes against one another 
+```{r}
+ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
+  geom_point(size = 2)
+```
+
+### TP0 v TP5 heat
 
 Read in DEG and DEM info for one comparison - in this case it will be TP0 and TP5 amb
 ```{r}
-deg <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
+deg <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")
 colnames(deg)[colnames(deg) == "X"] <- "mRNA"
 
-dem <- read.csv("../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_heat_DEM.csv")
+dem <- read.csv("../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_heat_DEM.csv")
 colnames(dem)[colnames(dem) == "X"] <- "miRNA"
 ```
 
@@ -600,24 +603,32 @@ dem <- dem %>%
 
 Merge DEGs with pcc results  
 ```{r}
-combined_data_pcc_sig_deg <- combined_data_pcc_sig %>%
+combined_data_pcc_deg <- combined_data_pcc %>%
   inner_join(deg, by = "mRNA")
-head(combined_data_pcc_sig_deg)
+head(combined_data_pcc_deg)
 ```
 
 Merge DEMs
 ```{r}
-combined_data_pcc_sig_deg_dem <- combined_data_pcc_sig_deg %>%
+combined_data_pcc_deg_dem <- combined_data_pcc_deg %>%
   inner_join(dem, by = "miRNA")
-head(combined_data_pcc_sig_deg_dem)
+head(combined_data_pcc_deg_dem)
 ```
 
-Interesting! Cluster 2003 (which is mir-100) is positively correlated with 2 genes. 
+Merge with annotation data 
+```{r}
+combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID")) %>%
+  select(-starts_with("AST"))
+
+# Save as csv 
+write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP5_heat_pcc_deg_dem_annot.csv")
+```
 
 Plot
 ```{r}
-# Modify column names in combined_data_pcc_sig_deg
-combined_data_pcc_sig_deg <- combined_data_pcc_sig_deg %>%
+# Modify column names in combined_data_pcc_deg
+combined_data_pcc_deg <- combined_data_pcc_deg %>%
   rename_with(~str_replace(., "AST\\.", "AST-"), starts_with("AST."))
 
 # Modify miRNA names in mirna_counts
@@ -645,7 +656,7 @@ combined_counts <- full_join(mrna_long, mirna_long, by = "ID")
 combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
 
 # Filter for significant pairs
-sig_pairs <- combined_data_pcc_sig_deg %>%
+sig_pairs <- combined_data_pcc_deg %>%
   select(miRNA, mRNA)
 
 plot_data <- combined_counts_meta %>%
@@ -655,7 +666,7 @@ plot_data <- combined_counts_meta %>%
 treatment_colors <- c("Acclimation" = "gray", "Ambient" = "blue", "Heat" = "red")
 
 # Step 2: Create the plot
-ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
+count_plot <- ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape = Timepoint)) +
   geom_point(size = 2.5) +
   scale_x_log10() +  # Use log scale for mRNA counts
   scale_y_log10() +  # Use log scale for miRNA counts
@@ -667,10 +678,115 @@ ggplot(plot_data, aes(x = mRNA_count, y = miRNA_count, color = Treatment, shape 
        color = "Treatment", shape = "Timepoint") +
   theme(legend.position = "bottom",
         strip.background = element_rect(fill = "lightgrey"),
-        strip.text = element_text(size = 8))
+        strip.text = element_text(size = 8)); count_plot
 
-
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_pcc_deg_dem_counts.pdf", count_plot, width = 20, height = 15, dpi = 300)
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_pcc_deg_dem_counts.png", count_plot, width = 20, height = 15, dpi = 300)
 ```
+
+Plot fold changes against one another 
+```{r}
+ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
+  geom_point(size = 2)
+```
+
+Subset just the TP0 and TP5 heat samples and calculate PCC 
+```{r}
+mrna_counts_filt <- mrna_counts %>%
+  select(c("AST-1147", "AST-1567", "AST-1722", "AST-2398", "AST-2404", "AST-2412", "AST-2512", "AST-2563"))
+mirna_counts_filt <- mirna_counts %>%
+  select(c("AST-1147", "AST-1567", "AST-1722", "AST-2398", "AST-2404", "AST-2412", "AST-2512", "AST-2563"))
+```
+
+Normalize counts
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_counts_filt)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_counts_filt)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_interactions.csv")
+```
+
+Intersect with DEGs and DEMs
+```{r}
+blah <- pcc_results %>%
+  inner_join(deg, by = "mRNA") %>%
+  inner_join(dem, by = "miRNA") %>%
+  select(-starts_with("AST")) %>%
+  filter(p_value < 0.05) %>%
+  filter(abs(log2FoldChange.x) > 1) %>%
+  filter(abs(log2FoldChange.y) > 1)
+head(blah)
+length(unique(blah$miRNA))
+length(unique(blah$mRNA))
+```
+
+Merge with miranda data 
+```{r}
+blah_again <- blah %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+
+
+Plot using igraph 
+```{r}
+# Create the graph
+g <- graph_from_data_frame(blah, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% blah$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+```
+
 
 Still need to plot the rest of the comparisons as of 1/23/25. 
 
