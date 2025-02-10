@@ -1,0 +1,329 @@
+---
+title: "Amassing data"
+author: "Jill Ashey"
+date: "2025-01-29"
+output: html_document
+---
+
+I am getting overwhelmed with the amount of data that I have in different places so I am making this script that amasses the mRNA miRNA data thus far. I will be making a df that contains:
+
+- Expression information for all mRNAs for all comparisons
+- Expression information for all miRNAs for all comparisons
+- Miranda interaction data
+- Annotation data 
+- PCC data 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+Read in mRNA expression information
+```{r}
+tp0_v_tp5_amb <- read.csv("../output/Molecular/mRNA/TP0_v_5_amb.csv")
+colnames(tp0_v_tp5_amb)[colnames(tp0_v_tp5_amb) == "X"] <- "mRNA"
+tp0_v_tp5_amb$comparison <- "TP0_v_TP5_amb"
+
+tp0_v_tp7_amb <- read.csv("../output/Molecular/mRNA/TP0_v_7_amb.csv")
+colnames(tp0_v_tp7_amb)[colnames(tp0_v_tp7_amb) == "X"] <- "mRNA"
+tp0_v_tp7_amb$comparison <- "TP0_v_TP7_amb"
+
+tp0_v_tp5_heat <- read.csv("../output/Molecular/mRNA/TP0_v_5_heat.csv")
+colnames(tp0_v_tp5_heat)[colnames(tp0_v_tp5_heat) == "X"] <- "mRNA"
+tp0_v_tp5_heat$comparison <- "TP0_v_TP5_heat"
+
+tp0_v_tp7_heat <- read.csv("../output/Molecular/mRNA/TP0_v_7_heat.csv")
+colnames(tp0_v_tp7_heat)[colnames(tp0_v_tp7_heat) == "X"] <- "mRNA"
+tp0_v_tp7_heat$comparison <- "TP0_v_TP7_heat"
+```
+
+Bind all mRNA expression dfs and mark if the mRNA is differentially expressed 
+```{r}
+all_mrna <- rbind(tp0_v_tp5_amb, tp0_v_tp7_amb, tp0_v_tp5_heat, tp0_v_tp7_heat)
+
+all_mrna <- all_mrna %>%
+  mutate(DE = ifelse(padj < 0.05, "Y", "N"))
+```
+
+Read in miRNA expression information
+```{r}
+tp0_v_tp5_amb_mi <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv")
+colnames(tp0_v_tp5_amb_mi)[colnames(tp0_v_tp5_amb_mi) == "X"] <- "miRNA"
+tp0_v_tp5_amb_mi$comparison <- "TP0_v_TP5_amb"
+
+tp0_v_tp7_amb_mi <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
+colnames(tp0_v_tp7_amb_mi)[colnames(tp0_v_tp7_amb_mi) == "X"] <- "miRNA"
+tp0_v_tp7_amb_mi$comparison <- "TP0_v_TP7_amb"
+
+tp0_v_tp5_heat_mi <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_5_heat_miRNA.csv")
+colnames(tp0_v_tp5_heat_mi)[colnames(tp0_v_tp5_heat_mi) == "X"] <- "miRNA"
+tp0_v_tp5_heat_mi$comparison <- "TP0_v_TP5_heat"
+
+tp0_v_tp7_heat_mi <- read.csv("../output/Molecular/smRNA/shortstack/TP0_v_7_heat_miRNA.csv")
+colnames(tp0_v_tp7_heat_mi)[colnames(tp0_v_tp7_heat_mi) == "X"] <- "miRNA"
+tp0_v_tp7_heat_mi$comparison <- "TP0_v_TP7_heat"
+```
+
+Bind all miRNA expression dfs, mark if the mRNA is differentially expressed, and format miRNA names
+```{r}
+all_mirna <- rbind(tp0_v_tp5_amb_mi, tp0_v_tp7_amb_mi, tp0_v_tp5_heat_mi, tp0_v_tp7_heat_mi)
+
+all_mirna <- all_mirna %>%
+  mutate(DE = ifelse(padj < 0.05, "Y", "N")) %>%
+  mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+Read in df that contains pcc, miranda and annot data
+```{r}
+combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
+```
+
+Merge `combined_data_pcc` df with mRNA and miRNA dfs
+```{r}
+combined_data_pcc_mrna <- combined_data_pcc %>%
+  left_join(all_mrna, by = "mRNA")
+
+combined_data_pcc_mrna_mirna <- combined_data_pcc_mrna %>%
+  left_join(all_mirna, by = "miRNA")
+```
+
+Rename and reorder columns 
+```{r}
+combined_data_pcc_mrna_mirna <- combined_data_pcc_mrna_mirna %>%
+   dplyr::rename(
+    mRNA_baseMean = baseMean.x,
+    mRNA_log2FoldChange = log2FoldChange.x,
+    mRNA_lfcSE = lfcSE.x,
+    mRNA_stat = stat.x,
+    mRNA_pvalue = pvalue.x,
+    mRNA_padj = padj.x,
+    #mRNA_comparison = comparison.x,
+    mRNA_DE = DE.x,
+    miRNA_baseMean = baseMean.y,
+    miRNA_log2FoldChange = log2FoldChange.y,
+    miRNA_lfcSE = lfcSE.y,
+    miRNA_stat = stat.y,
+    miRNA_pvalue = pvalue.y,
+    miRNA_padj = padj.y,
+    #miRNA_comparison = comparison.y,
+    miRNA_DE = DE.y) %>%
+  dplyr::select(miRNA, mRNA, PCC.cor, p_value, adjusted_p_value, mRNA_log2FoldChange, mRNA_padj, mRNA_DE, miRNA_log2FoldChange, miRNA_padj, miRNA_DE, NCBI_Description, Swiss.Prot_Description, score, energy, query_similar, subject_similar, total_bp_shared, GO_Swiss.Prot, GO_Trembl) %>%
+  dplyr::filter(!is.na(miRNA_padj) & !is.na(mRNA_padj))
+
+dim(combined_data_pcc_mrna_mirna)
+combined_data_pcc_mrna_mirna <- unique(combined_data_pcc_mrna_mirna)
+dim(combined_data_pcc_mrna_mirna)
+```
+
+Assess df 
+```{r}
+dim(combined_data_pcc_mrna_mirna)
+length(unique(combined_data_pcc_mrna_mirna$miRNA))
+length(unique(combined_data_pcc_mrna_mirna$mRNA))
+```
+
+Select only differentially expressed 
+```{r}
+combined_data_pcc_mrna_mirna_de <- combined_data_pcc_mrna_mirna %>%
+  filter(miRNA_DE == "Y") %>%
+  filter(mRNA_DE == "Y") #%>%
+  #filter(p_value < 0.05)
+
+# Save as csv 
+write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
+```
+
+Plot!
+```{r}
+# Specify direction of correlation
+combined_data_pcc_mrna_mirna_de <- combined_data_pcc_mrna_mirna_de %>%
+  mutate(direction = ifelse(PCC.cor > 0, "Positive", "Negative")) %>%
+  mutate(Swiss.Prot_Description_short = str_remove(Swiss.Prot_Description, "OS=.*$"))
+
+plot<-ggplot(combined_data_pcc_mrna_mirna_de, aes(x = Swiss.Prot_Description_short, y = p_value, fill = direction)) +
+  #ylim(0, 1) +
+  #geom_hline(yintercept = 0.05, linetype = "solid", color = "black", linewidth = 1)+
+  geom_hline(yintercept = 0.05, color = "black", linetype = "solid", linewidth = 1) +  # Add line at 0.05 
+  geom_point(shape = 21, size = 10) + 
+  #scale_size(range = c(2, 20)) + 
+  xlab('') + 
+  ylab("PCC p-value") +
+  theme_bw(base_size = 30) +
+  #facet_grid(vars(ontology), scales = "free", space = "free_y") +
+  coord_flip(); plot
+
+# Save plot 
+ggsave("../output/Molecular/interactions/swissprot_pcc_de_target.pdf", plot, width = 40, height = 25, dpi = 300)
+ggsave("../output/Molecular/interactions/swissprot_pcc_de_target.png", plot, width = 40, height = 25, dpi = 300)
+```
+
+
+## Examine miRNAs of interest 
+
+Cluster_4640
+```{r}
+clust_4640 <- combined_data_pcc_mrna_mirna %>%
+  filter(miRNA == "Cluster_4640") %>%
+  #filter(PCC.cor < 0) %>%
+  filter(mRNA_log2FoldChange > 0)
+unique(clust_4640$NCBI_Description)
+```
+
+Cluster_2003
+```{r}
+clust_2003 <- combined_data_pcc_mrna_mirna %>%
+  filter(miRNA == "Cluster_2003") %>%
+  filter(PCC.cor < 0) %>%
+  filter(mRNA_log2FoldChange > 0) %>%
+  filter(miRNA_log2FoldChange < 0)
+unique(clust_2003$NCBI_Description)
+```
+
+Cluster_1453
+```{r}
+clust_1453 <- combined_data_pcc_mrna_mirna %>%
+  filter(miRNA == "Cluster_1453") %>%
+  filter(PCC.cor < 0) %>%
+  filter(mRNA_log2FoldChange > 0) %>%
+  filter(miRNA_log2FoldChange < 0)
+unique(clust_1453$NCBI_Description)
+```
+
+Cluster_3037
+```{r}
+clust_3037 <- combined_data_pcc_mrna_mirna %>%
+  filter(miRNA == "Cluster_3037") %>%
+  filter(PCC.cor < 0) %>%
+  filter(mRNA_log2FoldChange > 0) %>%
+  filter(miRNA_log2FoldChange < 0)
+unique(clust_3037$NCBI_Description)
+```
+
+## Test the hypothesis that a miRNA can upregulate a gene by inhibiting its upstream suppressor
+
+To do this for a significant positive mRNA-miRNA pair, assess if there are any mRNAs that are negatively correlated with both the miRNA and mRNA expression. 
+
+Filter the df so that only the significant positive DE mRNA-miRNA pairs remain 
+```{r}
+combined_data_pcc_mrna_mirna_sig_pos <- combined_data_pcc_mrna_mirna %>%
+  filter(PCC.cor > 0) %>%
+  filter(p_value < 0.05) %>%
+  filter(mRNA_DE == "Y") %>%
+  filter(miRNA_DE == "Y")
+unique(combined_data_pcc_mrna_mirna_sig_pos$miRNA)
+unique(combined_data_pcc_mrna_mirna_sig_pos$mRNA)
+```
+
+Extract relevant mRNAs
+```{r}
+mRNAs_list1 <- unique(combined_data_pcc_mrna_mirna_sig_pos$mRNA) # miRNAs with significant positive 
+mRNAs_list2 <- unique(combined_data_pcc_mrna_mirna$mRNA) # all miRNAs interacting with miRNAs and has a correlation value 
+```
+
+Read in mRNA count data and normalize 
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+
+# Set row names
+rownames(mrna_counts) <- mrna_counts[,1] #set first column that contains gene names as rownames
+mrna_counts <- mrna_counts[,-1] # remove column w/ gene names 
+```
+
+Subset the counts data 
+```{r}
+# Subset the counts matrix
+mrna_counts_subset <- mrna_counts[c(mRNAs_list1, mRNAs_list2), ]
+```
+
+```{r}
+# Normalize 
+## Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+mrna_counts_subset_norm <- normalize_counts(mrna_counts_subset)
+```
+
+```{r}
+# Create an empty dataframe to store results
+results <- data.frame(mRNA1 = character(), 
+                      mRNA2 = character(), 
+                      estimate = numeric(), 
+                      p_value = numeric(), 
+                      stringsAsFactors = FALSE)
+
+# Run cor.test for each pair
+for (mRNA1 in mRNAs_list1) {
+  for (mRNA2 in mRNAs_list2) {
+    if (mRNA1 != mRNA2) {
+      test_result <- cor.test(mrna_counts_subset_norm[mRNA1,], mrna_counts_subset_norm[mRNA2,], method = "pearson")
+      results <- rbind(results, data.frame(mRNA1 = mRNA1,
+                                           mRNA2 = mRNA2,
+                                           estimate = test_result$estimate,
+                                           p_value = test_result$p.value))
+    }
+  }
+}
+
+# Adjust p-values for FDR
+results <- results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+```
+
+Filter `results_neg` so that only negative correlations remain 
+```{r}
+results_neg <- results %>%
+  filter(estimate < 0)
+```
+
+Filter `combined_data_pcc_mrna_mirna` so that only negative correlations remain 
+```{r}
+combined_data_pcc_mrna_mirna_neg <- combined_data_pcc_mrna_mirna %>%
+  filter(PCC.cor < 0)
+```
+
+Merge `results_neg` with `combined_data_pcc_mrna_mirna_neg`
+```{r}
+merge <- results_neg %>%
+  inner_join(combined_data_pcc_mrna_mirna_neg, by = c("mRNA2" = "mRNA"))
+```
+
+Identify miRNAs of interest from sig pos df and subset `merge` to only include these miRNAs 
+```{r}
+unique_clusters <- unique(combined_data_pcc_mrna_mirna_sig_pos$miRNA)
+filtered_merge <- merge[merge$miRNA %in% unique_clusters, ]
+```
+
+mRNA1 are the mRNAs from the significant positive correlations (`combined_data_pcc_mrna_mirna_sig_pos$mRNA`) and mRNA2 are the mRNAs that are negatively correlated with the mRNA1s. 
+
+Remove any correlations >-0.1. 
+```{r}
+filtered_merge.1 <- filtered_merge %>%
+  filter(estimate < -0.1) %>%
+  filter(PCC.cor < -0.1) %>%
+  filter(mRNA_DE == "Y") %>%
+  filter(miRNA_DE == "Y")
+length(unique(filtered_merge.1$mRNA1)) # should be 11
+length(unique(filtered_merge.1$mRNA2))
+length(unique(filtered_merge.1$miRNA)) # should be 8
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+, we attempted to detect the double-negative patterns. For a significant positive miRNA-gene pair, we first detected all the intermediate (IM) genes that negatively correlate with both the miRNA and gene in the pair across multiple cancers (R b −0.1, adj.P b .05, cancer coverage≥5).” ([Tan et al., 2019, p. 84](zotero://select/library/items/NN76EXKZ)) ([pdf](zotero://open-pdf/library/items/VIM3W9YD?page=3&annotation=LRVNMSZZ))
+
+

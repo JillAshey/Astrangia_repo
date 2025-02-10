@@ -23,6 +23,7 @@ library(igraph)
 library(genefilter)
 library(gridExtra)
 library(ppcor)
+library(tidyheatmaps)
 ```
 
 ## Load data
@@ -80,6 +81,38 @@ miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from
 dim(miranda_data)
 ```
 
+Summarize how many mRNAs each miRNA are predicted to interact with. Summarize how many miRNAs each mRNA are predicted to interact with. 
+```{r}
+sum_mirna <- miranda_data %>%
+  group_by(miRNA) %>%
+  summarise(mRNA_count = n_distinct(mRNA)) %>% 
+  arrange(desc(mRNA_count))
+
+ggplot(sum_mirna %>% arrange(desc(mRNA_count)), 
+       aes(x = forcats::fct_reorder(miRNA, mRNA_count), y = mRNA_count)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "miRNA", y = "mRNA Count", title = "miRNA Regulation of mRNAs") #+
+  #coord_flip()  # Optional: horizontal bar plot for better readability
+
+# mRNA
+sum_mrna <- miranda_data %>%
+  group_by(mRNA) %>%
+  summarise(miRNA_count = n_distinct(miRNA))
+```
+
+Plot number of bp shared on the x axis and energy score on the y axis. 
+```{r}
+# Create the plot
+ggplot(miranda_data, aes(x = total_bp_shared, y = energy)) +
+  geom_point(alpha = 0.6) +  # Add points with some transparency
+  scale_x_continuous(breaks = unique(miranda_data$total_bp_shared)) +
+  scale_y_reverse() +
+  theme_bw() +  # Use a minimal theme
+  labs(x = "Total Base Pairs Shared",
+       y = "Energy")
+```
+
 Read in metadata 
 ```{r}
 meta <- read.csv("../data/Molecular/RNA_metadata.csv")
@@ -97,6 +130,12 @@ Read in annotation info
 ```{r}
 annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
 annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+```
+
+Merge miranda and annot data 
+```{r}
+miranda_annot <- miranda_data %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID"))
 ```
 
 ## Normalize counts for Pearson's correlation coefficient (PCC) calculations 
@@ -137,8 +176,12 @@ pcc_results <- pairs %>%
   ) %>%
   unnest_wider(pcc_stats)
 
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
 # Save as csv
-write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_interactions.csv")
+write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all.csv")
 ```
 
 Format miRNA names
@@ -147,37 +190,44 @@ pcc_results <- pcc_results %>%
   mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
 ```
 
-Merge with miranda data 
+Merge with miranda data and annot data 
 ```{r}
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
 
-# Assess number of miRNA and mRNA in interactions coupled with PCC 
-dim(combined_data_pcc)
-length(unique(combined_data_pcc$miRNA))
-length(unique(combined_data_pcc$mRNA))
+combined_data_pcc_annot <- combined_data_pcc %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID"))
 
-write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_interactions.csv")
+# Assess number of miRNA and mRNA in interactions coupled with PCC 
+dim(combined_data_pcc_annot)
+length(unique(combined_data_pcc_annot$miRNA))
+length(unique(combined_data_pcc_annot$mRNA))
+
+# Save as csv 
+write.csv(combined_data_pcc_annot, "../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
 ```
 
 Investigate data 
 ```{r}
 # How many p-values are < 0.05 or < 0.1?
-pvalue_summary_pcc <- combined_data_pcc %>%
+pvalue_summary_pcc <- combined_data_pcc_annot %>%
   summarise(
-    pvalue_0.05 = sum(p_value < 0.05),
-    pvalue_0.1 = sum(p_value < 0.1),
+    pvalue_0.05 = sum(adjusted_p_value < 0.05),
+    pvalue_0.1 = sum(adjusted_p_value < 0.1),
   )
 print(pvalue_summary_pcc)
 
 # How many pairs have a PCC correlation > |0.5|?
-corr_0.5 <- sum(abs(combined_data_pcc$PCC.cor) > 0.5)
+corr_0.5 <- sum(abs(combined_data_pcc_annot$PCC.cor) > 0.5)
 cat("\nPairs with Pearson Correlation > 0.5:", corr_0.5, "\n")
 
 # Are there any pairs that have a p-value < 0.05?
-pairs_of_interest_pcc <- combined_data_pcc %>%
-  filter(p_value < 0.05 )
+pairs_of_interest_pcc <- combined_data_pcc_annot %>%
+  filter(adjusted_p_value < 0.05 )
 cat("p-value < 0.05:", nrow(pairs_of_interest_pcc), "\n")
 
 # How many unique miRNAs and mRNAs have a PCC correlation > |0.5| and a p-value < 0.05?
@@ -185,16 +235,81 @@ length(unique(pairs_of_interest_pcc$miRNA))
 length(unique(pairs_of_interest_pcc$mRNA))
 ```
 
+When applying the BH correction, there are only 2 pars that have significant pvalues...Going to move forward using the p_value but come back to discuss w/ Hollie 
+
+Plot number of positive and significant interactions for each miRNA
+```{r}
+# Summarize the data
+summary_data <- combined_data_pcc_annot %>%
+  group_by(miRNA) %>%
+  summarise(
+    positive_count = sum(PCC.cor > 0),
+    negative_count = sum(PCC.cor < 0)
+  ) %>%
+  mutate(total_count = positive_count + negative_count) %>%
+  arrange(desc(total_count))
+
+# Assess how many miRNAs have more positive correlations vs more negative ones 
+positive_dominant <- sum(summary_data$positive_count > summary_data$negative_count)
+negative_dominant <- sum(summary_data$negative_count > summary_data$positive_count)
+equal <- sum(summary_data$positive_count == summary_data$negative_count)
+
+cat("miRNAs with more positive correlations:", positive_dominant, "\n")
+cat("miRNAs with more negative correlations:", negative_dominant, "\n")
+cat("miRNAs with equal positive and negative correlations:", equal, "\n")
+
+# Reshape the data for plotting
+plot_data <- summary_data %>%
+  tidyr::pivot_longer(cols = c(positive_count, negative_count),
+                      names_to = "correlation_type",
+                      values_to = "count")
+
+# Create the stacked bar plot
+ggplot(plot_data, aes(x = reorder(miRNA, -total_count), y = count, fill = correlation_type)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = "miRNA", y = "Count", fill = "Correlation Type",
+       title = "Positive and Negative PCC Correlations per miRNA")
+```
+
+Create network plot of the mRNA-miRNA interactions. 
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+```
+
 Select pvalue < 0.05
 ```{r}
-combined_data_pcc_sig <- combined_data_pcc %>%
+combined_data_pcc_sig <- combined_data_pcc_annot %>%
   dplyr::filter(p_value < 0.05)
 dim(combined_data_pcc_sig)
 
 write.csv(combined_data_pcc_sig, "../output/Molecular/interactions/miRNA_mRNA_sig_interactions.csv")
 ```
 
-Create network plot of the mRNA-miRNA interactions. 
+Create network plot of the significant mRNA-miRNA interactions. 
 ```{r}
 # Create the graph
 g <- graph_from_data_frame(combined_data_pcc_sig, directed = FALSE)
@@ -238,14 +353,14 @@ uniq_deg <- read.csv("../output/Molecular/mRNA/Unique_DEGs.csv")
 colnames(uniq_deg)[colnames(uniq_deg) == "X"] <- "mRNA"
 ```
 
-Merge pairs of interest with DEGs 
+Merge pcc df with DEGs and DEMs
 ```{r}
-deg_pairs <- pairs_of_interest_pcc %>%
+deg_pairs <- combined_data_pcc %>%
   left_join(uniq_deg, by = "mRNA") %>%
   rowwise() %>%
   mutate(DEG = if(any(is.na(c_across(starts_with("AST"))))) "N" else "Y") %>%
-  ungroup() #%>%
-  #na.omit()
+  ungroup() %>%
+  na.omit()
 
 # Save as csv 
 write.csv(deg_pairs, "../output/Molecular/interactions/miRNA_DEG_interactions.csv")
@@ -264,7 +379,7 @@ E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red 
 V(g)$type <- ifelse(V(g)$name %in% deg_pairs$miRNA, "miRNA", "mRNA")
 V(g)$shape <- ifelse(V(g)$type == "miRNA", "circle", "triangle")
 V(g)$color <- ifelse(V(g)$type == "miRNA", "purple", 
-                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "orange", "gray"))
+                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "grey", "orange"))
 
 # Convert to tbl_graph for ggraph
 g_tbl <- as_tbl_graph(g)
@@ -304,7 +419,7 @@ E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red 
 V(g)$type <- ifelse(V(g)$name %in% deg_pairs$miRNA, "miRNA", "mRNA")
 V(g)$shape <- ifelse(V(g)$type == "miRNA", "circle", "triangle")
 V(g)$color <- ifelse(V(g)$type == "miRNA", "purple", 
-                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "orange", "gray"))
+                     ifelse(V(g)$name %in% deg_pairs$mRNA[deg_pairs$DEG == "Y"], "grey", "orange"))
 V(g)$label <- ifelse(V(g)$type == "miRNA", V(g)$name, 
                      deg_pairs_annot$NCBI_Description[match(V(g)$name, deg_pairs_annot$mRNA)])
 
@@ -331,7 +446,7 @@ ggsave("../output/Molecular/interactions/miRNA_DEG_interaction_network_NCBI_desc
 
 Read in pcc information again so I do not need to rerun the pcc calculations again
 ```{r}
-combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions.csv")
+combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
 ```
 
 ### TP0 v TP5 amb
@@ -379,6 +494,31 @@ write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0
 
 Only one mRNA-miRNA interaction is significant for the TP0 amb v TP5 amb comparison: mRNA evm.TU.chromosome_7.2395 and miRNA Cluster_4640 (PCC = 0.8230005, p = 1.510235e-05). This mRNA corresponds to an uncharacterized protein. Both miRNA and mRNA in this pair are downregulated at TP0. 
 
+Assess data
+```{r}
+# How many total pairs? 
+dim(combined_data_pcc_deg_dem_annot)
+
+# How many DEGs? How many DEMs?
+deg_num <- length(unique(combined_data_pcc_deg_dem_annot$mRNA))
+cat("\nNumber of DEGs present in pairs:", deg_num, "\n")
+dem_num <- length(unique(combined_data_pcc_deg_dem_annot$miRNA))
+cat("\nNumber of DEMs present in pairs:", dem_num, "\n")
+
+# How many pairs had a negative correlation? A positive correlation?
+neg_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor < 0)
+cat("\nNumber of negative correlations", neg_corr, "\n")
+pos_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor > 0)
+cat("\nNumber of positive correlations", pos_corr, "\n")
+
+# How many pairs have a PCC p-value < 0.05?
+pvalue_summary <- combined_data_pcc_deg_dem_annot %>%
+  summarise(
+    pvalue_0.05 = sum(p_value < 0.05)
+  )
+print(pvalue_summary)
+```
+
 Plot counts of interacting mRNAs and miRNAs identified for this pairwise comparison
 ```{r}
 # Modify column names in combined_data_pcc_deg_dem
@@ -409,7 +549,7 @@ combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
 
 # Filter for pairs
 pairs <- combined_data_pcc_deg_dem %>%
-  select(miRNA, mRNA)
+  dplyr::select(miRNA, mRNA)
 
 plot_data <- combined_counts_meta %>%
   inner_join(pairs, by = c("miRNA", "mRNA"))
@@ -439,8 +579,45 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_pcc_deg_dem_counts.pn
 Plot fold changes against one another 
 ```{r}
 ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
-  geom_point(size = 2)
+  geom_point(size = 2) + 
+  labs(x = "mRNA LFC", y = "miRNA LFC")
 ```
+
+Plot network plot of this pairwise comparison
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_deg_dem_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_deg_dem_annot$miRNA, "miRNA", "mRNA")
+V(g)$description <- ifelse(V(g)$type == "mRNA", 
+                           combined_data_pcc_deg_dem_annot$NCBI_Description[match(V(g)$name, combined_data_pcc_deg_dem_annot$mRNA)],
+                           NA)
+#V(g)$p_value <- combined_data_pcc_deg_dem_annot$p_value[match(V(g)$name, c(combined_data_pcc_deg_dem_annot$miRNA, combined_data_pcc_deg_dem_annot$mRNA))]
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type, size = 5)) +
+  geom_node_text(aes(label = ifelse(type == "mRNA", description, NA)), 
+                 repel = TRUE, size = 3, max.overlaps = Inf) + # Ensure only mRNA nodes are labeled
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  scale_size_continuous(range = c(3, 10)) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_amb_DEM_DEG_interaction_network.png", p, width = 10, height = 5, dpi = 300)
+```
+
+Labels for the nodes aren't appearing properly, will come back to this. 
 
 ### TP0 v TP7 amb
 
@@ -473,8 +650,6 @@ combined_data_pcc_deg_dem <- combined_data_pcc_deg %>%
 head(combined_data_pcc_deg_dem)
 ```
 
-Interesting! Cluster 2003 (which is mir-100) is positively correlated with 3 genes. 
-
 Merge with annotation data and remove the counts from the df 
 ```{r}
 combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
@@ -483,6 +658,31 @@ combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
 
 # Save as csv 
 write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP7_amb_pcc_deg_dem_annot.csv")
+```
+
+Assess data
+```{r}
+# How many total pairs? 
+dim(combined_data_pcc_deg_dem_annot)
+
+# How many DEGs? How many DEMs?
+deg_num <- length(unique(combined_data_pcc_deg_dem_annot$mRNA))
+cat("\nNumber of DEGs present in pairs:", deg_num, "\n")
+dem_num <- length(unique(combined_data_pcc_deg_dem_annot$miRNA))
+cat("\nNumber of DEMs present in pairs:", dem_num, "\n")
+
+# How many pairs had a negative correlation? A positive correlation?
+neg_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor < 0)
+cat("\nNumber of negative correlations", neg_corr, "\n")
+pos_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor > 0)
+cat("\nNumber of positive correlations", pos_corr, "\n")
+
+# How many pairs have a PCC p-value < 0.05?
+pvalue_summary <- combined_data_pcc_deg_dem_annot %>%
+  summarise(
+    pvalue_0.05 = sum(p_value < 0.05)
+  )
+print(pvalue_summary)
 ```
 
 Plot counts of interacting mRNAs and miRNAs identified for this pairwise comparison
@@ -516,7 +716,7 @@ combined_counts_meta <- left_join(combined_counts, meta, by = "ID")
 
 # Filter for significant pairs
 sig_pairs <- combined_data_pcc_deg_dem %>%
-  select(miRNA, mRNA)
+  dplyr::select(miRNA, mRNA)
 
 plot_data <- combined_counts_meta %>%
   inner_join(sig_pairs, by = c("miRNA", "mRNA"))
@@ -546,8 +746,45 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_pcc_deg_dem_counts.pn
 Plot fold changes against one another 
 ```{r}
 ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
-  geom_point(size = 2)
+  geom_point(size = 2) + 
+  labs(x = "mRNA LFC", y = "miRNA LFC")
 ```
+
+Plot network plot of this pairwise comparison
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_deg_dem_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_deg_dem_annot$miRNA, "miRNA", "mRNA")
+V(g)$description <- ifelse(V(g)$type == "mRNA", 
+                           combined_data_pcc_deg_dem_annot$NCBI_Description[match(V(g)$name, combined_data_pcc_deg_dem_annot$mRNA)],
+                           NA)
+#V(g)$p_value <- combined_data_pcc_deg_dem_annot$p_value[match(V(g)$name, c(combined_data_pcc_deg_dem_annot$miRNA, combined_data_pcc_deg_dem_annot$mRNA))]
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type, size = 5)) +
+  geom_node_text(aes(label = ifelse(type == "mRNA", description, NA)), 
+                 repel = TRUE, size = 3, max.overlaps = Inf) + # Ensure only mRNA nodes are labeled
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  scale_size_continuous(range = c(3, 10)) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_amb_DEM_DEG_interaction_network.png", p, width = 10, height = 5, dpi = 300)
+```
+
+Labels for the nodes aren't appearing properly, will come back to this. 
 
 ### TP0 v TP5 heat
 
@@ -588,6 +825,31 @@ combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
 
 # Save as csv 
 write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP5_heat_pcc_deg_dem_annot.csv")
+```
+
+Assess data
+```{r}
+# How many total pairs? 
+dim(combined_data_pcc_deg_dem_annot)
+
+# How many DEGs? How many DEMs?
+deg_num <- length(unique(combined_data_pcc_deg_dem_annot$mRNA))
+cat("\nNumber of DEGs present in pairs:", deg_num, "\n")
+dem_num <- length(unique(combined_data_pcc_deg_dem_annot$miRNA))
+cat("\nNumber of DEMs present in pairs:", dem_num, "\n")
+
+# How many pairs had a negative correlation? A positive correlation?
+neg_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor < 0)
+cat("\nNumber of negative correlations", neg_corr, "\n")
+pos_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor > 0)
+cat("\nNumber of positive correlations", pos_corr, "\n")
+
+# How many pairs have a PCC p-value < 0.05?
+pvalue_summary <- combined_data_pcc_deg_dem_annot %>%
+  summarise(
+    pvalue_0.05 = sum(p_value < 0.05)
+  )
+print(pvalue_summary)
 ```
 
 Plot counts of interacting mRNAs and miRNAs identified for this pairwise comparison
@@ -651,8 +913,45 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_pcc_deg_dem_counts.p
 Plot fold changes against one another 
 ```{r}
 ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
-  geom_point(size = 2)
+  geom_point(size = 2) + 
+  labs(x = "mRNA LFC", y = "miRNA LFC")
 ```
+
+Plot network plot of this pairwise comparison
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_deg_dem_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_deg_dem_annot$miRNA, "miRNA", "mRNA")
+V(g)$description <- ifelse(V(g)$type == "mRNA", 
+                           combined_data_pcc_deg_dem_annot$NCBI_Description[match(V(g)$name, combined_data_pcc_deg_dem_annot$mRNA)],
+                           NA)
+#V(g)$p_value <- combined_data_pcc_deg_dem_annot$p_value[match(V(g)$name, c(combined_data_pcc_deg_dem_annot$miRNA, combined_data_pcc_deg_dem_annot$mRNA))]
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type, size = 5)) +
+  geom_node_text(aes(label = ifelse(type == "mRNA", description, NA)), 
+                 repel = TRUE, size = 3, max.overlaps = Inf) + # Ensure only mRNA nodes are labeled
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  scale_size_continuous(range = c(3, 10)) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP5_heat_DEM_DEG_interaction_network.png", p, width = 10, height = 5, dpi = 300)
+```
+
+Labels for the nodes aren't appearing properly, will come back to this. 
 
 ### TP0 v TP7 heat
 
@@ -693,6 +992,31 @@ combined_data_pcc_deg_dem_annot <- combined_data_pcc_deg_dem %>%
 
 # Save as csv 
 write.csv(combined_data_pcc_deg_dem_annot, "../output/Molecular/interactions/TP0_amb_v_TP7_heat_pcc_deg_dem_annot.csv")
+```
+
+Assess data
+```{r}
+# How many total pairs? 
+dim(combined_data_pcc_deg_dem_annot)
+
+# How many DEGs? How many DEMs?
+deg_num <- length(unique(combined_data_pcc_deg_dem_annot$mRNA))
+cat("\nNumber of DEGs present in pairs:", deg_num, "\n")
+dem_num <- length(unique(combined_data_pcc_deg_dem_annot$miRNA))
+cat("\nNumber of DEMs present in pairs:", dem_num, "\n")
+
+# How many pairs had a negative correlation? A positive correlation?
+neg_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor < 0)
+cat("\nNumber of negative correlations", neg_corr, "\n")
+pos_corr <- sum(combined_data_pcc_deg_dem_annot$PCC.cor > 0)
+cat("\nNumber of positive correlations", pos_corr, "\n")
+
+# How many pairs have a PCC p-value < 0.05?
+pvalue_summary <- combined_data_pcc_deg_dem_annot %>%
+  summarise(
+    pvalue_0.05 = sum(p_value < 0.05)
+  )
+print(pvalue_summary)
 ```
 
 Plot counts of interacting mRNAs and miRNAs identified for this pairwise comparison
@@ -756,5 +1080,42 @@ ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_heat_pcc_deg_dem_counts.p
 Plot fold changes against one another 
 ```{r}
 ggplot(combined_data_pcc_deg_dem_annot, aes(x = log2FoldChange.x, y = log2FoldChange.y)) + 
-  geom_point(size = 2)
+  geom_point(size = 2) + 
+  labs(x = "mRNA LFC", y = "miRNA LFC")
 ```
+
+Plot network plot of this pairwise comparison
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_deg_dem_annot, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "red", "blue")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_deg_dem_annot$miRNA, "miRNA", "mRNA")
+V(g)$description <- ifelse(V(g)$type == "mRNA", 
+                           combined_data_pcc_deg_dem_annot$NCBI_Description[match(V(g)$name, combined_data_pcc_deg_dem_annot$mRNA)],
+                           NA)
+#V(g)$p_value <- combined_data_pcc_deg_dem_annot$p_value[match(V(g)$name, c(combined_data_pcc_deg_dem_annot$miRNA, combined_data_pcc_deg_dem_annot$mRNA))]
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type, size = 5)) +
+  geom_node_text(aes(label = ifelse(type == "mRNA", description, NA)), 
+                 repel = TRUE, size = 3, max.overlaps = Inf) + # Ensure only mRNA nodes are labeled
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  scale_size_continuous(range = c(3, 10)) +
+  theme_graph() +
+  labs(title = "miRNA-mRNA Interaction Network",
+       subtitle = "Edge width represents |PCC|, color represents correlation direction");p
+ggsave("../output/Molecular/interactions/TP0_amb_v_TP7_heat_DEM_DEG_interaction_network.png", p, width = 10, height = 5, dpi = 300)
+```
+
+Labels for the nodes aren't appearing properly, will come back to this. 
