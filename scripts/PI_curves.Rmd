@@ -193,6 +193,10 @@ pr.save <- pr.out %>% select(plug_id, Light_Value, Run, micromol.cm2.s, micromol
 write.csv(pr.save, "output/1_pi_curve_rates.csv")
 ```
 
+Plot PI curve rates
+```{r}
+blah <- read.csv("../output/Physiology/PR/1_pi_curve_rates.csv")
+```
 
 
 

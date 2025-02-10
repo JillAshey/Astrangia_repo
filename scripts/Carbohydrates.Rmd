@@ -51,99 +51,8 @@ library(corrr)
 library(GGally)
 library(cowplot)
 library(multcomp)
+library(ggstatsplot)
 ```
-
-## Load data 
-```{r}
-data <- read.csv("data/Physiology/Carbohydrates/20220406_Carbohydrates_Data.csv")
-Meta <- read.csv("data/Physiology/Carbohydrates/20220406_Carbohydrates_Meta.csv")
-```
-
-## Calculate standard curve
-Merge files and rename cols
-```{r}
-data.1 <- merge(Meta, data, by = c("Well", "Run"))
-
-# Blank correction for each run separately
-Blank <- data.1 %>% 
-  filter(Sample.Type == "Blank") %>%
-  summarise(blk.avg = mean(X485))
-data.1$abs.corr <- data.1$X485 - Blank$blk.avg
-```
-
-Plot standard curve 
-```{r}
-Standard <- data.1 %>% 
-  filter(Sample.Type == "Standard")
-Standard.plot <- ggplot(data = Standard, aes(x=Concentration, y=abs.corr))+
-  #facet_grid(~Run)+
-  ylab("Absorbance (nm)")+ xlab("Carbohydrate (mg/mL)") + 
-  geom_point()+
-  geom_smooth(method = "lm") +
-  stat_regline_equation(label.y = 1.0, aes(label = ..eq.label..)) +
-  stat_regline_equation(label.y = 0.75, aes(label = ..rr.label..)) +
-  theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1));Standard.plot
-```
-
-Extract standard curve. 
-```{r}
-lmstandard <- lm (Concentration ~ abs.corr, data = Standard)
-lmsummary <- summary(lmstandard) 
-```
-
-## Calculations (initial curve)
-
-Obtain concentration values for samples from standard curve.  
-```{r}
-Samples <- data.1 %>% #subsetting Samples
-  filter(Sample.Type == "Sample")
-
-Samples$Concentration <- predict(lmstandard, newdata = Samples) #using model to get concentration
-```
-
-Accounting for dilution factor (1000/10) and normalizing to homogenate volume 
-```{r}
-Samples$Carb.uL <- (Samples$Concentration * Samples$Homo_vol * 10)
-```
-
-Remove AH samples 
-```{r}
-Samples <- Samples %>% 
-  filter(!Sample.ID == "X")
-
-Samples <- Samples %>% 
-  filter(!Sample.ID == "W")
-```
-
-
-Plot Astrangia
-```{r}
-Carb.Plot.Ast <- Samples%>%
-  ggplot(aes(x=Treatment, y=Carb.uL, fill = Treatment)) +
-  #facet_grid(~Sample.ID)+
-  geom_boxplot(width=.5, outlier.shape= NA, position = position_dodge(width = 0.4)) +
-#  stat_summary(fun=mean, aes(group=Fraction, color = Fraction), position = position_dodge(width = 0.5))  + 
-  geom_point(pch = 21, position=position_jitterdodge(dodge.width=0.4)) +
-  #  ylim(0,0.5) +
-  xlab("Temperature") + ylab(expression("Total Carbohydrate " (mg~uL))) + #Axis titles
-  theme_bw() + theme(panel.border = element_rect(color="black", fill=NA, size=0.75), panel.grid.major = element_blank(), #Makes background theme white
-                     panel.grid.minor = element_blank(), axis.line = element_blank()) +
-  #  theme(axis.text = element_text(size = 30, color = "black"),
-  #        axis.title = element_text(size = 36, color = "black")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)); Carb.Plot.Ast
-ggsave("output/Physiology/Carbohydrates/Carbohydrates.pdf", Carb.Plot.Ast)
-```
-
-
-
-
-
-
-
-20230420
-I now have processed most of my Astrangia 2021 samples for the host fraction
 
 ## Load data 
 ```{r}
@@ -311,7 +220,8 @@ carb_all <- rbind(sample1, sample2, sample3, sample4, sample5)
 
 carb_all <- carb_all %>%
   dplyr::group_by(ID) %>%
-  dplyr::summarise(mean_concentration = mean(Concentration))
+  dplyr::summarise(mean_concentration = mean(Concentration)) %>%
+  filter(mean_concentration > 0)
 ```
 
 ## Read in metadata, surface area, and homogenate volume
@@ -330,10 +240,9 @@ metadata$vol_mL <- as.numeric(metadata$vol_mL)
 
 ## Merge carb data with metadata 
 ```{r}
-carb_all <- carb_all %>% 
-  dplyr::rename(PlugID = ID)
-
-all <- merge(metadata, carb_all, by = "PlugID")
+all <- carb_all %>% 
+  dplyr::rename(PlugID = ID) %>%
+  full_join(metadata, by = "PlugID")
 ```
 
 ## Normalize to homogenate vol and surface area 
@@ -343,6 +252,11 @@ all <- merge(metadata, carb_all, by = "PlugID")
 
 # Accounting for dilution factor (1000/10) and Normalizing to homogenate volume and surface area
 all$Carb.mg.cm2 <- (all$mean_concentration * all$vol_mL * 10)/all$Area_cm ## do I multiple by 100 (since I took 100 ul for the assay) or 10 (because I took 1/10th of the volume from the aliquotted homogenate)
+
+all <- all %>%
+  mutate(carb_ug = mean_concentration/vol_mL,
+         carb_ug.cm2 = carb_ug / Area_cm,
+         carb_mg.cm2 = carb_ug.cm2/1000)
 ```
 
 Save carb data
@@ -377,8 +291,8 @@ Remove field data and change Treatment for TP0 to be "Acclimation"
 carb <- carb %>%
 #   filter(!Timepoint == "TP0") %>%
    filter(!Treatment == "Field") %>%
-   filter(Carb.mg.cm2 <= 15)
-   mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
+   filter(Carb.mg.cm2 <= 15) %>%
+   dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
 ```
 
 Set levels for plotting by month 
@@ -413,8 +327,8 @@ plot <- ggplot(carb, aes(x = Month, y = Carb.mg.cm2, colour = Treatment)) +
                                     face = "bold",
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
 
-ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.pdf", plot, width = 15, height = 10)
-ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.png", plot, width = 15, height = 10)
+#ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.pdf", plot, width = 15, height = 10)
+#ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.png", plot, width = 15, height = 10)
 ```
 
 Summarize data
@@ -426,7 +340,7 @@ mean.carb_site_exp <- summarySE(carb, measurevar = "Carb.mg.cm2", groupvars = c(
 
 Looking at this plot, I see that not all of the treatments/timepoints have n=8. I need to look through my data and notebooks so that I can make sure I have all the data that I need and that I have processed everything. 
 
-Going to do stats just for Temperate coral conference 
+Going to do stats
 ```{r}
 model <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = carb)
 summary(model)
@@ -471,3 +385,97 @@ TukeyHSD(model, which = "Treatment")
 ## Heat differs from amb (but just barely w/ pvalue of 0.0504046)
 ```
 
+Need to do data transformations 
+
+Check for outliers 
+```{r}
+plot <- ggbetweenstats(carb, Timepoint, Carb.mg.cm2, outlier.tagging = T); plot
+```
+
+Remove outliers 
+```{r}
+#set quantile values
+q <- c(0.25, 0.75)
+
+# calculate quantile values by Temperature and Treatment groups
+Quants <- carb %>%
+  group_by(Timepoint) %>%
+  summarize(quant25 = quantile(Carb.mg.cm2, probs = q[1]),
+            quant75 = quantile(Carb.mg.cm2, probs = q[2]),
+            IQRbyGroup=IQR(Carb.mg.cm2))
+
+#Calculate Quantile upper and lower ranges 
+Quants$upper <-  Quants$quant75+1.5*Quants$IQRbyGroup # Upper Range  
+Quants$lower <- Quants$quant25-1.5*Quants$IQRbyGroup # Lower Range
+
+#Calculate STDev upper and lower ranges 
+Quants$upper.stdev <- mean(carb$Carb.mg.cm2)+(sd(carb$Carb.mg.cm2)*2) # Upper Range  
+Quants$lower.stdev <- mean(carb$Carb.mg.cm2)-(sd(carb$Carb.mg.cm2)*2) # Lower Range
+
+#join outlier cutoffs with rate data
+data <- cross_join(carb, Quants)
+
+#remove outliers from rates
+data <- data %>%
+   filter(Carb.mg.cm2 < upper) %>%
+   filter(Carb.mg.cm2 > lower)
+
+# Plot TA value by treatment 
+ggplot(data, aes(x = Timepoint, y = Carb.mg.cm2)) +
+  geom_boxplot()
+
+# Remove outliers from high trt (rows 82 and 166)
+#TAdata <- TAdata[-c(82,166),]
+
+# Plot TA value by treatment 
+#ggplot(TAdata, aes(x = Treatment, y = TA)) +
+#  geom_boxplot()
+
+#remove excess data columns
+#TAdata <- TAdata %>% 
+#  dplyr::select(c("SampleID","TA","Salinity", "Date"))
+```
+
+sqrt data 
+```{r}
+data <- data %>%
+  mutate(sqrt_Carb.mg.cm2 = sqrt(Carb.mg.cm2))
+```
+
+
+Do stats with outliers removed 
+```{r}
+model <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = data)
+summary(model)
+
+## Check ANOVA assumptions 
+# ANOVA assumes data is normally distributed and variance across groups is homogenous 
+# 1. Check homogeneity of variance assumption
+# a. Residuals vs fits plot
+plot(model, 1)
+
+# b. Levene's test 
+leveneTest(residuals(model) ~ Timepoint*Treatment, data = data)
+## p-value is greater than 0.05, so variance is homogeneous 
+
+# 2. Check normality assumption 
+# a. Normality plot of residuals 
+plot(model, 2) 
+hist(residuals(model))
+
+#b. Shapiro-Wilk test 
+aov_residuals <- residuals(object = model)
+shapiro.test(x = aov_residuals)
+# pvalue is less than 0.05, normality is violated
+
+## Compute summary stats 
+model.tables(model, type = "means", se = T)
+
+## Multiple pairwise-comparisons between the means of groups 
+# Tukey HSD 
+TukeyHSD(model, which = "Timepoint")
+## TP2 differs from TP7
+
+TukeyHSD(model, which = "Treatment")
+## Heat differs from amb (but just barely w/ pvalue of 0.0504046)
+```
