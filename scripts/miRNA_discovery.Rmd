@@ -5,7 +5,7 @@ date: "2024-03-06"
 output: html_document
 ---
 
-I ran mirdeep2 on R1 reads from the Astrangia 2021 experiment. The output was files with novel and known miRNAs. In this code, I filter the results to identify putative miRNAs.
+## Shortstack 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -13,55 +13,20 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-Load the novel miRNAs
+Load data 
 ```{r}
-novel <- read.csv("../data/Molecular/smRNA/all_novel_20241121.csv")
-length(unique(novel$provisional.id))
-length(unique(novel$consensus.mature.sequence)) 
+mirna <- read.table("../output/Molecular/smRNA/shortstack/Results.txt", header = T) 
 ```
 
-Filter so that mirdeep2 score >100, no rfam info, at least 10 reads in mature and star read count, and significant randfold p-value. 
+Select only miRNAs with a Y in MIRNA column 
 ```{r}
-novel_filt <- novel %>%
-  filter(miRDeep2.score > 10) %>%
-  filter(rfam.alert == "-") %>%
-  filter(mature.read.count > 10) %>%
-  filter(star.read.count >10) %>%
-  filter(significant.randfold.p.value == "yes") #%>%
-  #na.omit()
-
-length(unique(novel_filt$provisional.id))
-length(unique(novel_filt$consensus.mature.sequence))
-
-# Save csv 
-#write.csv(novel_filt, "../data/Molecular/smRNA/novel_filt.csv")
+mirna <- mirna %>%
+  dplyr::filter(MIRNA == "Y")
+head(mirna)
 ```
 
-Will need to go through each pdf to determine putative miRNAs. 
-
-Load the known miRNAs
+Save putative miRNAs
 ```{r}
-known <- read.csv("../data/Molecular/smRNA/all_known_20241121.csv")
-length(unique(known$tag.id)) 
-length(unique(known$consensus.mature.sequence)) 
+write.csv(mirna, "../output/Molecular/smRNA/shortstack/putative_miRNAs.csv")
 ```
-
-Because we can see some mapping to known miRNAs in cnidarians, I'm going to filter so that mirdeep2 score >0, no rfam info, at least 10 reads in mature read count, and significant ranfold p-value
-```{r}
-known_filt <- known %>%
-  filter(miRDeep2.score > 0) %>%
-  filter(rfam.alert == "-") %>%
-  filter(mature.read.count > 10) %>%
-  #filter(star.read.count >10) %>%
-  filter(significant.randfold.p.value == "yes") #%>%
-  #na.omit()
-
-length(unique(known_filt$tag.id)) 
-length(unique(known_filt$consensus.mature.sequence)) 
-
-# Save csv 
-#write.csv(known_filt, "../data/Molecular/smRNA/known_filt.csv")
-```
-
-Bind novel and known miRNAs. 
 

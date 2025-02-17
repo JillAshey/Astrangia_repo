@@ -131,7 +131,7 @@ combined_data_pcc_mrna_mirna_de <- combined_data_pcc_mrna_mirna %>%
   #filter(p_value < 0.05)
 
 # Save as csv 
-write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
+#write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
 ```
 
 Plot!
@@ -207,10 +207,10 @@ To do this for a significant positive mRNA-miRNA pair, assess if there are any m
 Filter the df so that only the significant positive DE mRNA-miRNA pairs remain 
 ```{r}
 combined_data_pcc_mrna_mirna_sig_pos <- combined_data_pcc_mrna_mirna %>%
-  filter(PCC.cor > 0) %>%
-  filter(p_value < 0.05) %>%
-  filter(mRNA_DE == "Y") %>%
-  filter(miRNA_DE == "Y")
+    filter(PCC.cor > 0)# %>%
+  # filter(p_value < 0.05) %>%
+  # filter(mRNA_DE == "Y") %>%
+  # filter(miRNA_DE == "Y")
 unique(combined_data_pcc_mrna_mirna_sig_pos$miRNA)
 unique(combined_data_pcc_mrna_mirna_sig_pos$mRNA)
 ```
@@ -228,6 +228,10 @@ mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
 # Set row names
 rownames(mrna_counts) <- mrna_counts[,1] #set first column that contains gene names as rownames
 mrna_counts <- mrna_counts[,-1] # remove column w/ gene names 
+
+# Remove AST-1105
+mrna_counts <- mrna_counts %>%
+  select(-AST.1105)
 ```
 
 Subset the counts data 
@@ -236,6 +240,7 @@ Subset the counts data
 mrna_counts_subset <- mrna_counts[c(mRNAs_list1, mRNAs_list2), ]
 ```
 
+Normalize mRNA counts
 ```{r}
 # Normalize 
 ## Function to normalize counts (simple RPM normalization)
@@ -247,6 +252,7 @@ normalize_counts <- function(counts) {
 mrna_counts_subset_norm <- normalize_counts(mrna_counts_subset)
 ```
 
+Run PCC
 ```{r}
 # Create an empty dataframe to store results
 results <- data.frame(mRNA1 = character(), 
@@ -311,19 +317,40 @@ length(unique(filtered_merge.1$mRNA2))
 length(unique(filtered_merge.1$miRNA)) # should be 8
 ```
 
+### Examine specific correlations of interest 
 
+One of the pathways that I have detected is the miR-100 mediated uptake of inorganic phosphate in Feb when nutrients are low. Based on my data, I think that E2 ligases, acid phosphates and miR100 are forming a pathway to facilitate this. I want to see if the E2 ligases are also correlated with the acid phosphotases 
 
+Extract relevant mRNAs
+```{r}
+mRNAs_list1 <- "evm.TU.chromosome_13.1876" 
+mRNAs_list2 <- "evm.TU.chromosome_12.2473" 
+```
 
+Subset the counts data 
+```{r}
+# Subset the counts matrix
+mrna_counts_subset <- mrna_counts[c(mRNAs_list1, mRNAs_list2), ]
+```
 
+```{r}
+mrna_counts_reshaped <- mrna_counts_subset %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column("Sample") %>%
+  rename(
+    Gene1 = `evm.TU.chromosome_13.1876`,
+    Gene2 = `evm.TU.chromosome_12.2473`
+  )
 
+# Create the plot
+ggplot(mrna_counts_reshaped, aes(x = Gene2, y = Gene1)) +
+  geom_point() +
+  geom_text(aes(label = Sample), hjust = 0, vjust = 0) +
+  labs(title = "Gene counts comparison") +
+  theme_minimal()
 
+cor.test(mrna_counts_reshaped$Gene2, mrna_counts_reshaped$Gene1)
+```
 
-
-
-
-
-
-
-, we attempted to detect the double-negative patterns. For a significant positive miRNA-gene pair, we first detected all the intermediate (IM) genes that negatively correlate with both the miRNA and gene in the pair across multiple cancers (R b −0.1, adj.P b .05, cancer coverage≥5).” ([Tan et al., 2019, p. 84](zotero://select/library/items/NN76EXKZ)) ([pdf](zotero://open-pdf/library/items/VIM3W9YD?page=3&annotation=LRVNMSZZ))
-
-
+Confused...these two mRNAs have a positive correlation but I expected them to have a negative correlation...
