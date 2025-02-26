@@ -17,6 +17,8 @@ I am getting overwhelmed with the amount of data that I have in different places
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(viridis)
+library(cowplot)
 ```
 
 Read in mRNA expression information
@@ -77,6 +79,34 @@ all_mirna <- all_mirna %>%
 Read in df that contains pcc, miranda and annot data
 ```{r}
 combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
+
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
+```
+
+Plot 
+```{r}
+ggplot(combined_data_pcc, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
+  #geom_point(alpha = 0.5) +  # Add points with some transparency
+  geom_jitter(alpha = 0.5, width = 0.05, height = 0) +  # Jitter points horizontally
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") +  # Add horizontal line at y = 0.05
+  theme_minimal() +
+  labs(x = "Pearson Correlation Coefficient",
+       y = "P-value",
+       color = "P-value < 0.05") 
+# If you want to remove the legend, add:
+# + theme(legend.position = "none")
+```
+
+Assess data 
+```{r}
+sum(combined_data_pcc$p_value < 0.05)
+
+blah <- combined_data_pcc %>%
+  filter(p_value < 0.05)
+length(unique(blah$miRNA))
+length(unique(blah$mRNA))
 ```
 
 Merge `combined_data_pcc` df with mRNA and miRNA dfs
@@ -121,6 +151,7 @@ Assess df
 dim(combined_data_pcc_mrna_mirna)
 length(unique(combined_data_pcc_mrna_mirna$miRNA))
 length(unique(combined_data_pcc_mrna_mirna$mRNA))
+
 ```
 
 Select only differentially expressed 
@@ -130,8 +161,25 @@ combined_data_pcc_mrna_mirna_de <- combined_data_pcc_mrna_mirna %>%
   filter(mRNA_DE == "Y") #%>%
   #filter(p_value < 0.05)
 
+length(unique(combined_data_pcc_mrna_mirna_de$miRNA))
+length(unique(combined_data_pcc_mrna_mirna_de$mRNA))
 # Save as csv 
 #write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
+```
+
+Plot PCC vs pvalue
+```{r}
+ggplot(combined_data_pcc_mrna_mirna_de, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
+  #geom_point(alpha = 0.5) +  # Add points with some transparency
+  geom_jitter(alpha = 0.5, width = 0.05, height = 0) +  # Jitter points horizontally
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") +  # Add horizontal line at y = 0.05
+  theme_minimal() +
+  labs(x = "Pearson Correlation Coefficient",
+       y = "P-value",
+       color = "P-value < 0.05") 
+# If you want to remove the legend, add:
+# + theme(legend.position = "none")
 ```
 
 Plot!
@@ -157,6 +205,163 @@ plot<-ggplot(combined_data_pcc_mrna_mirna_de, aes(x = Swiss.Prot_Description_sho
 ggsave("../output/Molecular/interactions/swissprot_pcc_de_target.pdf", plot, width = 40, height = 25, dpi = 300)
 ggsave("../output/Molecular/interactions/swissprot_pcc_de_target.png", plot, width = 40, height = 25, dpi = 300)
 ```
+
+Make plots for paper. plot of pos and neg correlations from just PCC+ miranda data → DEs, include the plots of pvalue v PCC. so there will be 4 figures in one plot 
+```{r}
+### PCC + miranda 
+# Summarize data
+summary_data <- combined_data_pcc %>%
+  group_by(miRNA) %>%
+  summarise(
+    positive_count = sum(PCC.cor > 0),
+    negative_count = sum(PCC.cor < 0)
+  ) %>%
+  mutate(total_count = positive_count + negative_count) %>%
+  arrange(desc(total_count))
+
+# Reshape the data for plotting
+plot_data <- summary_data %>%
+  tidyr::pivot_longer(cols = c(positive_count, negative_count),
+                      names_to = "correlation_type",
+                      values_to = "count")
+
+# Plot number of correlations for PCC + miranda
+plot_a <- ggplot(plot_data, aes(x = reorder(miRNA, -total_count), y = count, fill = correlation_type)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Color-blind friendly palette
+  theme_minimal(base_size = 25) +  # Increase base font size
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 25, colour = "black"),
+    axis.text.y = element_text(size = 25, colour = "black"),
+    axis.title = element_text(size = 27, face = "bold", colour = "black"),
+    legend.title = element_text(size = 18, face = "bold", colour = "black"),
+    legend.text = element_text(size = 23, colour = "black"),
+    legend.position = c(1, 1),
+    legend.justification = c(1, 1),
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.ticks.x = element_line(color = "black", size = 0.5),
+    axis.ticks.length.x = unit(0.25, "cm"),
+    plot.margin = margin(b = 20, unit = "pt"),  # Add bottom margin
+    axis.title.x = element_text(margin = margin(t = 15, unit = "pt"))  # Move x-axis title down
+  ) +
+  labs(
+    x = "miRNA",
+    y = "Count",
+    fill = "Correlation Type"
+  ) +
+  scale_x_discrete(expand = c(0, 0)) +  # Remove padding at the ends of x-axis
+  scale_y_continuous(expand = c(0, 0)); plot_a  # Remove padding at the bottom of y-axis
+
+# Plot pvalue v PCC 
+plot_b <- ggplot(combined_data_pcc, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
+  geom_jitter(alpha = 0.7, width = 0.05, height = 0, size =3.5) +  # Increased point size and alpha
+  scale_color_manual(values = c("FALSE" = "grey50", "TRUE" = "red")) +  # Colorblind-friendly palette
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "black", size = 1) +  # Thicker line
+  theme_minimal(base_size = 25) +  # Increase base font size
+  theme(
+    axis.text = element_text(size = 25, colour = "black"),
+    axis.title = element_text(size = 27, face = "bold", colour = "black"),
+    legend.title = element_text(size = 25, face = "bold", colour = "black"),
+    legend.text = element_text(size = 23, colour = "black"),
+    legend.position = c(1, 1),
+    legend.justification = c(1, 1),
+    axis.line = element_line(color = "black", size = 0.5),
+    axis.ticks = element_line(color = "black", size = 0.5),
+    axis.ticks.length = unit(0.25, "cm"),
+    plot.margin = margin(b = 20, l = 20, unit = "pt")  # Add bottom and left margin
+  ) +
+  labs(
+    x = "Pearson Correlation Coefficient",
+    y = "P-value",
+    color = "P-value < 0.05"
+  ); plot_b
+
+### PCC + miranda AND DEs
+# Summarize data
+summary_data <- combined_data_pcc_mrna_mirna_de %>%
+  group_by(miRNA) %>%
+  summarise(
+    positive_count = sum(PCC.cor > 0),
+    negative_count = sum(PCC.cor < 0)
+  ) %>%
+  mutate(total_count = positive_count + negative_count) %>%
+  arrange(desc(total_count))
+
+# Reshape the data for plotting
+plot_data <- summary_data %>%
+  tidyr::pivot_longer(cols = c(positive_count, negative_count),
+                      names_to = "correlation_type",
+                      values_to = "count")
+
+# Plot number of correlations for PCC + miranda AND sig corrs
+plot_c <- ggplot(plot_data, aes(x = reorder(miRNA, -total_count), y = count, fill = correlation_type)) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Color-blind friendly palette
+  theme_minimal(base_size = 25) +  # Increase base font size
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 25, colour = "black"),
+    axis.text.y = element_text(size = 25, colour = "black"),
+    axis.title = element_text(size = 27, face = "bold", colour = "black"),
+    legend.title = element_text(size = 18, face = "bold", colour = "black"),
+    legend.text = element_text(size = 23, colour = "black"),
+    legend.position = c(1, 1),
+    legend.justification = c(1, 1),
+    axis.line.x = element_line(color = "black", size = 0.5),
+    axis.ticks.x = element_line(color = "black", size = 0.5),
+    axis.ticks.length.x = unit(0.25, "cm"),
+    plot.margin = margin(b = 20, unit = "pt"),  # Add bottom margin
+    axis.title.x = element_text(margin = margin(t = 15, unit = "pt"))  # Move x-axis title down
+  ) +
+  labs(
+    x = "miRNA",
+    y = "Count",
+    fill = "Correlation Type"
+  ) +
+  scale_x_discrete(expand = c(0, 0)) +  # Remove padding at the ends of x-axis
+  scale_y_continuous(expand = c(0, 0)); plot_c  # Remove padding at the bottom of y-axis
+
+# Plot pvalue v PCC 
+plot_d <- ggplot(combined_data_pcc_mrna_mirna_de, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
+  geom_jitter(alpha = 0.7, width = 0.05, height = 0, size = 3.5) +  # Increased point size and alpha
+  scale_color_manual(values = c("FALSE" = "grey50", "TRUE" = "red")) +  # Colorblind-friendly palette
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "black", size = 1) +  # Thicker line
+  theme_minimal(base_size = 25) +  # Increase base font size
+  theme(
+    axis.text = element_text(size = 25, colour = "black"),
+    axis.title = element_text(size = 27, face = "bold", colour = "black"),
+    legend.title = element_text(size = 25, face = "bold", colour = "black"),
+    legend.text = element_text(size = 23, colour = "black"),
+    legend.position = c(1, 1),
+    legend.justification = c(1, 1),
+    axis.line = element_line(color = "black", size = 0.5),
+    axis.ticks = element_line(color = "black", size = 0.5),
+    axis.ticks.length = unit(0.25, "cm"),
+    plot.margin = margin(b = 20, l = 20, unit = "pt")  # Add bottom and left margin
+  ) +
+  labs(
+    x = "Pearson Correlation Coefficient",
+    y = "P-value",
+    color = "P-value < 0.05"
+  ); plot_d
+
+# Put plots together
+combined_plot <- plot_grid(plot_a, plot_b, plot_c, plot_d, 
+          labels = c("A", "B", "C", "D"),
+          label_size = 30,
+          ncol = 2, 
+          align = "hv")
+
+# Save plot 
+ggsave("../output/Molecular/interactions/combined_plot_pcc_target.pdf", combined_plot, width = 40, height = 30, dpi = 300)
+ggsave("../output/Molecular/interactions/combined_plot_pcc_target.png", combined_plot, width = 40, height = 30, dpi = 300)
+```
+
+
+
+
+
+
+
 
 
 ## Examine miRNAs of interest 
