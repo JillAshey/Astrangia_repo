@@ -1,0 +1,20 @@
+Accession	Sample Name	SPUID	Organism	Tax ID	Breed	Isolate	
+SAMN47203241	AST-1065_smRNA	AST-1065_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203242	AST-1147_smRNA	AST-1147_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203243	AST-1412_smRNA	AST-1412_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203244	AST-1560_smRNA	AST-1560_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203245	AST-1567_smRNA	AST-1567_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203246	AST-1617_smRNA	AST-1617_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203247	AST-1722_smRNA	AST-1722_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203248	AST-2000_smRNA	AST-2000_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203249	AST-2007_smRNA	AST-2007_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203250	AST-2302_smRNA	AST-2302_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203251	AST-2360_smRNA	AST-2360_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203252	AST-2398_smRNA	AST-2398_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203253	AST-2404_smRNA	AST-2404_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203254	AST-2412_smRNA	AST-2412_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203255	AST-2512_smRNA	AST-2512_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203256	AST-2523_smRNA	AST-2523_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203257	AST-2563_smRNA	AST-2563_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203258	AST-2729_smRNA	AST-2729_smRNA	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47203259	AST-2755_smRNA	AST-2755_smRNA	Astrangia poculata	165419	Not applicable	Coral host	

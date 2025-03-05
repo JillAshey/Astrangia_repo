@@ -1,0 +1,20 @@
+Accession	Sample Name	SPUID	Organism	Tax ID	Breed	Isolate	
+SAMN47202949	AST-1065	AST-1065	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202950	AST-1147	AST-1147	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202951	AST-1412	AST-1412	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202952	AST-1560	AST-1560	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202953	AST-1567	AST-1567	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202954	AST-1617	AST-1617	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202955	AST-1722	AST-1722	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202956	AST-2000	AST-2000	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202957	AST-2007	AST-2007	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202958	AST-2302	AST-2302	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202959	AST-2360	AST-2360	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202960	AST-2398	AST-2398	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202961	AST-2404	AST-2404	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202962	AST-2412	AST-2412	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202963	AST-2512	AST-2512	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202964	AST-2523	AST-2523	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202965	AST-2563	AST-2563	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202966	AST-2729	AST-2729	Astrangia poculata	165419	Not applicable	Coral host	
+SAMN47202967	AST-2755	AST-2755	Astrangia poculata	165419	Not applicable	Coral host	
