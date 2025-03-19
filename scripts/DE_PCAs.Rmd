@@ -64,9 +64,6 @@ vsd <- varianceStabilizingTransformation(dds, blind = FALSE)
 
 Plot PCA
 ```{r}
-# Define your custom colors for treatments
-custom_colors <- c("Heat" = "red", "Acclimation" = "grey", "Ambient" = "blue")
-
 # Plot PCA
 pca_data <- plotPCA(vsd, intgroup = c("Timepoint", "Treatment"), returnData = TRUE)
 percentVar <- round(100 * attr(pca_data, "percentVar"))
@@ -84,11 +81,13 @@ pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August")
 # Plot with ggplot2
 mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
   geom_point(size = 10) +
+  stat_ellipse(aes(fill = Treatment), geom = "polygon", alpha = 0.2, level = 0.95) +
   labs(
     x = paste0("PC1: ", percentVar[1], "% variance"),
     y = paste0("PC2: ", percentVar[2], "% variance")
   ) +
-    scale_color_manual(values = custom_colors) +  # Set custom colors
+  scale_color_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
+  scale_fill_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
   theme_bw() +
       theme(legend.title = element_text(size = 28, face = "bold"),
           legend.text = element_text(size = 25),
@@ -104,8 +103,8 @@ mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = M
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); mrna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 15, height = 10)
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 15, height = 10)
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 10, height = 8)
+ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 10, height = 8)
 ```
 
 
@@ -114,7 +113,7 @@ ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 15, heig
 ### miRNA
 Read in counts data for differentially expressed genes 
 ```{r}
-mirna_de <- read.csv("../output/Molecular/smRNA/Unique_DEMs.csv")
+mirna_de <- read.csv("../output/Molecular/smRNA/shortstack/Unique_DEMs.csv")
 ```
 
 There are some predicted miRNAs that look like duplicates. For example, chromosome_4_131850, chromosome_4_131836, chromosome_4_131810, and chromosome_4_131796 all have the same number of counts, which makes me think that it is just one miRNA in this region of the genome. Look into the mirdeep2 plots
@@ -163,9 +162,6 @@ vsd <- varianceStabilizingTransformation(dds, blind = FALSE)
 
 Plot PCA
 ```{r}
-# Define your custom colors for treatments
-custom_colors <- c("Heat" = "red", "Acclimation" = "grey", "Ambient" = "blue")
-
 # Plot PCA
 pca_data <- plotPCA(vsd, intgroup = c("Timepoint", "Treatment"), returnData = TRUE)
 percentVar <- round(100 * attr(pca_data, "percentVar"))
@@ -181,13 +177,15 @@ pca_data <- pca_data %>%
 pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August"))
 
 # Plot with ggplot2
-mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Timepoint)) +
+mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
   geom_point(size = 10) +
+  stat_ellipse(aes(fill = Treatment), geom = "polygon", alpha = 0.2, level = 0.95) +
   labs(
     x = paste0("PC1: ", percentVar[1], "% variance"),
     y = paste0("PC2: ", percentVar[2], "% variance")
   ) +
-    scale_color_manual(values = custom_colors) +  # Set custom colors
+  scale_color_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
+  scale_fill_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
   theme_bw() +
       theme(legend.title = element_text(size = 28, face = "bold"),
           legend.text = element_text(size = 25),
@@ -203,8 +201,8 @@ mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = 
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); mirna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/smRNA/pca_plot_DEMs.pdf", mirna_plot, width = 15, height = 10)
-ggsave("../output/Molecular/smRNA/pca_plot_DEMs.png", mirna_plot, width = 15, height = 10)
+ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.pdf", mirna_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.png", mirna_plot, width = 10, height = 8)
 ```
 
 

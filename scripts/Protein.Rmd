@@ -296,151 +296,146 @@ mean.prot_site <- summarySE(prot, measurevar = "prot_mg.cm2", groupvars = c("Sit
 write.csv(prot, "../output/Physiology/SolubleProtein/SolubleProtein.csv")
 ```
 
-## Plot 
+# Stats and plotting 
+
+Load data 
 ```{r}
-gd <- prot %>% 
-  dplyr::group_by(Timepoint, Treatment) %>%
-  dplyr::summarise(avg = mean(prot_mg.cm2),
-            sem = sd(prot_mg.cm2)/sqrt(length(prot_mg.cm2)))
+prot <- read.csv("../output/Physiology/SolubleProtein/SolubleProtein.csv")
 
-plot <- ggplot(prot, aes(x = Timepoint, y = prot_mg.cm2, group = Treatment)) +
-  geom_point(aes(color = Treatment), size = 2) +
-  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  scale_color_manual(values = c("blue", "gray", "red")) +
-  theme_classic()
-plot
+prot <- prot %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
 
-## Right now, I'm only summarizing and plotting by Timepoint and Treatment. At some point, I will include site as a random effect variable 
-
-# Remove outliers 
-prot_sub <- prot %>%
-  filter(prot_mg.cm2 <= 10)
-
-ggplot(prot_sub, aes(x = Timepoint, y = prot_mg.cm2, group = Treatment)) +
-  geom_point(aes(color = Treatment), size = 2) +
-  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  scale_color_manual(values = c("blue", "gray", "red")) +
-  theme_classic()
-
-ggplot(prot_sub, aes(x = Timepoint, y = prot_mg.cm2, fill = Treatment)) +
-  geom_boxplot() +
-  #geom_point(aes(color = Treatment), size = 2) +
-  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  scale_fill_manual(values = c("blue", "gray", "red")) + 
-  #facet_wrap(~Timepoint) +
-  #ylab("Soluble protein (mg/cm²)") +
-  theme_classic()
-
-
-
-
-
-
-# Remove field data and outlier
+## Check for outliers 
+```{r}
+# Remove field data for now 
 prot_exp <- prot %>%
-  filter(!Treatment == "Field") %>%
-  filter(prot_mg.cm2 <= 10) 
+  filter(!Treatment == "Field")
 
-# plot by exp only 
-plot_trt <- ggplot(prot_exp, aes(x = Timepoint, y = prot_mg.cm2, fill = Treatment)) +
-  geom_boxplot(lwd = 1, color = "black") +
-  #geom_point(aes(color = Treatment), size = 2) +
-  #geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  scale_fill_manual(values = c("blue", "red")) +
-  ylab("Soluble protein (mg/cm²)") +
-  xlab("") +
-  theme_classic() +
-  theme(legend.title = element_text(size = 28),
-          legend.text = element_text(size = 25),
-          legend.position = "right",
-          legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
-                                   color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
-plot_trt
+# Look for outliers visually
+ggplot(prot_exp, aes(x = Treatment, y = prot_mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
 
-ggsave("output/Physiology/SolubleProtein/SolubleProtein_Treatment.pdf", plot_trt, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/SolubleProtein/SolubleProtein_Treatment.png", plot_trt, width = 50, height = 25, units = "cm")
+# IQR method 
+Q1 <- quantile(prot_exp$prot_mg.cm2, 0.25)
+Q3 <- quantile(prot_exp$prot_mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- prot_exp[prot_exp$prot_mg.cm2 < lower_bound | prot_exp$prot_mg.cm2 > upper_bound, ]
+print(outliers)
+
+# Z-score method
+prot_exp$z_score <- scale(prot_exp$prot_mg.cm2)
+outliers_z <- prot_exp[abs(prot_exp$z_score) > 3, ]
+print(outliers_z)
 ```
 
-## Stats 
+Remove outliers based on IQR
 ```{r}
-## Summarize w/o field data
-mean.prot_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Treatment", "Timepoint"))
-mean.prot_site_exp <- summarySE(prot_exp, measurevar = "prot_mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+# Calculate IQR
+Q1 <- quantile(prot_exp$prot_mg.cm2, 0.25)
+Q3 <- quantile(prot_exp$prot_mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+prot_exp_filtered <- prot_exp[prot_exp$prot_mg.cm2 >= lower_bound & prot_exp$prot_mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(prot_exp)
+dim(prot_exp_filtered)
+```
+5 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(prot_exp_filtered, aes(x = prot_mg.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(prot_exp_filtered$prot_mg.cm2)
+qqline(prot_exp_filtered$prot_mg.cm2, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(prot_exp_filtered$prot_mg.cm2)
 ```
 
-## Test for differences 
-For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
+Data is not normal, perform data transformation
 ```{r}
-## Compute two-way ANOVA test 
-model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot_exp)
-summary(model)
+# Sqrt
+prot_exp_filtered$prot_mg.cm2_sqrt <- sqrt(prot_exp_filtered$prot_mg.cm2)
+shapiro.test(prot_exp_filtered$prot_mg.cm2_sqrt)
+ggplot(prot_exp_filtered, aes(x = prot_mg.cm2_sqrt)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(prot_exp_filtered$prot_mg.cm2_sqrt)
+qqline(prot_exp_filtered$prot_mg.cm2_sqrt, col = "red")
 
-#                     Df Sum Sq Mean Sq F value   Pr(>F)    
-# Treatment            1   0.15  0.1522   0.314    0.577    
-# Timepoint            7  21.91  3.1294   6.464 5.36e-06 ***
-# Treatment:Timepoint  7   5.81  0.8300   1.714    0.118    
-# Residuals           77  37.28  0.4841                     
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# log 
+prot_exp_filtered$prot_mg.cm2_log <- log(prot_exp_filtered$prot_mg.cm2 + 1)  # Add 1 to avoid log(0)
+shapiro.test(prot_exp_filtered$prot_mg.cm2_log)  # Check normality
+ggplot(prot_exp_filtered, aes(x = prot_mg.cm2_log)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(prot_exp_filtered$prot_mg.cm2_log)
+qqline(prot_exp_filtered$prot_mg.cm2_log, col = "red")
 
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP6 differs from TP0, TP1, TP2, TP3, TP4, TP5, and TP7
-
-# Multiple comparisons using multcomp package
-
-# Pairwise test 
-pairwise.t.test(log(prot_exp$prot_mg.cm2), prot_exp$Timepoint, p.adjust.method = "bonf") # should I specify a p.adjust.method? 
-
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test 
-leveneTest(prot_mg.cm2 ~ Timepoint*Treatment, data = prot_exp)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) ## Similar to the other residual plot, looks like rows 17, 73, and 107 are outliers. May be good to remove 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-## p-value is not less than 0.05, so normality is all good 
+# Inverse 
+prot_exp_filtered$prot_mg.cm2_inv <- 1 / (prot_exp_filtered$prot_mg.cm2 + 1)  # Add 1 to avoid division by zero
+shapiro.test(prot_exp_filtered$prot_mg.cm2_inv)
+ggplot(prot_exp_filtered, aes(x = prot_mg.cm2_inv)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(prot_exp_filtered$prot_mg.cm2_inv)
+qqline(prot_exp_filtered$prot_mg.cm2_inv, col = "red")
 ```
 
+Inverse transformation produces normality. 
 
-
-### 20240108
-
-Going to remove outliers, plot everything and do stats 
-
+Run a two-way ANOVA
 ```{r}
-prot <- read_csv("../output/Physiology/SolubleProtein/SolubleProtein.csv")
+# Ensure factors are properly set
+prot_exp_filtered$Treatment <- as.factor(prot_exp_filtered$Treatment)
+prot_exp_filtered$Timepoint <- as.factor(prot_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(prot_mg.cm2_inv ~ Treatment * Timepoint, data = prot_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(prot_mg.cm2_inv ~ Treatment * Timepoint, data = prot_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
 ```
 
-Assign Month to TPs
+Timepoint is significant but Treatment and interaction is not. 
+
+Run post-hoc test for Timepoint
 ```{r}
-prot <- prot %>% 
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+prot_exp_filtered <- prot_exp_filtered %>% 
   mutate(Month = case_when(
-    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP0" ~ "February", 
     Timepoint == "TP1" ~ "March", 
     Timepoint == "TP2" ~ "Early April", 
     Timepoint == "TP3" ~ "Late April", 
@@ -450,32 +445,34 @@ prot <- prot %>%
     Timepoint == "TP7" ~ "August")) 
 ```
 
-Remove field data and change Treatment for TP0 to be "Acclimation"
+Plot inverse 
 ```{r}
-prot <- prot %>%
-#   filter(!Timepoint == "TP0") %>%
-   filter(!Treatment == "Field") %>%
-   mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
-```
+anova_summary <- summary(anova_result)
 
-Set levels for plotting by month 
-```{r}
-prot$Month <- factor(prot$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
-```
+# Extract p-values
+p_treatment <- anova_summary[[1]]$`Pr(>F)`[1]  # Treatment p-value
+p_timepoint <- anova_summary[[1]]$`Pr(>F)`[2]  # Timepoint p-value
+p_interaction <- anova_summary[[1]]$`Pr(>F)`[3]  # Interaction p-value
 
-Plot 
-```{r}
-plot <- ggplot(prot, aes(x = Month, y = prot_mg.cm2, colour = Treatment)) +
-  geom_boxplot(aes(colour=Treatment), lwd=2) +
-  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  scale_fill_manual(values = c("grey", "blue", "red")) +
-  scale_colour_manual(values = c("grey","blue", "red")) +
-  xlab("") +
-  ylab("Soluble protein (mg/cm²)") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
+# Format text for annotation
+anova_text <- paste0("Two-way ANOVA Results:",
+                     "Treatment p = ", signif(p_treatment, 3),
+                     "Timepoint p = ", signif(p_timepoint, 3),
+                     "Interaction p = ", signif(p_interaction, 3))
+
+# Set Month as factor 
+prot_exp_filtered$Month <- factor(prot_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# Create the plot
+prot_inv <- ggplot(prot_exp_filtered, aes(x = Month, y = prot_mg.cm2_inv, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7) + 
   theme_classic() +
-    theme(legend.title = element_text(size = 28, face = "bold"),
+  labs(x = "",
+       y = "Soluble Protein (inverse-transformed mg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+      theme(legend.title = element_text(size = 28, face = "bold"),
           legend.text = element_text(size = 25),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
@@ -488,165 +485,122 @@ plot <- ggplot(prot, aes(x = Month, y = prot_mg.cm2, colour = Treatment)) +
                                    color = "black"),
         axis.title.y = element_text(size = 35,
                                     face = "bold",
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
-
-ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240521.pdf", plot, width = 15, height = 10)
-ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_20240521.png", plot, width = 15, height = 10)
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); chla
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoint_InverseTransformed.pdf", prot_inv, width = 15, height = 10)
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoint_InverseTransformed.png", prot_inv, width = 15, height = 10)
 ```
 
-Looking at this plot, I see that not all of the treatments/timepoints have n=8. I need to look through my data and notebooks so that I can make sure I have all the data that I need and that I have processed everything. 
-
-Going to do stats just for Temperate coral conference 
+Plot untransformed data 
 ```{r}
-model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot)
-summary(model)
+# Set Month as factor 
+prot_exp_filtered$Month <- factor(prot_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-#                     Df Sum Sq Mean Sq F value   Pr(>F)    
-# Treatment            2   2.21   1.105   1.996    0.143    
-# Timepoint            6  21.19   3.532   6.380 1.65e-05 ***
-# Treatment:Timepoint  6   3.55   0.592   1.069    0.388    
-# Residuals           79  43.74   0.554                     
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+prot <- ggplot(prot_exp_filtered, aes(x = Month, y = prot_mg.cm2, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  theme_classic() +
+  xlab("") +
+  ylab("Soluble Protein (mg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 25,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
+                                   color = "black"),
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); prot
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
 
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP6 differs from TP0, TP1, TP2, TP3, TP4, and TP5
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoint.pdf", prot, width = 20, height = 15)
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoint.png", prot, width = 20, height = 15)
 ```
 
-STILL NEED TO REMOVE OUTLIERS AND CONFIRM THAT I HAVE ALL SAMPLES 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Summarize data 
+Calculate mean, sd and sem of each group for plotting 
 ```{r}
-summary <- prot %>%
-  dplyr::select(Timepoint, Treatment, prot_mg.cm2)%>%  # Select the necessary columns
-  group_by(Timepoint, Treatment) %>%
-  summarise(mean_prot_mg.cm2 = mean(prot_mg.cm2, na.rm = TRUE),
-            sd_prot_mg.cm2 = sd(prot_mg.cm2, na.rm = TRUE))
-
-summary <- prot %>% 
-  group_by(Timepoint, Treatment) %>%
-  dplyr::select(prot_mg.cm2) %>%
-  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary
-
-summary_tp <- prot %>% 
-  group_by(Timepoint) %>%
-  select(prot_mg.cm2) %>%
-  summarise(across(everything(), list(mean = mean, sd = sd), na.rm = TRUE)); summary_tp
+prot_summary <- prot_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_prot = mean(prot_mg.cm2, na.rm = TRUE),
+    sd_prot = sd(prot_mg.cm2, na.rm = TRUE),
+    sem_prot = prot_mg.cm2 / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
 ```
 
-Stats!
+Plot as dot and whisker plots
 ```{r}
-## Compute two-way ANOVA test 
-model <- aov(prot_mg.cm2 ~ Treatment*Timepoint, data = prot)
-summary(model)
+# Set Month as factor 
+prot_summary$Month <- factor(prot_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-## TP significant, Trt:TP different significant
+# sem
+prot_dot_sem <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_prot - sem_prot, 
+                    ymax = mean_prot + sem_prot), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab("Soluble Protein (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); prot_dot_sem
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoin_dotwhisker_sem.pdf", prot_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoin_dotwhisker_sem.png", prot_dot_sem, width = 20, height = 15)
 
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-
-emm = emmeans(model, ~ Treatment*Timepoint)
-cld(emm, Letters=c(LETTERS)) #letter display
-pairs(emm)
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = prot)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality is violated
-
-
-
-
-
-## Data transformation using log 
-## Compute two-way ANOVA test 
-model <- aov(log(prot_mg.cm2) ~ Treatment*Timepoint, data = prot)
-summary(model)
-
-## TP significant, Trt:TP different significant
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-
-emm = emmeans(model, ~ Treatment*Timepoint)
-cld(emm, Letters=c(LETTERS)) #letter display
-pairs(emm)
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = prot)
-## p-value is  greater than 0.05, so variance is  homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is greater than 0.05, normality is not violated
-```
-
-Remove outliers 
-```{r}
-#set quantile values
-q <- c(0.25, 0.75)
-
-# calculate quantile values by Temperature and Treatment groups
-Quants <- prot %>%
-  group_by(Treatment, Timepoint) %>%
-  summarize(quant25 = quantile(prot, probs = q[1]),
-            quant75 = quantile(prot, probs = q[2]),
-            IQRbyGroup=IQR(prot))
-
-## getting errors...
+# sd
+prot_dot_sd <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatment)) +
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_prot - sd_prot, 
+                    ymax = mean_prot + sd_prot),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab("Soluble Protein (mg/cm²)") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15), face = "bold", color = "black"),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );prot_dot_sd
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoin_dotwhisker_sd.pdf", prot_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/SolubleProtein/SolubleProtein_Treatment_Timepoin_dotwhisker_sd.png", prot_dot_sd, width = 22, height = 12)
 ```
 
 
@@ -655,4 +609,5 @@ Quants <- prot %>%
 
 
 
-I also need to go back and see which AST samples I still need to run for carb and protein in the lab
+
+

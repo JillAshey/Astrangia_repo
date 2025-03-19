@@ -19,6 +19,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(viridis)
 library(cowplot)
+library(igraph)
+library(tidygraph)
+library(ggraph)
 ```
 
 Read in mRNA expression information
@@ -84,19 +87,32 @@ length(unique(combined_data_pcc$miRNA))
 length(unique(combined_data_pcc$mRNA))
 ```
 
-Plot 
+Plot using igraph
 ```{r}
-ggplot(combined_data_pcc, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
-  #geom_point(alpha = 0.5) +  # Add points with some transparency
-  geom_jitter(alpha = 0.5, width = 0.05, height = 0) +  # Jitter points horizontally
-  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
-  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") +  # Add horizontal line at y = 0.05
-  theme_minimal() +
-  labs(x = "Pearson Correlation Coefficient",
-       y = "P-value",
-       color = "P-value < 0.05") 
-# If you want to remove the legend, add:
-# + theme(legend.position = "none")
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "blue", "red")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "auto") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 10) +
+  #geom_node_text(aes(label = name), repel = TRUE) +
+  #theme(aspect.ratio = 1) +
+  #coord_fixed(expand = TRUE) +
+  scale_edge_width(range = c(1, 5)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange", "Positive correlation" = "blue", "Negative correlation" = "red")) +
+  theme_graph();p
+ggsave("../output/Molecular/interactions/miRNA_mRNA_network.png", p, width = 35, height = 30, dpi = 300)
 ```
 
 Assess data 
@@ -151,7 +167,134 @@ Assess df
 dim(combined_data_pcc_mrna_mirna)
 length(unique(combined_data_pcc_mrna_mirna$miRNA))
 length(unique(combined_data_pcc_mrna_mirna$mRNA))
+```
 
+Plot using igraph
+```{r}
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_mrna_mirna, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "blue", "red")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_mrna_mirna$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 10) +
+  #geom_node_text(aes(label = name), repel = TRUE) +
+  #theme(aspect.ratio = 1) +
+  #coord_fixed(expand = TRUE) +
+  scale_edge_width(range = c(1, 5)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange", "Positive correlation" = "blue", "Negative correlation" = "red")) +
+  theme_graph();p
+ggsave("../output/Molecular/interactions/miRNA_mRNA_network_expressed.png", p, width = 35, height = 30, dpi = 300)
+
+# components <- decompose(g_tbl)
+# 
+# # Plot each component
+# lapply(components, function(comp) {
+#   ggraph(comp, layout = "fr") +
+#     geom_edge_link(aes(width = weight, color = color), alpha = 0.6) +
+#     geom_node_point(aes(color = type), size = 4) +
+#     theme_graph()
+# })
+```
+
+Barplot of targets 
+```{r}
+# Summarize the data with unique mRNA counts
+summary_data <- combined_data_pcc_mrna_mirna %>%
+  group_by(miRNA) %>%
+  summarise(
+    positive_count = n_distinct(mRNA[PCC.cor > 0]),
+    negative_count = n_distinct(mRNA[PCC.cor < 0])
+  ) %>%
+  mutate(total_count = positive_count + negative_count) %>%
+  arrange(desc(total_count))
+
+# Reshape the data for plotting
+plot_data <- summary_data %>%
+  pivot_longer(cols = c(positive_count, negative_count),
+               names_to = "correlation_type",
+               values_to = "count")
+
+# Create the stacked bar plot
+mirna_num <- ggplot(plot_data, aes(x = reorder(miRNA, -total_count), y = count, fill = correlation_type)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_fill_manual(values = c("positive_count" = "#CC3361", "negative_count" = "#33CC9E"),
+                    labels = c("Positive", "Negative")) +
+  theme_classic(base_size = 25) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(color = "black"),
+    legend.title = element_text(size = 25, face = "bold"),
+    legend.text = element_text(size = 18),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20, unit = "pt")
+  ) +
+  labs(x = "miRNAs", y = "Number of mRNA Targets", fill = "Correlation Type") +
+  scale_y_continuous(expand = c(0, 0)); mirna_num
+
+ggsave("../output/Molecular/interactions/miRNA_num_targets.png", mirna_num, width = 18, height = 10, dpi = 300)
+ggsave("../output/Molecular/interactions/miRNA_num_targets.pdf", mirna_num, width = 18, height = 10, dpi = 300)
+```
+
+Barplot of the number of miRNAs that target each mRNA 
+```{r}
+# Summarize the data with unique mRNA counts
+summary_data <- combined_data_pcc_mrna_mirna %>%
+  group_by(mRNA) %>%
+  summarise(
+    positive_count = n_distinct(mRNA[PCC.cor > 0]),
+    negative_count = n_distinct(mRNA[PCC.cor < 0])
+  ) %>%
+  mutate(total_count = positive_count + negative_count) %>%
+  arrange(desc(total_count))
+
+# Reshape the data for plotting
+plot_data <- summary_data %>%
+  pivot_longer(cols = c(positive_count, negative_count),
+               names_to = "correlation_type",
+               values_to = "count")
+
+# Create the stacked bar plot
+mrna_num <- ggplot(plot_data, aes(x = reorder(mRNA, -total_count), y = count, fill = correlation_type)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_fill_manual(values = c("positive_count" = "#CC3361", "negative_count" = "#33CC9E"),
+                    labels = c("Positive", "Negative")) +
+  scale_y_continuous(breaks = c(1, 2), limits = c(0, 2), expand = c(0, 0)) +  # Remove padding at bottom
+  theme_classic(base_size = 25) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(color = "black"),
+    legend.title = element_text(size = 25, face = "bold"),
+    legend.text = element_text(size = 18),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20, unit = "pt")
+  ) +
+  labs(x = "mRNAs", y = "Number of Targeting miRNAs", fill = "Correlation Type"); mrna_num
+
+ggsave("../output/Molecular/interactions/mRNA_num_targeting.png", mrna_num, width = 18, height = 10, dpi = 300)
+ggsave("../output/Molecular/interactions/mRNA_num_targeting.pdf", mrna_num, width = 18, height = 10, dpi = 300)
 ```
 
 Select only differentially expressed 
@@ -167,19 +310,30 @@ length(unique(combined_data_pcc_mrna_mirna_de$mRNA))
 #write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
 ```
 
-Plot PCC vs pvalue
+Plot using igraph
 ```{r}
-ggplot(combined_data_pcc_mrna_mirna_de, aes(x = PCC.cor, y = p_value, color = p_value < 0.05)) +
-  #geom_point(alpha = 0.5) +  # Add points with some transparency
-  geom_jitter(alpha = 0.5, width = 0.05, height = 0) +  # Jitter points horizontally
-  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
-  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") +  # Add horizontal line at y = 0.05
-  theme_minimal() +
-  labs(x = "Pearson Correlation Coefficient",
-       y = "P-value",
-       color = "P-value < 0.05") 
-# If you want to remove the legend, add:
-# + theme(legend.position = "none")
+# Create the graph
+g <- graph_from_data_frame(combined_data_pcc_mrna_mirna_de, directed = FALSE)
+
+# Add edge attributes
+E(g)$weight <- abs(E(g)$PCC.cor)  # Use absolute PCC for edge weight
+E(g)$color <- ifelse(E(g)$PCC.cor > 0, "blue", "red")  # Blue for positive, red for negative correlations
+
+# Add node attributes
+V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_mrna_mirna_de$miRNA, "miRNA", "mRNA")
+
+# Convert to tbl_graph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Create the plot
+p <- ggraph(g_tbl, layout = "fr") +
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange", "Positive correlation" = "blue", "Negative correlation" = "red")) +
+  theme_graph();p
+ggsave("../output/Molecular/interactions/miRNA_mRNA_network_de.png", p, width = 15, height = 10, dpi = 300)
 ```
 
 Plot!

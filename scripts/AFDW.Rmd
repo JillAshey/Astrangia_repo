@@ -43,21 +43,615 @@ Ash-free dry weight - organic compounds
 
 ## Read in ash-free dry weight raw data, surface area, homogenate volume and metadata 
 ```{r}
-AFDW <- read.csv("data/Physiology/AFDW.csv", header = T, na.strings = "") %>% filter(!is.na(PlugID)) %>% select(PlugID, Fraction, initial.mass.g, dry.pan.mass.g, burnt.pan.mass.g)
+AFDW <- read.csv("../data/Physiology/AFDW.csv", header = T, na.strings = "") %>% filter(!is.na(PlugID)) %>% dplyr::select(PlugID, Fraction, initial.mass.g, dry.pan.mass.g, burnt.pan.mass.g)
 
 # Load surface area, homogenate volume and master fragment sheet 
-surface_area <- read.csv("data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% select(PlugID, Area_cm)
-homogenate_vol <- read.csv("data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% select(PlugID, vol_mL) 
-master <- read.csv("data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% select(PlugID, Site, Treatment, Timepoint)
+surface_area <- read.csv("../data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
+homogenate_vol <- read.csv("../data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
+master <- read.csv("../data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% dplyr::select(PlugID, Site, Treatment, Timepoint)
 
-#metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "PlugID", type = "left")
 #metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
+
+# Remove field samples for now 
+metadata_exp <- metadata %>%
+  filter(Treatment != "Field")
 ```
 
-## Calculate mass per mL 
+Standardize for volume input
 ```{r}
+sym <- 5
+host <- 4
 
+AFDW_df <- metadata_exp %>%
+  mutate(dry.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ dry.pan.mass.g/sym, Fraction=="Host" ~dry.pan.mass.g/host),
+         burnt.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ burnt.pan.mass.g/sym, Fraction=="Host" ~burnt.pan.mass.g/host))
 ```
+
+Standardize and calculate tissue biomass
+```{r}
+AFDW_df <- AFDW_df %>%
+  mutate(dry.pan.mass.g.vol.corr = dry.pan.mass.g.ml*vol_mL, # Standardize dry pan mass to homogenate volume
+         burnt.pan.mass.g.vol.corr = burnt.pan.mass.g.ml*vol_mL, # Standardize burnt pan mass to homogenate volume
+        dry.bioimass.g = (dry.pan.mass.g.vol.corr - initial.mass.g), # Calculate dry biomass
+         DW.mg.cm2 = ((dry.bioimass.g)*1000) / Area_cm, # Calculate dry biomass standardized by surface area 
+        dry.bioimass.g = (dry.pan.mass.g.vol.corr - burnt.pan.mass.g.vol.corr),
+        AFDW.mg.cm2 = ((dry.bioimass.g)*1000) / Area_cm)
+```
+
+Write to csv 
+```{r}
+write.csv(AFDW_df, "../output/Physiology/AFDW/AFDW_biomass.csv")
+```
+
+# Stats and plotting - host 
+
+Read in data and subset host 
+```{r}
+biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
+
+biomass_host <- biomass %>%
+  dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  dplyr::mutate(Treatment = as.factor(Treatment)) %>%
+  dplyr::filter(Fraction == "Host") %>%
+  na.omit()
+```
+
+Check for outliers 
+```{r}
+# Look for outliers visually
+ggplot(biomass_host, aes(x = Treatment, y = AFDW.mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(biomass_host$AFDW.mg.cm2, 0.25)
+Q3 <- quantile(biomass_host$AFDW.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- biomass_host[biomass_host$AFDW.mg.cm2 < lower_bound | biomass_host$AFDW.mg.cm2 > upper_bound, ]
+print(outliers)
+
+# Z-score method
+biomass_host$z_score <- scale(biomass_host$AFDW.mg.cm2)
+outliers_z <- biomass_host[abs(biomass_host$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(biomass_host$AFDW.mg.cm2, 0.25)
+Q3 <- quantile(biomass_host$AFDW.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+biomass_host_filtered <- biomass_host[biomass_host$AFDW.mg.cm2 >= lower_bound & biomass_host$AFDW.mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(biomass_host)
+dim(biomass_host_filtered)
+```
+
+6 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(biomass_host_filtered, aes(x = AFDW.mg.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(biomass_host_filtered$AFDW.mg.cm2)
+qqline(biomass_host_filtered$AFDW.mg.cm2, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(biomass_host_filtered$AFDW.mg.cm2)
+```
+
+Data is not normal, perform data transformation
+```{r}
+# Sqrt
+biomass_host_filtered$AFDW.mg.cm2_sqrt <- sqrt(biomass_host_filtered$AFDW.mg.cm2)
+shapiro.test(biomass_host_filtered$AFDW.mg.cm2_sqrt)
+ggplot(biomass_host_filtered, aes(x = AFDW.mg.cm2_sqrt)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_host_filtered$AFDW.mg.cm2_sqrt)
+qqline(biomass_host_filtered$AFDW.mg.cm2_sqrt, col = "red")
+
+# log 
+biomass_host_filtered$AFDW.mg.cm2_log <- log(biomass_host_filtered$AFDW.mg.cm2 + 1)  # Add 1 to avoid log(0)
+shapiro.test(biomass_host_filtered$AFDW.mg.cm2_log)  # Check normality
+ggplot(biomass_host_filtered, aes(x = AFDW.mg.cm2_log)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_host_filtered$AFDW.mg.cm2_log)
+qqline(biomass_host_filtered$AFDW.mg.cm2_log, col = "red")
+
+# Inverse 
+biomass_host_filtered$AFDW.mg.cm2_inv <- 1 / (biomass_host_filtered$AFDW.mg.cm2 + 1)  # Add 1 to avoid division by zero
+shapiro.test(biomass_host_filtered$AFDW.mg.cm2_inv)
+ggplot(biomass_host_filtered, aes(x = AFDW.mg.cm2_inv)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_host_filtered$AFDW.mg.cm2_inv)
+qqline(biomass_host_filtered$AFDW.mg.cm2_inv, col = "red")
+```
+
+Both log and sqrt are normal. Going to stick with sqrt, as this has been the transformation that I have applied to other phys variables. 
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+biomass_host_filtered$Treatment <- as.factor(biomass_host_filtered$Treatment)
+biomass_host_filtered$Timepoint <- as.factor(biomass_host_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(AFDW.mg.cm2_sqrt ~ Treatment * Timepoint, data = biomass_host_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(AFDW.mg.cm2_sqrt ~ Treatment * Timepoint, data = biomass_host_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+No significant differences 
+
+Run post-hoc test for Treatment and Timepoint
+```{r}
+TukeyHSD(anova_result, "Treatment", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+biomass_host_filtered <- biomass_host_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+```
+
+Plot untransformed data 
+```{r}
+# Set Month as factor 
+biomass_host_filtered$Month <- factor(biomass_host_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+afdw_host <- ggplot(biomass_host_filtered, aes(x = Month, y = AFDW.mg.cm2, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  theme_classic() +
+  xlab("") +
+  ylab("Host Tissue Biomass (mg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 25,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
+                                   color = "black"),
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); afdw_host
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
+
+ggsave("../output/Physiology/AFDW/AFDW_Host_Treatment_Timepoint.pdf", afdw_host, width = 20, height = 15)
+ggsave("../output/Physiology/AFDW/AFDW_Host_Treatment_Timepoint.png", afdw_host, width = 20, height = 15)
+```
+
+Plot sqrt data 
+```{r}
+# Set Month as factor 
+biomass_host_filtered$Month <- factor(biomass_host_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+afdw_host_sqrt <- ggplot(biomass_host_filtered, aes(x = Month, y = AFDW.mg.cm2_sqrt, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  theme_classic() +
+  xlab("") +
+  ylab("Host Tissue Biomass (sqrt-transformed mg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 25,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
+                                   color = "black"),
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); afdw_host_sqrt
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
+
+ggsave("../output/Physiology/AFDW/AFDW_Host_Sqrt_Treatment_Timepoint.pdf", afdw_host_sqrt, width = 20, height = 15)
+ggsave("../output/Physiology/AFDW/AFDW_Host_Sqrt_Treatment_Timepoint.png", afdw_host_sqrt, width = 20, height = 15)
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+biomass_host_summary <- biomass_host_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_host = mean(AFDW.mg.cm2, na.rm = TRUE),
+    sd_host = sd(AFDW.mg.cm2, na.rm = TRUE),
+    sem_host = sd_host / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+biomass_host_summary$Month <- factor(biomass_host_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+host_dot_sem <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_host - sem_host, 
+                    ymax = mean_host + sem_host), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab("Host Tissue Biomass (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); host_dot_sem
+ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sem.pdf", host_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sem.png", host_dot_sem, width = 20, height = 15)
+
+# sd
+host_dot_sd <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_host - sd_host, 
+                    ymax = mean_host + sd_host),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  xlab("") +
+  ylab("Host Tissue Biomass (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15), face = "bold", color = "black"),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );host_dot_sd
+
+ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sd.pdf", host_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sd.png", host_dot_sd, width = 22, height = 12)
+```
+
+# Stats and plotting - sym 
+
+Read in data and subset sym 
+```{r}
+biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
+
+biomass_sym <- biomass %>%
+  dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  dplyr::mutate(Treatment = as.factor(Treatment)) %>%
+  dplyr::filter(Fraction == "Symbiont") %>%
+  na.omit()
+```
+
+Check for outliers 
+```{r}
+# Look for outliers visually
+ggplot(biomass_sym, aes(x = Treatment, y = AFDW.mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(biomass_sym$AFDW.mg.cm2, 0.25)
+Q3 <- quantile(biomass_sym$AFDW.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- biomass_sym[biomass_sym$AFDW.mg.cm2 < lower_bound | biomass_sym$AFDW.mg.cm2 > upper_bound, ]
+print(outliers)
+
+# Z-score method
+biomass_sym$z_score <- scale(biomass_sym$AFDW.mg.cm2)
+outliers_z <- biomass_sym[abs(biomass_sym$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(biomass_sym$AFDW.mg.cm2, 0.25)
+Q3 <- quantile(biomass_sym$AFDW.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+biomass_sym_filtered <- biomass_sym[biomass_sym$AFDW.mg.cm2 >= lower_bound & biomass_sym$AFDW.mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(biomass_sym)
+dim(biomass_sym_filtered)
+```
+
+8 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(biomass_sym_filtered, aes(x = AFDW.mg.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(biomass_sym_filtered$AFDW.mg.cm2)
+qqline(biomass_sym_filtered$AFDW.mg.cm2, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(biomass_sym_filtered$AFDW.mg.cm2)
+```
+
+Data is not normal, perform data transformation
+```{r}
+# Sqrt
+biomass_sym_filtered$AFDW.mg.cm2_sqrt <- sqrt(biomass_sym_filtered$AFDW.mg.cm2)
+shapiro.test(biomass_sym_filtered$AFDW.mg.cm2_sqrt)
+ggplot(biomass_sym_filtered, aes(x = AFDW.mg.cm2_sqrt)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_sym_filtered$AFDW.mg.cm2_sqrt)
+qqline(biomass_sym_filtered$AFDW.mg.cm2_sqrt, col = "red")
+
+# log 
+biomass_sym_filtered$AFDW.mg.cm2_log <- log(biomass_sym_filtered$AFDW.mg.cm2 + 1)  # Add 1 to avoid log(0)
+shapiro.test(biomass_sym_filtered$AFDW.mg.cm2_log)  # Check normality
+ggplot(biomass_sym_filtered, aes(x = AFDW.mg.cm2_log)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_sym_filtered$AFDW.mg.cm2_log)
+qqline(biomass_sym_filtered$AFDW.mg.cm2_log, col = "red")
+
+# Inverse 
+biomass_sym_filtered$AFDW.mg.cm2_inv <- 1 / (biomass_sym_filtered$AFDW.mg.cm2 + 1)  # Add 1 to avoid division by zero
+shapiro.test(biomass_sym_filtered$AFDW.mg.cm2_inv)
+ggplot(biomass_sym_filtered, aes(x = AFDW.mg.cm2_inv)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(biomass_sym_filtered$AFDW.mg.cm2_inv)
+qqline(biomass_sym_filtered$AFDW.mg.cm2_inv, col = "red")
+```
+
+Sqrt is normal.
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+biomass_sym_filtered$Treatment <- as.factor(biomass_sym_filtered$Treatment)
+biomass_sym_filtered$Timepoint <- as.factor(biomass_sym_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(AFDW.mg.cm2_sqrt ~ Treatment * Timepoint, data = biomass_sym_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(AFDW.mg.cm2_sqrt ~ Treatment * Timepoint, data = biomass_sym_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+No significant differences 
+
+Run post-hoc test for Treatment and Timepoint
+```{r}
+TukeyHSD(anova_result, "Treatment", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+biomass_sym_filtered <- biomass_sym_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+```
+
+Plot untransformed data 
+```{r}
+# Set Month as factor 
+biomass_sym_filtered$Month <- factor(biomass_sym_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+afdw_sym <- ggplot(biomass_sym_filtered, aes(x = Month, y = AFDW.mg.cm2, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  theme_classic() +
+  xlab("") +
+  ylab("Host Tissue Biomass (mg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 25,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
+                                   color = "black"),
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); afdw_sym
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
+
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint.pdf", afdw_sym, width = 20, height = 15)
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint.png", afdw_sym, width = 20, height = 15)
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+biomass_sym_summary <- biomass_sym_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_sym = mean(AFDW.mg.cm2, na.rm = TRUE),
+    sd_sym = sd(AFDW.mg.cm2, na.rm = TRUE),
+    sem_sym = sd_sym / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+biomass_sym_summary$Month <- factor(biomass_sym_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+sym_dot_sem <- ggplot(biomass_sym_summary, aes(x = Month, y = mean_sym, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_sym - sem_sym, 
+                    ymax = mean_sym + sem_sym), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab("Symbiont Tissue Biomass (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); sym_dot_sem
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint_dotwhisker_sem.pdf", sym_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint_dotwhisker_sem.png", sym_dot_sem, width = 20, height = 15)
+
+# sd
+sym_dot_sd <- ggplot(biomass_sym_summary, aes(x = Month, y = mean_sym, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_sym - sd_sym, 
+                    ymax = mean_sym + sd_sym),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  xlab("") +
+  ylab("Symbiont Tissue Biomass (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15), face = "bold", color = "black"),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );sym_dot_sd
+
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint_dotwhisker_sd.pdf", sym_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/AFDW/AFDW_Sym_Treatment_Timepoint_dotwhisker_sd.png", sym_dot_sd, width = 22, height = 12)
+```
+
+# Stats and plotting - S:H ratio
+
+Read in data 
+```{r}
+biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
+
+biomass$AFDW.mg.cm2 <- as.numeric(biomass$AFDW.mg.cm2)
+```
+
+Calculate S:H ratio 
+
 
 
 

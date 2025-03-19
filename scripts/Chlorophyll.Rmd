@@ -311,7 +311,44 @@ chl_exp_filtered <- chl_exp_filtered %>%
   mutate(Treatment = as.factor(Treatment))
 ```
 
-Plot 
+Plot sqrt
+```{r}
+# Set Month as factor 
+chl_exp_filtered$Month <- factor(chl_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# Create the plot
+chla <- ggplot(chl_exp_filtered, aes(x = Month, y = chla_sqrt, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  theme_classic() +
+  labs(x = "",
+       y = "Chlorophyll-a (sqrt-transformed µg/cm²)") +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+      theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
+          legend.position = "right",
+          legend.key.size = unit(3, "line")) +
+  theme(axis.text.x = element_text(size = 25,
+                                   color = "black",
+                                   angle = 45,
+                                   hjust = 1, 
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
+                                   color = "black"),
+        axis.title.y = element_text(size = 30,
+                                    face = "bold",
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); chla
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
+ggsave("../output/Physiology/Chlorophyll/Chla_Sqrt_Treatment_Timepoint.pdf", chla, width = 20, height = 15)
+ggsave("../output/Physiology/Chlorophyll/Chla_Sqrt_Treatment_Timepoint.png", chla, width = 20, height = 15)
+```
+
+Plot untransformed data 
 ```{r}
 anova_summary <- summary(anova_result)
 
@@ -330,35 +367,111 @@ anova_text <- paste0("Two-way ANOVA Results:",
 chl_exp_filtered$Month <- factor(chl_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
 # Create the plot
-chla <- ggplot(chl_exp_filtered, aes(x = Month, y = chla_sqrt, fill = Treatment, color = Treatment)) + 
-  geom_boxplot(alpha = 0.7, outlier.shape = NA) +  
-  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7) + 
+chla <- ggplot(chl_exp_filtered, aes(x = Month, y = chla.ug.cm2, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
   theme_classic() +
   labs(x = "",
-       y = "Chlorophyll-a (sqrt-transformed µg/cm²)") +
+       y = "Chlorophyll-a (µg/cm²)") +
   scale_fill_manual(values = c("grey", "blue", "red")) +
   scale_colour_manual(values = c("grey","blue", "red")) + 
       theme(legend.title = element_text(size = 28, face = "bold"),
-          legend.text = element_text(size = 25),
+          legend.text = element_text(size = 15),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
+  theme(axis.text.x = element_text(size = 25,
                                    color = "black",
                                    angle = 45,
                                    hjust = 1, 
-                                   face = "bold")) +
-   theme(axis.text.y = element_text(size = 30,
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
                                    color = "black"),
-        axis.title.y = element_text(size = 35,
+        axis.title.y = element_text(size = 30,
                                     face = "bold",
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); chla
   #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
   #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
   #         hjust = 1, vjust = 1, size = 5, color = "black")
-ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint.pdf", chla, width = 15, height = 10)
-ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint.png", chla, width = 15, height = 10)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint.pdf", chla, width = 20, height = 15)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint.png", chla, width = 20, height = 15)
 ```
 
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+chla_summary <- chl_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_chla = mean(chla.ug.cm2, na.rm = TRUE),
+    sd_chla = sd(chla.ug.cm2, na.rm = TRUE),
+    sem_chla = sd_chla / sqrt(n),  # SEM formula
+    mean_chlasqrt = mean(chla_sqrt, na.rm = TRUE),
+    sd_chlasqrt = sd(chla_sqrt, na.rm = TRUE),
+    sem_chlasqrt = sd_chlasqrt / sqrt(n),
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+chla_summary$Month <- factor(chla_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+chla_dot_sem <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_chla - sem_chla, 
+                    ymax = mean_chla + sem_chla), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  labs(y = expression(Chlorophyll-a~(µg~cm^{-2})), x = "") +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); chla_dot_sem
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.pdf", chla_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.png", chla_dot_sem, width = 20, height = 15)
+
+# sd
+chla_dot_sd <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_chla - sd_chla, 
+                    ymax = mean_chla + sd_chla),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  labs(y = expression(bold(Chlorophyll-a~(µg~cm^{-2}))), x = "") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );chla_dot_sd
+
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd.pdf", chla_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd.png", chla_dot_sd, width = 22, height = 12)
+```
 
 
 

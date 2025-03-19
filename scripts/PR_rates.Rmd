@@ -597,7 +597,6 @@ ggsave("output/Physiology/PR/Field_Timepoint.Treatment_PR.pdf", plot, width = 4,
 # p2 + scale_color_manual(values = c("black", "blue", "red"))
 ```
 
-
 ## Bind experimental and field plots 
 ```{r}
 figure <- ggarrange(trt.plot, field_trt.plot,
@@ -607,625 +606,536 @@ figure
 
 plot <- grid.arrange(figure, clip="off")
 ggsave("output/Physiology/PR/Combination.Exp.Fld_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 7, units = c("in"))
-
 ```
 
+# Stats and plotting - 20250317
 
-## Plot experimental and field data in one plot 
+## Photosynthesis 
 
-### Import data 
+Read in data
 ```{r}
 exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
-field <- read_csv(file = "../output/Physiology/PR/PR_field_rates.csv")
-field$Treatment <- "Field"
 
+photo_exp <- exp %>%
+  filter(Light_Value > 0)
 
-all <- full_join(exp, field) %>%
-  as_tibble()
-  
-all <- all %>% 
+photo_exp <- photo_exp %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Check for outliers
+```{r}
+# Look for outliers visually
+ggplot(photo_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(photo_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(photo_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- photo_exp[photo_exp$micromol.cm2.h < lower_bound | photo_exp$micromol.cm2.h > upper_bound, ]
+print(outliers)
+
+# Z-score method
+photo_exp$z_score <- scale(photo_exp$micromol.cm2.h)
+outliers_z <- photo_exp[abs(photo_exp$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(photo_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(photo_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+photo_exp_filtered <- photo_exp[photo_exp$micromol.cm2.h >= lower_bound & photo_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(photo_exp)
+dim(photo_exp_filtered)
+```
+
+15 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(photo_exp_filtered, aes(x = micromol.cm2.h)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(photo_exp_filtered$micromol.cm2.h)
+qqline(photo_exp_filtered$micromol.cm2.h, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(photo_exp_filtered$micromol.cm2.h)
+```
+
+Data is normal. Set date as Timepoints
+```{r}
+photo_exp_filtered <- photo_exp_filtered %>%
   mutate(Timepoint = case_when(
     Date == "2021-02-04" ~ "TP0",
     Date == "2021-03-04" ~ "TP1",
     Date == "2021-04-01" ~ "TP2",
-    Date == "2021-04-10" ~ "TP2",
     Date == "2021-04-29" ~ "TP3",
-    Date == "2021-04-30" ~ "TP3",
     Date == "2021-05-27" ~ "TP4",
-    Date == "2021-06-02" ~ "TP4",
     Date == "2021-06-24" ~ "TP5",
-    Date == "2021-06-25" ~ "TP5", 
     Date == "2021-07-22" ~ "TP6",
-    Date == "2021-07-23" ~ "TP6",
-    Date == "2021-08-19" ~ "TP7",
-    Date == "2021-09-01" ~ "TP7")) 
-  
-all <- all %>% 
-  mutate(Assay = case_when(
-    Light_Value == "0" ~ "Rd",
-    Light_Value == "320" ~ "P",
-    Light_Value == "337" ~ "P",
-    Light_Value == "340" ~ "P",
-    Light_Value == "350" ~ "P",
-    Light_Value == "355" ~ "P",
-    Light_Value == "368" ~ "P",
-    Light_Value == "392" ~ "P",
-    Light_Value == "321" ~ "P",
-    Light_Value == "361" ~ "P",
-    Light_Value == "319" ~ "P", 
-    Light_Value == "334" ~ "P",
-    Light_Value == "366" ~ "P",
-    Light_Value == "358" ~ "P",
-    Light_Value == "342" ~ "P"))
-
-# all <- all %>% 
-#   mutate(Assay = case_when(
-#     Treatment == "Ambient" ~ "Ambient",
-#     Treatment == "Heat" ~ "Heat",
-#     Treatment == "Field-TP2" ~ "Field",
-#     Treatment == "Field-TP3" ~ "Field",
-#     Treatment == "Field-TP4" ~ "Field"))
-
-```  
-
-```{r}
-gd <- all %>% 
-        group_by(Assay,Timepoint,Treatment) %>% 
-        summarise(avg = mean(micromol.cm2.h),
-                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
-
-# Remove Acclimatization rows, if desired
-#all <- all %>%
-#  filter(!Treatment==c("Acclimatization"))
-
-all.plot <- ggplot(all, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
-  geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
-  geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-  scale_color_manual(values=c("black", "blue", "green", "red"))+
-  #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
-  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  #ylim(-0.4,0.5) +
-  facet_wrap(~Assay, ncol = 2)+
-  theme_bw()+
-  theme(legend.position = c(0.63, 0.8),
-        legend.title = element_text(colour="black", size=6, face="bold"),
-        legend.text = element_text(size=4))+
-  guides(color = guide_legend(override.aes = list(size = 1)))
-all.plot
-
-plot <- grid.arrange(all.plot, clip="off")
-ggsave("output/Physiology/PR/All_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+    Date == "2021-08-19" ~ "TP7")) 
 ```
 
-Remove outliers (micromol.cm2.h > 20) and plot 
+Run a two-way ANOVA
 ```{r}
-sub <- all %>% 
-  filter(micromol.cm2.h <= 10) %>%
-  filter(micromol.cm2.h >= -5)
+# Ensure factors are properly set
+photo_exp_filtered$Treatment <- as.factor(photo_exp_filtered$Treatment)
+photo_exp_filtered$Timepoint <- as.factor(photo_exp_filtered$Timepoint)
 
-gd <- sub %>% 
-        group_by(Assay,Timepoint,Treatment) %>% 
-        summarise(avg = mean(micromol.cm2.h),
-                  sem  = sd(micromol.cm2.h)/sqrt(length((micromol.cm2.h))))
+# Run two-way ANOVA
+anova_result <- aov(micromol.cm2.h ~ Treatment * Timepoint, data = photo_exp_filtered)
+summary(anova_result)
 
-# Remove Acclimatization rows, if desired
-#all <- all %>%
-#  filter(!Treatment==c("Acclimatization"))
+# Check for homogenity of variance 
+leveneTest(micromol.cm2.h ~ Treatment * Timepoint, data = photo_exp_filtered)
 
-sub.plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, group=Treatment)) +
-  geom_point(alpha = .4, aes(colour = Treatment), size = 2) +
-  geom_point(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment), size=4)+
-  scale_color_manual(values=c("black", "blue", "green", "red"))+
-  #geom_errorbar(data = gd, aes(ymin=avg-sem, ymax=avg+sem)) +
-  geom_point(data = gd, aes(x = Timepoint, y = avg-sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_point(data = gd, aes(x = Timepoint, y = avg+sem, group=Treatment, colour = Treatment), size=2, shape=8)+
-  geom_line(data = gd, aes(x = Timepoint, y = avg, group=Treatment, colour = Treatment)) +
-  #ylim(-0.4,0.5) +
-  facet_wrap(~Assay, ncol = 2)+
-  theme_bw()+
-  theme(legend.position = c(0.63, 0.8),
-        legend.title = element_text(colour="black", size=6, face="bold"),
-        legend.text = element_text(size=4))+
-  guides(color = guide_legend(override.aes = list(size = 1)))
-sub.plot
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
 
-plot <- grid.arrange(sub.plot, clip="off")
-ggsave("output/Physiology/PR/Sub_Timepoint.Treatment_PR.pdf", plot, width = 4, height = 3.5, units = c("in"))
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
 ```
 
-## Plot w/ similar format to other phys plots (for Benthics Ecology Meeting 2023)
+Timepoint is significant but Treatment and interaction is not. 
+
+Run post-hoc test for Timepoint
 ```{r}
-## using the sub data and no field data included
-sub <- all %>% 
-  filter(micromol.cm2.h <= 10) %>%
-  filter(micromol.cm2.h >= -5) %>%
-  filter(Treatment == c("Ambient", "Heat")) 
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
 
-# renaming P to Photosynthesis and Rd to Respiration 
-sub$Assay[sub$Assay == "P"] <- "Photosynthesis"
-sub$Assay[sub$Assay == "Rd"] <- "Respiration"
-
-# Plot and save 
-pr_plot <- ggplot(sub, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
-  geom_boxplot(lwd = 1, color = "black") +
-  scale_fill_manual(values = c("blue", "red")) +
-  #ylab("Carbohydrates (mg/cm²)") +
-  xlab("") +
-  #hjust(x = 0) +
-  facet_wrap(~Assay, ncol = 2) +
-  theme_bw() +
-  theme(strip.text.x = element_text(size = 18)) +
-  theme(legend.title = element_text(size = 28),
-          legend.text = element_text(size = 25),
-          legend.position = "right",
-          legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-  theme(axis.text.y = element_text(size = 30,
-                                   color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
-pr_plot
-
-ggsave("output/Physiology/PR/PR_Treatment_20230424.pdf", pr_plot, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/PR/PR_Treatment_20230424.png", pr_plot, width = 50, height = 25, units = "cm")
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
 ```
 
-In the P and Rd plots, there is positive values present in Rd. This should not be happening because the respiration was measured in the dark so no oxygen production should be occurring in the absence of light. I'm not sure how to reconcile this...
-
-I'm going to plot TP5, TP6 and TP7 without the earlier timepoints. I chose these specifically because TP5, TP6, and TP7 Rd values are all negative. Lets see how that plot looks
+Format data for plotting 
 ```{r}
-# Subset by TP5, TP6 and TP7
-sub_lateTPs <- sub %>% 
-  filter(Timepoint == c("TP5", "TP6", "TP7"))
-
-# Plot and save 
-pr_plot <- ggplot(sub_lateTPs, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
-  geom_boxplot(lwd = 1, color = "black") +
-  scale_fill_manual(values = c("blue", "red")) +
-  #ylab("Carbohydrates (mg/cm²)") +
-  xlab("") +
-  #hjust(x = 0) +
-  facet_wrap(~Assay, ncol = 2) +
-  theme_bw() +
-  theme(legend.title = element_text(size = 28),
-          legend.text = element_text(size = 25),
-          legend.position = "right",
-          legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
-                                   color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
-pr_plot
-ggsave("output/Physiology/PR/PR_Treatment_TP5-7_20230423.pdf", pr_plot, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/PR/PR_Treatment_TP5-7_20230423.png", pr_plot, width = 50, height = 25, units = "cm")
-```
-
-
-
-
-
-
-
-## Test for differences 
-For now (as of 20230420), I'm using code based on this [tutorial](http://www.sthda.com/english/wiki/two-way-anova-test-in-r). I need to do some more investigations on stats stuff 
-```{r}
-# Separate into P and Rd dfs 
-p_df <- sub %>%
-  filter(Assay == "Photosynthesis")
-rd_df <- sub %>%
-  filter(Assay == "Respiration")
-
-## Plot P
-p_plot <- ggplot(p_df, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
-  geom_boxplot(lwd = 1, color = "black") +
-  scale_fill_manual(values = c("blue", "red")) +
-  #ylab("Carbohydrates (mg/cm²)") +
-  xlab("") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
-  theme_classic() +
-  theme(legend.title = element_text(size = 28),
-          legend.text = element_text(size = 25),
-          legend.position = "right",
-          legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
-                                   color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
-p_plot
-ggsave("output/Physiology/PR/P_Treatment_20230424.pdf", p_plot, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/PR/P_Treatment_20230424.png", p_plot, width = 50, height = 25, units = "cm")
-
-## Plot R
-r_plot <- ggplot(rd_df, aes(x = Timepoint, y = micromol.cm2.h, fill = Treatment)) +
-  geom_boxplot(lwd = 1, color = "black") +
-  scale_fill_manual(values = c("blue", "red")) +
-  #ylab("Carbohydrates (mg/cm²)") +
-  xlab("") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
-  theme_classic() +
-  theme(legend.title = element_text(size = 28),
-          legend.text = element_text(size = 25),
-          legend.position = "right",
-          legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
-                                   color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))) 
-r_plot
-ggsave("output/Physiology/PR/R_Treatment_20230424.pdf", r_plot, width = 50, height = 25, units = "cm")
-ggsave("output/Physiology/PR/R_Treatment_20230424.png", r_plot, width = 50, height = 25, units = "cm")
-
-################################# PHOTOSYNTHESIS ################################# 
-## Compute two-way ANOVA test 
-model <- aov(log(micromol.cm2.h) ~ Treatment*Timepoint, data = p_df)
-summary(model)
-
-#                     Df Sum Sq Mean Sq F value  Pr(>F)   
-# Treatment            1  0.884  0.8840   2.178 0.15075   
-# Timepoint            6 10.495  1.7491   4.310 0.00317 **
-# Treatment:Timepoint  6  0.540  0.0901   0.222 0.96649   
-# Residuals           29 11.769  0.4058                   
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 5 observations deleted due to missingness
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP1 differs from TP5, TP6, & TP7
-
-# Multiple comparisons using multcomp package
-
-# Pairwise test 
-pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint) # should I specify a p.adjust.method? 
-## TP6 differs from TP1, TP2, and TP3
-
-
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test 
-leveneTest(micromol.cm2.h ~ Timepoint*Treatment, data = sub)
-## p-value is  less than 0.05, so variance is not homogenous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is greater than 0.05 so normality is all good 
-
-
-
-
-
-
-
-################################# RESPIRATION ################################# 
-## Compute two-way ANOVA test 
-model <- aov(log(micromol.cm2.h) ~ Treatment*Timepoint, data = rd_df)
-summary(model)
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP6 differs from TP1 (only slightly), TP2, and TP3
-
-# Multiple comparisons using multcomp package
-
-# Pairwise test 
-pairwise.t.test(p_df$micromol.cm2.h, p_df$Timepoint) # should I specify a p.adjust.method? 
-## TP6 differs from TP1, TP2, and TP3
-```
-
-
-
-
-
-### 20240108 
-
-Going to remove outliers, plot everything and do stats 
-
-```{r}
-exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
-field <- read_csv(file = "../output/Physiology/PR/PR_field_rates.csv")
-field$Treatment <- "Field"
-
-
-all <- full_join(exp, field) %>%
-  as_tibble()
-  
-all <- all %>% 
-  mutate(Timepoint = case_when(
-    Date == "2021-02-04" ~ "TP0",
-    Date == "2021-03-04" ~ "TP1",
-    Date == "2021-04-01" ~ "TP2",
-    Date == "2021-04-10" ~ "TP2",
-    Date == "2021-04-29" ~ "TP3",
-    Date == "2021-04-30" ~ "TP3",
-    Date == "2021-05-27" ~ "TP4",
-    Date == "2021-06-02" ~ "TP4",
-    Date == "2021-06-24" ~ "TP5",
-    Date == "2021-06-25" ~ "TP5", 
-    Date == "2021-07-22" ~ "TP6",
-    Date == "2021-07-23" ~ "TP6",
-    Date == "2021-08-19" ~ "TP7",
-    Date == "2021-09-01" ~ "TP7")) 
-
-all <- all %>% 
+# Assign month to TPs 
+photo_exp_filtered <- photo_exp_filtered %>% 
   mutate(Month = case_when(
-    Date == "2021-02-04" ~ "Febuary", # TP0
-    Date == "2021-03-04" ~ "March", # TP1
-    Date == "2021-04-01" ~ "Early April", # TP2
-    Date == "2021-04-10" ~ "Early April", # TP2
-    Date == "2021-04-29" ~ "Late April", # TP3
-    Date == "2021-04-30" ~ "Late April", # TP3
-    Date == "2021-05-27" ~ "May", # TP4
-    Date == "2021-06-02" ~ "May", # TP4
-    Date == "2021-06-24" ~ "June", # TP5
-    Date == "2021-06-25" ~ "June", # TP5
-    Date == "2021-07-22" ~ "July", # TP6
-    Date == "2021-07-23" ~ "July", # TP6
-    Date == "2021-08-19" ~ "August", # TP7
-    Date == "2021-09-01" ~ "August")) # TP7
-  
-all <- all %>% 
-  mutate(Assay = case_when(
-    Light_Value == "0" ~ "Rd",
-    Light_Value == "320" ~ "P",
-    Light_Value == "337" ~ "P",
-    Light_Value == "340" ~ "P",
-    Light_Value == "350" ~ "P",
-    Light_Value == "355" ~ "P",
-    Light_Value == "368" ~ "P",
-    Light_Value == "392" ~ "P",
-    Light_Value == "321" ~ "P",
-    Light_Value == "361" ~ "P",
-    Light_Value == "319" ~ "P", 
-    Light_Value == "334" ~ "P",
-    Light_Value == "366" ~ "P",
-    Light_Value == "358" ~ "P",
-    Light_Value == "342" ~ "P")) %>%
-  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
-
-
-# all <- all %>% 
-#   mutate(Assay = case_when(
-#     Treatment == "Ambient" ~ "Ambient",
-#     Treatment == "Heat" ~ "Heat",
-#     Treatment == "Field-TP2" ~ "Field",
-#     Treatment == "Field-TP3" ~ "Field",
-#     Treatment == "Field-TP4" ~ "Field"))
-```  
-
-Remove P assay because most colonies were aposymbiotic 
-```{r}
-all_rd <- all %>%
-  filter(Assay == "Rd")
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
 ```
 
-Remove any values that were greater than 0, as positive values should not have occurred during the dark respiration run, as well as the acclimatization period (TP0) and field data.
+Plot 
 ```{r}
-all_rd <- all_rd %>%
-  #filter(!micromol.cm2.h > 0) %>%
-  filter(!micromol.cm2.h < -10) %>%
-  #filter(!Treatment == "Acclimatization") %>%
-  filter(!Treatment == "Field")
-```
+anova_summary <- summary(anova_result)
 
-Set levels for plotting by month 
-```{r}
-all_rd$Month <- factor(all_rd$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
-```
+# Extract p-values
+p_treatment <- anova_summary[[1]]$`Pr(>F)`[1]  # Treatment p-value
+p_timepoint <- anova_summary[[1]]$`Pr(>F)`[2]  # Timepoint p-value
+p_interaction <- anova_summary[[1]]$`Pr(>F)`[3]  # Interaction p-value
 
-Plot
-```{r}
-plot <- ggplot(all_rd, aes(x = Month, y = micromol.cm2.h, colour = Treatment)) +
-  geom_boxplot(aes(colour=Treatment), lwd=2) +
-  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  #geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
-  scale_fill_manual(values = c("grey", "blue", "red")) +
-  scale_colour_manual(values = c("grey", "blue", "red")) +
-  xlab("") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
+# Format text for annotation
+anova_text <- paste0("Two-way ANOVA Results:",
+                     "Treatment p = ", signif(p_treatment, 3),
+                     "Timepoint p = ", signif(p_timepoint, 3),
+                     "Interaction p = ", signif(p_interaction, 3))
+
+# Set Month as factor 
+photo_exp_filtered$Month <- factor(photo_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# Create the plot
+photo <- ggplot(photo_exp_filtered, aes(x = Month, y = micromol.cm2.h, fill = Treatment, color = Treatment)) + 
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
   theme_classic() +
-    theme(legend.title = element_text(size = 28, face = "bold"),
-          legend.text = element_text(size = 25),
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
+  theme(axis.text.x = element_text(size = 25,
                                    color = "black",
                                    angle = 45,
                                    hjust = 1, 
-                                   face = "bold")) +
-   theme(axis.text.y = element_text(size = 30,
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
                                    color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    face = "bold",
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); photo
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
 
-ggsave("../output/Physiology/PR/R_Treatment_20240521.pdf", plot, width = 15, height = 10)
-ggsave("../output/Physiology/PR/R_Treatment_20240521.png", plot, width = 15, height = 10)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoint.pdf", photo, width = 20, height = 15)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoint.png", photo, width = 20, height = 15)
 ```
 
-Summarize data
+Calculate mean, sd and sem of each group for plotting 
 ```{r}
-## Summarize data w/o field 
-mean.r_exp <- summarySE(all_rd, measurevar = "micromol.cm2.h", groupvars = c("Treatment", "Timepoint"))
-#mean.r_site_exp <- summarySE(carb, measurevar = "micromol.cm2.h", groupvars = c("Site", "Treatment", "Timepoint"))
+photo_summary <- photo_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_photo = micromol.cm2.h / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
 ```
 
-Going to do stats just for Temperate coral conference 
+Plot as dot and whisker plots
 ```{r}
-model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = all_rd)
-summary(model)
+# Set Month as factor 
+photo_summary$Month <- factor(photo_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-#                      Df Sum Sq Mean Sq F value   Pr(>F)    
-# Treatment             2  10.87   5.436   3.027   0.0524 .  
-# Timepoint             6  87.07  14.512   8.081 2.92e-07 ***
-# Treatment:Timepoint   6  60.81  10.135   5.644 3.76e-05 ***
-# Residuals           112 201.13   1.796                     
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
-
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_rd)
-## p-value is less than 0.05, so variance is not homogeneous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality is violated
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP1 differs from TP6; TP2, TP3, TP5, TP6 and TP7 differs from TP4
-
-TukeyHSD(model, which = "Treatment")
-## Ambient and acclimation differed
-```
-
-Probably need to do data transformations 
-
-It is weird that there are positive values in the R data since the corals were in the dark. 
-
-Check out P
-```{r}
-all_p <- all %>%
-  filter(Assay == "P")
-```
-
-Remove field data.
-```{r}
-all_p <- all_p %>%
-  #filter(!micromol.cm2.h > 0) %>%
-  #filter(!micromol.cm2.h < -10) %>%
-  #filter(!Treatment == "Acclimatization") %>%
-  filter(!Treatment == "Field")
-```
-
-Set levels for plotting by month 
-```{r}
-all_p$Month <- factor(all_p$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
-```
-
-Plot
-```{r}
-plot <- ggplot(all_p, aes(x = Month, y = micromol.cm2.h, colour = Treatment)) +
-  geom_boxplot(aes(colour=Treatment), lwd=2) +
-  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  #geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add dotted line at y = 0
-  scale_fill_manual(values = c("grey", "blue", "red")) +
-  scale_colour_manual(values = c("grey", "blue", "red")) +
+# sem
+photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_photo - sem_photo, 
+                    ymax = mean_photo + sem_photo), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
   xlab("") +
-  #ylab("Carbohydrates (mg/cm²)") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); photo_dot_sem
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.pdf", photo_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.png", photo_dot_sem, width = 20, height = 15)
+
+# sd
+photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_photo - sd_photo, 
+                    ymax = mean_photo + sd_photo),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );photo_dot_sd
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd.pdf", photo_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd.png", photo_dot_sd, width = 22, height = 12)
+```
+
+## Respiration 
+
+Read in data
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+
+resp_exp <- exp %>%
+  filter(Light_Value == 0)
+
+resp_exp <- resp_exp %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Check for outliers
+```{r}
+# Look for outliers visually
+ggplot(resp_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(resp_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(resp_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- resp_exp[resp_exp$micromol.cm2.h < lower_bound | resp_exp$micromol.cm2.h > upper_bound, ]
+print(outliers)
+
+# Z-score method
+resp_exp$z_score <- scale(resp_exp$micromol.cm2.h)
+outliers_z <- resp_exp[abs(resp_exp$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(resp_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(resp_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+resp_exp_filtered <- resp_exp[resp_exp$micromol.cm2.h >= lower_bound & resp_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(resp_exp)
+dim(resp_exp_filtered)
+```
+
+13 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(resp_exp_filtered, aes(x = micromol.cm2.h)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(resp_exp_filtered$micromol.cm2.h)
+qqline(resp_exp_filtered$micromol.cm2.h, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(resp_exp_filtered$micromol.cm2.h)
+```
+
+Data is normal. Set date as Timepoints
+```{r}
+resp_exp_filtered <- resp_exp_filtered %>%
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7")) 
+```
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+resp_exp_filtered$Treatment <- as.factor(resp_exp_filtered$Treatment)
+resp_exp_filtered$Timepoint <- as.factor(resp_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(micromol.cm2.h ~ Treatment * Timepoint, data = resp_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(micromol.cm2.h ~ Treatment * Timepoint, data = resp_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+Run post hoc test 
+```{r}
+# Using emmeans to perform pairwise comparisons of the interaction
+emm_interaction <- emmeans(anova_result, ~ Timepoint * Treatment)
+
+# Conduct pairwise comparisons for the interaction
+pairwise_interaction <- pairs(emm_interaction)
+
+# View the results
+summary(pairwise_interaction)
+
+pairwise_df <- as.data.frame(summary(pairwise_interaction))
+pairwise_df <- na.omit(pairwise_df)
+
+# Look at Tukey as well
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+TukeyHSD(anova_result, "Treatment", conf.level = 0.95)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+resp_exp_filtered <- resp_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation
+resp_exp_filtered <- resp_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Plot 
+```{r}
+anova_summary <- summary(anova_result)
+
+# Extract p-values
+p_treatment <- anova_summary[[1]]$`Pr(>F)`[1]  # Treatment p-value
+p_timepoint <- anova_summary[[1]]$`Pr(>F)`[2]  # Timepoint p-value
+p_interaction <- anova_summary[[1]]$`Pr(>F)`[3]  # Interaction p-value
+
+# Format text for annotation
+anova_text <- paste0("Two-way ANOVA Results:",
+                     "Treatment p = ", signif(p_treatment, 3),
+                     "Timepoint p = ", signif(p_timepoint, 3),
+                     "Interaction p = ", signif(p_interaction, 3))
+
+# Set Month as factor 
+resp_exp_filtered$Month <- factor(resp_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# Create the plot
+resp <- ggplot(resp_exp_filtered, aes(x = Month, y = micromol.cm2.h, fill = Treatment, color = Treatment)) + 
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
   theme_classic() +
-    theme(legend.title = element_text(size = 28, face = "bold"),
-          legend.text = element_text(size = 25),
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
+  theme(axis.text.x = element_text(size = 25,
                                    color = "black",
                                    angle = 45,
                                    hjust = 1, 
-                                   face = "bold")) +
-   theme(axis.text.y = element_text(size = 30,
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
                                    color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    face = "bold",
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); resp
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
 
-ggsave("../output/Physiology/PR/P_Treatment_20240521.pdf", plot, width = 15, height = 10)
-ggsave("../output/Physiology/PR/P_Treatment_20240521.png", plot, width = 15, height = 10)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoint.pdf", resp, width = 20, height = 15)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoint.png", resp, width = 20, height = 15)
 ```
 
-Summarize data
+Calculate mean, sd and sem of each group for plotting 
 ```{r}
-## Summarize data w/o field 
-mean.p_exp <- summarySE(all_p, measurevar = "micromol.cm2.h", groupvars = c("Treatment", "Timepoint"))
-#mean.r_site_exp <- summarySE(carb, measurevar = "micromol.cm2.h", groupvars = c("Site", "Treatment", "Timepoint"))
+resp_summary <- resp_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_resp = micromol.cm2.h / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
 ```
 
-Going to do stats just for Temperate coral conference 
+Plot as dot and whisker plots
 ```{r}
-model <- aov(micromol.cm2.h ~ Treatment*Timepoint, data = all_p)
-summary(model)
+# Set Month as factor 
+resp_summary$Month <- factor(resp_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-#                      Df Sum Sq Mean Sq F value   Pr(>F)    
-# Treatment             2     11    5.29   0.166 0.846917    
-# Timepoint             6    906  151.02   4.747 0.000239 ***
-# Treatment:Timepoint   6    137   22.89   0.719 0.634742    
-# Residuals           113   3595   31.82                     
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# sem
+resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_resp - sem_resp, 
+                    ymax = mean_resp + sem_resp), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); resp_dot_sem
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.pdf", resp_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.png", resp_dot_sem, width = 20, height = 15)
 
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
+# sd
+resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_resp - sd_resp, 
+                    ymax = mean_resp + sd_resp),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );resp_dot_sd
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sd.pdf", resp_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sd.png", resp_dot_sd, width = 22, height = 12)
 
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = all_p)
-## p-value is greater than 0.05, so variance is homogeneous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality is violated
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP2 differs from TP4 and TP6; TP3 differs from TP4
 ```
+
+

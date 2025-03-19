@@ -10,6 +10,12 @@ Use DESeq2 to evaluate differential expression of miRNAs; using miRNAs generated
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(update = TRUE)
+BiocManager::install("DESeq2", force = TRUE)
+install.packages("locfit")
+
 library(genefilter)
 library(DESeq2)
 library(pheatmap)
@@ -26,6 +32,7 @@ library(gplots)
 library(wesanderson)
 library(cowplot)
 library(gridExtra)
+library(locfit)
 ```
 
 Read in data and select only counts data 
@@ -107,7 +114,7 @@ head(TP0_v_5_amb)
 
 # Save results for all miRNAs 
 TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
-write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv")
+#write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
@@ -123,7 +130,7 @@ TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig))
 TP0_v_5_amb.sig <- as.data.frame(TP0_v_5_amb.sig)
 TP0_v_5_amb.sig.list <- as.data.frame(counts(TP0_v_5_amb.sig.list))
 TP0_v_5_amb.sig.list.full <- cbind(TP0_v_5_amb.sig, TP0_v_5_amb.sig.list)
-write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_amb_DEM.csv")
+#write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_amb_DEM.csv")
 ```
 
 TP0 v TP7 Ambient
@@ -134,7 +141,7 @@ head(TP0_v_7_amb)
 
 # Save results for all miRNAs 
 TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
-write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
+#write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
@@ -150,7 +157,7 @@ TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig))
 TP0_v_7_amb.sig <- as.data.frame(TP0_v_7_amb.sig)
 TP0_v_7_amb.sig.list <- as.data.frame(counts(TP0_v_7_amb.sig.list))
 TP0_v_7_amb.sig.list.full <- cbind(TP0_v_7_amb.sig, TP0_v_7_amb.sig.list)
-write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_amb_DEM.csv")
+#write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_amb_DEM.csv")
 ```
 
 TP5 v TP7 Ambient 
@@ -178,7 +185,7 @@ head(TP0_v_5_heat)
 
 # Save results for all miRNAs 
 TP0_v_5_heat_df <- as.data.frame(TP0_v_5_heat)
-write.csv(TP0_v_5_heat_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_heat_miRNA.csv")
+#write.csv(TP0_v_5_heat_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_heat); ma_plot
@@ -194,7 +201,7 @@ TP0_v_5_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_heat.sig
 TP0_v_5_heat.sig <- as.data.frame(TP0_v_5_heat.sig)
 TP0_v_5_heat.sig.list <- as.data.frame(counts(TP0_v_5_heat.sig.list))
 TP0_v_5_heat.sig.list.full <- cbind(TP0_v_5_heat.sig, TP0_v_5_heat.sig.list)
-write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_heat_DEM.csv")
+#write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_heat_DEM.csv")
 ```
 
 TP0 v TP7 Heat
@@ -205,7 +212,7 @@ head(TP0_v_7_heat)
 
 # Save results for all miRNAs 
 TP0_v_7_heat_df <- as.data.frame(TP0_v_7_heat)
-write.csv(TP0_v_7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_heat_miRNA.csv")
+#write.csv(TP0_v_7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_heat); ma_plot
@@ -221,7 +228,7 @@ TP0_v_7_heat.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_heat.sig
 TP0_v_7_heat.sig <- as.data.frame(TP0_v_7_heat.sig)
 TP0_v_7_heat.sig.list <- as.data.frame(counts(TP0_v_7_heat.sig.list))
 TP0_v_7_heat.sig.list.full <- cbind(TP0_v_7_heat.sig, TP0_v_7_heat.sig.list)
-write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_heat_DEM.csv")
+#write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_heat_DEM.csv")
 ```
 
 TP5 Heat v TP7 Heat
@@ -232,7 +239,7 @@ head(TP5_heat_v_7_heat)
 
 # Save results for all miRNAs 
 TP5_heat_v_7_heat_df <- as.data.frame(TP5_heat_v_7_heat)
-write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP5_heat_v_7_heat_miRNA.csv")
+#write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP5_heat_v_7_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
@@ -249,7 +256,7 @@ head(TP5_amb_v_TP5_heat)
 
 # Save results for all miRNAs 
 TP5_amb_v_TP5_heat_df <- as.data.frame(TP5_amb_v_TP5_heat)
-write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/smRNA/shortstack/TP5_amb_v_TP5_heat_miRNA.csv")
+#write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/smRNA/shortstack/TP5_amb_v_TP5_heat_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_amb_v_TP5_heat)
@@ -266,7 +273,7 @@ head(TP7_amb_v_TP7_heat)
 
 # Save results for all miRNAs 
 TP7_amb_v_TP7_heat_df <- as.data.frame(TP7_amb_v_TP7_heat)
-write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP7_amb_v_TP7_heat_miRNA.csv")
+#write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/smRNA/shortstack/TP7_amb_v_TP7_heat_miRNA.csv")
 
 # Volcano plot for LFC
 plotMA(TP7_amb_v_TP7_heat)
@@ -283,7 +290,7 @@ head(TP5_heat_v_TP7_amb)
 
 # Save results for all miRNAs 
 TP5_heat_v_TP7_amb_df <- as.data.frame(TP5_heat_v_TP7_amb)
-write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP5_heat_v_TP7_amb_miRNA.csv")
+#write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP5_heat_v_TP7_amb_miRNA.csv")
 
 # Volcano plot for LFC
 ma_plot <- plotMA(TP5_heat_v_TP7_amb)
@@ -322,7 +329,7 @@ length(unique(DEMs.all$DEMs))
 
 Unique.sig.list <- data[which(rownames(data) %in% DEMs.all$DEMs),] #subset list of sig transcripts from original count data
 Unique.rsig <- rlog(Unique.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-write.csv(counts(Unique.sig.list), file="../output/Molecular/smRNA/shortstack/Unique_DEMs.csv")
+#write.csv(counts(Unique.sig.list), file="../output/Molecular/smRNA/shortstack/Unique_DEMs.csv")
 ```
 
 There are 12 DEMs. 
@@ -330,43 +337,35 @@ There are 12 DEMs.
 PCA with DEMs
 ```{r}
 pca_plot <- plotPCA(Unique.rsig, intgroup = c("Condition")); pca_plot
-# percentVar_pca <- round(100*attr(pca_plot, "percentVar")) #plot PCA of samples with all data
-# 
-# pca_plot_degs <- ggplot(pca_plot, aes(PC1, PC2, color = Condition)) + 
-#   geom_point(size=10) +
-#   xlab(paste0("PC1: ",percentVar_pca[1],"% variance")) +
-#   ylab(paste0("PC2: ",percentVar_pca[2],"% variance")) +
-#   #scale_color_manual(values = wes_palette("GrandBudapest1", n=3)) +
-#   #ggtitle(label = "M. capitata") +
-#   theme_bw() + #Set background color
-#   theme(legend.text = element_text(size=13), 
-#         #legend.position="none",
-#         plot.background = element_blank(),
-#         legend.title = element_text(size=18, face="bold"), 
-#         #legend.title=element_blank(),
-#         axis.text = element_text(size=13), 
-#         axis.title = element_text(size=15,  face="bold"), 
-#         axis.title.y = element_text(vjust=-1.5),
-#         plot.title = element_text(size = 20, face = "italic", hjust = 0.5)) +
-#   coord_equal(ratio = 2); pca_plot_degs
-##^^ code above wasn't working 
+pca_data <- pca_plot$data
 
-# Customize the PCA plot
-pca_plot2 <- pca_plot + 
-  #labs(x = paste0("PC1: ", percentVar_pca[1], "% variance"),
-  #     y = paste0("PC2: ", percentVar_pca[2], "% variance")) +
+# Create a new column for just the treatment (Heat, Ambient, Acclimation)
+pca_data$Treatment <- gsub("^TP[0-9]+_", "", as.character(pca_data$Condition))
+
+# Create a new column for the timepoint and rename
+pca_data$Month <- gsub("_.*$", "", as.character(pca_data$Condition))
+pca_data$Month <- factor(pca_data$Month, 
+                         levels = c("TP0", "TP5", "TP7"),
+                         labels = c("February", "June", "August"))
+
+# Create the plot
+pca_plot2 <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
+  geom_point(size = 7) +
+  labs(x = paste0("PC1: 49% variance"),
+       y = paste0("PC2: 12% variance")) +
+  stat_ellipse(aes(fill = Treatment), geom = "polygon", alpha = 0.2, level = 0.95) +
+  scale_color_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
+  scale_fill_manual(values = c("Heat" = "#E41A1C", "Ambient" = "#377EB8", "Acclimation" = "grey60")) +
+  scale_shape_manual(values = c("February" = 16, "June" = 17, "August" = 15)) +
   theme_bw() +
-  theme(legend.text = element_text(size = 13),
+  theme(legend.text = element_text(size = 18),
         plot.background = element_blank(),
-        legend.title = element_text(size = 18, face = "bold"),
-        axis.text = element_text(size = 13),
-        axis.title = element_text(size = 15, face = "bold"),
+        legend.title = element_text(size = 23, face = "bold"),
+        axis.text = element_text(size = 18, color = "black"),
+        axis.title = element_text(size = 20, face = "bold"),
         axis.title.y = element_text(vjust = -1.5),
         plot.title = element_text(size = 20, face = "italic", hjust = 0.5)); pca_plot2
-
 ```
-
-Need to make the plot prettier and figure out how to incorporate Treatment and timepoint 
 
 Heatmap with DEMs
 ```{r}
@@ -388,8 +387,8 @@ Also need to make this prettier
 
 Save DEM plots 
 ```{r}
-ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.pdf", pca_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.png", pca_plot, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.pdf", pca_plot2, width = 10, height = 8)
+ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.png", pca_plot2, width = 10, height = 8)
 
 pdf("../output/Molecular/smRNA/shortstack/heatmap_DEMs.pdf", width = 8, height = 10)
 print(heatmap)

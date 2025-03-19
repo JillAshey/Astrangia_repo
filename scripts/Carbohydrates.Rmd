@@ -264,19 +264,149 @@ Save carb data
 write.csv(all, "../output/Physiology/Carbohydrates/Carbohydrates.csv")
 ```
 
+# Stats and plotting 
 
-
-## Plotting and stats
 Read in data
 ```{r}
 carb <- read.csv("../output/Physiology/Carbohydrates/Carbohydrates.csv")
+
+carb <- carb %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
 ```
 
-Assign Month to TPs
+Check for outliers 
 ```{r}
-carb <- carb %>% 
+# Look for outliers visually
+ggplot(carb, aes(x = Treatment, y = Carb.mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(carb$Carb.mg.cm2, 0.25)
+Q3 <- quantile(carb$Carb.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- carb[carb$Carb.mg.cm2 < lower_bound | carb$Carb.mg.cm2 > upper_bound, ]
+print(outliers)
+
+# Z-score method
+carb$z_score <- scale(carb$Carb.mg.cm2)
+outliers_z <- carb[abs(carb$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(carb$Carb.mg.cm2, 0.25)
+Q3 <- quantile(carb$Carb.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+carb_exp_filtered <- carb[carb$Carb.mg.cm2 >= lower_bound & carb$Carb.mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(carb)
+dim(carb_exp_filtered)
+```
+
+6 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(carb_exp_filtered, aes(x = Carb.mg.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(carb_exp_filtered$Carb.mg.cm2)
+qqline(carb_exp_filtered$Carb.mg.cm2, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(carb_exp_filtered$Carb.mg.cm2)
+```
+
+Data is not normal, perform data transformation
+```{r}
+# Sqrt
+carb_exp_filtered$Carb.mg.cm2_sqrt <- sqrt(carb_exp_filtered$Carb.mg.cm2)
+shapiro.test(carb_exp_filtered$Carb.mg.cm2_sqrt)
+ggplot(carb_exp_filtered, aes(x = Carb.mg.cm2_sqrt)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(carb_exp_filtered$Carb.mg.cm2_sqrt)
+qqline(carb_exp_filtered$Carb.mg.cm2_sqrt, col = "red")
+
+# log 
+carb_exp_filtered$Carb.mg.cm2_log <- log(carb_exp_filtered$Carb.mg.cm2 + 1)  # Add 1 to avoid log(0)
+shapiro.test(carb_exp_filtered$Carb.mg.cm2_log)  # Check normality
+ggplot(carb_exp_filtered, aes(x = Carb.mg.cm2_log)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(carb_exp_filtered$Carb.mg.cm2_log)
+qqline(carb_exp_filtered$Carb.mg.cm2_log, col = "red")
+
+# Inverse 
+carb_exp_filtered$Carb.mg.cm2_inv <- 1 / (carb_exp_filtered$Carb.mg.cm2 + 1)  # Add 1 to avoid division by zero
+shapiro.test(carb_exp_filtered$Carb.mg.cm2_inv)
+ggplot(carb_exp_filtered, aes(x = Carb.mg.cm2_inv)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+qqnorm(carb_exp_filtered$Carb.mg.cm2_inv)
+qqline(carb_exp_filtered$Carb.mg.cm2_inv, col = "red")
+```
+
+Sqrt transformation produces normality. Remove NAs produced from negative values 
+```{r}
+carb_exp_filtered <- carb_exp_filtered %>%
+  filter(Carb.mg.cm2_sqrt != "NaN")
+```
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+carb_exp_filtered$Treatment <- as.factor(carb_exp_filtered$Treatment)
+carb_exp_filtered$Timepoint <- as.factor(carb_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(Carb.mg.cm2_sqrt ~ Treatment * Timepoint, data = carb_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(Carb.mg.cm2_sqrt ~ Treatment * Timepoint, data = carb_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+Treatment is significant but Timepoint and interaction is not. This contrasts with our other phys data, which is primarily different by time point. 
+
+Run post-hoc test for Treatment and Timepoint
+```{r}
+TukeyHSD(anova_result, "Treatment", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+carb_exp_filtered <- carb_exp_filtered %>% 
   mutate(Month = case_when(
-    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP0" ~ "February", 
     Timepoint == "TP1" ~ "March", 
     Timepoint == "TP2" ~ "Early April", 
     Timepoint == "TP3" ~ "Late April", 
@@ -286,196 +416,117 @@ carb <- carb %>%
     Timepoint == "TP7" ~ "August")) 
 ```
 
-Remove field data and change Treatment for TP0 to be "Acclimation"
+Plot untransformed data 
 ```{r}
-carb <- carb %>%
-#   filter(!Timepoint == "TP0") %>%
-   filter(!Treatment == "Field") %>%
-   filter(Carb.mg.cm2 <= 15) %>%
-   dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment))
-```
+# Set Month as factor 
+carb_exp_filtered$Month <- factor(carb_exp_filtered$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-Set levels for plotting by month 
-```{r}
-carb$Month <- factor(carb$Month, levels = c("Febuary", "March", "Early April", "Late April", "May", "June", "July", "August"))
-```
-
-Plot 
-```{r}
-plot <- ggplot(carb, aes(x = Month, y = Carb.mg.cm2, colour = Treatment)) +
-  geom_boxplot(aes(colour=Treatment), lwd=2) +
-  #geom_point(aes(fill=Treatment, group=Treatment), colour="black", pch = 21, size=4, position = position_jitterdodge(0.3), alpha=0.9) + 
-  scale_fill_manual(values = c("grey", "blue", "red")) +
-  scale_colour_manual(values = c("grey","blue", "red")) +
+carb <- ggplot(carb_exp_filtered, aes(x = Month, y = Carb.mg.cm2, fill = Treatment, color = Treatment)) + 
+  geom_boxplot(alpha = 0.6, outlier.shape = NA, size = 1) +  
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.7, size = 4) + 
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted")+
+  theme_classic() +
   xlab("") +
   ylab("Carbohydrates (mg/cm²)") +
-  #hjust(x = 0) +
-  #facet_wrap(~Assay, ncol = 2) +
-  theme_classic() +
-    theme(legend.title = element_text(size = 28, face = "bold"),
-          legend.text = element_text(size = 25),
+  scale_fill_manual(values = c("grey", "blue", "red")) +
+  scale_colour_manual(values = c("grey","blue", "red")) + 
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 15),
           legend.position = "right",
           legend.key.size = unit(3, "line")) +
-  theme(axis.text.x = element_text(size = 30,
+  theme(axis.text.x = element_text(size = 25,
                                    color = "black",
                                    angle = 45,
                                    hjust = 1, 
-                                   face = "bold")) +
-   theme(axis.text.y = element_text(size = 30,
+                                   face = "bold"),
+        axis.ticks.x = element_line(size = 1),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.y = element_text(size = 25,
                                    color = "black"),
-        axis.title.y = element_text(size = 35,
-                                    face = "bold",
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); plot 
+        axis.title.y = element_text(face = "bold", size = 30,
+                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); carb
+  #annotate("text", x = max(as.numeric(chl_exp_filtered$Timepoint)) - 0.2, 
+  #         y = max(chl_exp_filtered$chla_sqrt), label = anova_text, 
+  #         hjust = 1, vjust = 1, size = 5, color = "black")
 
-#ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.pdf", plot, width = 15, height = 10)
-#ggsave("../output/Physiology/Carbohydrates/Carbohydrates_20240521.png", plot, width = 15, height = 10)
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint.pdf", carb, width = 20, height = 15)
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint.png", carb, width = 20, height = 15)
 ```
 
-Summarize data
+Calculate mean, sd and sem of each group for plotting 
 ```{r}
-## Summarize data w/o field 
-mean.carb_exp <- summarySE(carb, measurevar = "Carb.mg.cm2", groupvars = c("Treatment", "Timepoint"))
-mean.carb_site_exp <- summarySE(carb, measurevar = "Carb.mg.cm2", groupvars = c("Site", "Treatment", "Timepoint"))
+carb_summary <- carb_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_carb = mean(Carb.mg.cm2, na.rm = TRUE),
+    sd_carb = sd(Carb.mg.cm2, na.rm = TRUE),
+    sem_carb = sd_carb / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
 ```
 
-Looking at this plot, I see that not all of the treatments/timepoints have n=8. I need to look through my data and notebooks so that I can make sure I have all the data that I need and that I have processed everything. 
-
-Going to do stats
+Plot as dot and whisker plots
 ```{r}
-model <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = carb)
-summary(model)
+# Set Month as factor 
+carb_summary$Month <- factor(carb_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
 
-#                     Df Sum Sq Mean Sq F value  Pr(>F)   
-# Treatment             2   30.7  15.368   3.328 0.03962 * 
-# Timepoint             6   84.0  13.994   3.030 0.00892 **
-# Treatment:Timepoint   6   42.3   7.051   1.527 0.17632   
-# Residuals           107  494.1   4.618                   
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# sem
+carb_dot_sem <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_carb - sem_carb, 
+                    ymax = mean_carb + sem_carb), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab("Carbohydrates (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); carb_dot_sem
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.pdf", carb_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.png", carb_dot_sem, width = 20, height = 15)
 
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
+# sd
+carb_dot_sd <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_carb - sd_carb, 
+                    ymax = mean_carb + sd_carb),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  xlab("") +
+  ylab("Carbohydrates (mg/cm²)") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15), face = "bold", color = "black"),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );carb_dot_sd
 
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = carb)
-## p-value is greater than 0.05, so variance is homogeneous 
-
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality is violated
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP2 differs from TP7
-
-TukeyHSD(model, which = "Treatment")
-## Heat differs from amb (but just barely w/ pvalue of 0.0504046)
-```
-
-Need to do data transformations 
-
-Check for outliers 
-```{r}
-plot <- ggbetweenstats(carb, Timepoint, Carb.mg.cm2, outlier.tagging = T); plot
-```
-
-Remove outliers 
-```{r}
-#set quantile values
-q <- c(0.25, 0.75)
-
-# calculate quantile values by Temperature and Treatment groups
-Quants <- carb %>%
-  group_by(Timepoint) %>%
-  summarize(quant25 = quantile(Carb.mg.cm2, probs = q[1]),
-            quant75 = quantile(Carb.mg.cm2, probs = q[2]),
-            IQRbyGroup=IQR(Carb.mg.cm2))
-
-#Calculate Quantile upper and lower ranges 
-Quants$upper <-  Quants$quant75+1.5*Quants$IQRbyGroup # Upper Range  
-Quants$lower <- Quants$quant25-1.5*Quants$IQRbyGroup # Lower Range
-
-#Calculate STDev upper and lower ranges 
-Quants$upper.stdev <- mean(carb$Carb.mg.cm2)+(sd(carb$Carb.mg.cm2)*2) # Upper Range  
-Quants$lower.stdev <- mean(carb$Carb.mg.cm2)-(sd(carb$Carb.mg.cm2)*2) # Lower Range
-
-#join outlier cutoffs with rate data
-data <- cross_join(carb, Quants)
-
-#remove outliers from rates
-data <- data %>%
-   filter(Carb.mg.cm2 < upper) %>%
-   filter(Carb.mg.cm2 > lower)
-
-# Plot TA value by treatment 
-ggplot(data, aes(x = Timepoint, y = Carb.mg.cm2)) +
-  geom_boxplot()
-
-# Remove outliers from high trt (rows 82 and 166)
-#TAdata <- TAdata[-c(82,166),]
-
-# Plot TA value by treatment 
-#ggplot(TAdata, aes(x = Treatment, y = TA)) +
-#  geom_boxplot()
-
-#remove excess data columns
-#TAdata <- TAdata %>% 
-#  dplyr::select(c("SampleID","TA","Salinity", "Date"))
-```
-
-sqrt data 
-```{r}
-data <- data %>%
-  mutate(sqrt_Carb.mg.cm2 = sqrt(Carb.mg.cm2))
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sd.pdf", carb_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sd.png", carb_dot_sd, width = 22, height = 12)
 ```
 
 
-Do stats with outliers removed 
-```{r}
-model <- aov(Carb.mg.cm2 ~ Treatment*Timepoint, data = data)
-summary(model)
 
-## Check ANOVA assumptions 
-# ANOVA assumes data is normally distributed and variance across groups is homogenous 
-# 1. Check homogeneity of variance assumption
-# a. Residuals vs fits plot
-plot(model, 1)
 
-# b. Levene's test 
-leveneTest(residuals(model) ~ Timepoint*Treatment, data = data)
-## p-value is greater than 0.05, so variance is homogeneous 
 
-# 2. Check normality assumption 
-# a. Normality plot of residuals 
-plot(model, 2) 
-hist(residuals(model))
-
-#b. Shapiro-Wilk test 
-aov_residuals <- residuals(object = model)
-shapiro.test(x = aov_residuals)
-# pvalue is less than 0.05, normality is violated
-
-## Compute summary stats 
-model.tables(model, type = "means", se = T)
-
-## Multiple pairwise-comparisons between the means of groups 
-# Tukey HSD 
-TukeyHSD(model, which = "Timepoint")
-## TP2 differs from TP7
-
-TukeyHSD(model, which = "Treatment")
-## Heat differs from amb (but just barely w/ pvalue of 0.0504046)
-```
