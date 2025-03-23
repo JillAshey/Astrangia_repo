@@ -18,6 +18,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(gridExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
 ```
 
 # Check working directory
@@ -37,7 +41,7 @@ daily <- subset(daily, Treatment=="Heat" | Treatment=="Ambient")
 
 # Discrete pH calculations from Tris calibrations.
 ```{r}
-path <-("data/pH_Tris") #set path to calibration files
+path <-("data/Environmental/pH_Tris") #set path to calibration files
 file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
 pH.cals <- data.frame(matrix(NA, nrow=length(file.names), ncol=3, dimnames=list(file.names,c("Date", "Intercept", "Slope")))) #generate a 3 column dataframe with specific column names
 
@@ -128,7 +132,7 @@ flow.tank = ggplot(SW.chem, aes(x=Tank, y=Flow.mL.sec)) +
     theme(axis.text.x = element_text(angle = 90))
 flow.tank
 plot.tank <- grid.arrange(temp.tank, sal.tank, pH.tank, light.tank, flow.tank, ncol=3, nrow = 2, clip="off")
-ggsave("output/Daily/Daily_Measurements.By.Tank.pdf", plot.tank, width = 21, height = 21, units = c("in"))
+#ggsave("output/Daily/Daily_Measurements.By.Tank.pdf", plot.tank, width = 21, height = 21, units = c("in"))
 ```
 
 # test for differences between tanks and treatments
@@ -188,39 +192,228 @@ hist(mod.flow$residuals)
 
 # Plot by date 
 ```{r}
-# Plot and save
-# By Treatment
-temp.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Treatment)) +
-  geom_line(aes(color = Treatment), size = 1) 
-sal.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Salinity.psu, group=Treatment)) +
-  geom_line(aes(color = Treatment), size = 1) 
-ph.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=pH.Total, group=Treatment)) +
-  geom_line(aes(color = Treatment), size = 1) 
-light.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Light, group=Treatment)) +
-  geom_line(aes(color = Treatment), size = 1) 
-flow.trt.date <- ggplot(SW.chem, aes(x=Timepoint, y=Flow.mL.sec, group=Treatment)) +
-  geom_line(aes(color = Treatment), size = 1) 
+# Reshape the data from wide to long format
+SW.chem_long <- SW.chem %>%
+  pivot_longer(cols = c(Temperature.C, Salinity.psu, pH.Total),
+               names_to = "Variable",
+               values_to = "Value")
 
-plot.trt.timepoint <- grid.arrange(temp.trt.date, sal.trt.date, ph.trt.date, light.trt.date, flow.trt.date, ncol=1, nrow = 5, clip="off")
-ggsave("output/Daily/Daily_Measurements.By.Date.Treatment.pdf", plot.trt.timepoint, width = 30, height = 21, units = c("in"))
+# Create the plot
+date_daily<- ggplot(SW.chem_long, aes(x = Timepoint, y = Value, color = Treatment)) +
+  geom_point() +
+  #geom_line() +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 1) +
+  labs(title = "Temperature, Salinity, and pH Total by Timepoint",
+       x = "Timepoint",
+       y = "Value") +
+  theme_bw() +
+  theme(legend.position = "bottom"); date_daily
 
-# By Tank
-temp.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Temperature.C, group=Tank)) +
-  geom_line(aes(color = Tank), size = 1) 
-sal.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Salinity.psu, group=Tank)) +
-  geom_line(aes(color = Tank), size = 1) 
-ph.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=pH.Total, group=Tank)) +
-  geom_line(aes(color = Tank), size = 1) 
-light.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Light, group=Tank)) +
-  geom_line(aes(color = Tank), size = 1) 
-flow.tank.date <- ggplot(SW.chem, aes(x=Timepoint, y=Flow.mL.sec, group=Tank)) +
-  geom_line(aes(color = Tank), size = 1) 
 
-plot.tank.timepoint <- grid.arrange(temp.tank.date, sal.tank.date, ph.tank.date, light.tank.date, flow.tank.date, ncol=1, nrow = 5, clip="off")
-ggsave("output/Daily/Daily_Measurements.By.Date.Tank.pdf", plot.tank.timepoint, width = 21, height = 25, units = c("in"))
+#ggsave("output/Environmental/Daily/Daily_Measurements.By.Date_facet.pdf", plot.all, width = 30, height = 25, units = c("in"))
+#ggsave("output/Daily/Daily_Measurements.By.Date_facet.png", plot.all, width = 30, height = 25, units = c("in"))
+```
 
-plot.all <- grid.arrange(temp.trt.date, temp.tank.date, sal.trt.date, sal.tank.date, ph.trt.date,ph.tank.date,  light.trt.date, light.tank.date, flow.trt.date, flow.tank.date, ncol=2, nrow=5)
-ggsave("output/Daily/Daily_Measurements.By.Date.pdf", plot.all, width = 30, height = 25, units = c("in"))
+Make date plot pretty!
+```{r}
+SW.chem_clean <- SW.chem %>%
+  mutate(
+    # Convert Timepoint with proper year format
+    Timepoint = as.Date(gsub("^0021", "2021", Timepoint)),
+    # Convert numeric Date to proper date format
+    Date = as.Date(as.character(Date), "%Y%m%d")
+  ) %>%
+  pivot_longer(
+    cols = c(Temperature.C, Salinity.psu, pH.Total),
+    names_to = "Parameter",
+    values_to = "Value"
+  ) 
+
+# Create final plot with vertical line
+daily_plot <- ggplot(SW.chem_clean, aes(x = Date, y = Value, color = Treatment)) +
+  geom_point(size = 2.5) +
+  geom_smooth(method = "loess", se = FALSE) +
+  geom_vline(xintercept = as.Date("2021-02-06"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-03-04"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-04-02"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-04-29"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-05-28"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-06-25"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-07-23"), linetype = "dashed", color = "black", size = 1) +
+  geom_vline(xintercept = as.Date("2021-08-25"), linetype = "dashed", color = "black", size = 1) +
+  facet_wrap(~ Parameter, ncol = 1, scales = "free_y", strip.position = "right") +
+  scale_color_manual(values = c(Ambient = "#377EB8", Heat = "#E41A1C")) +
+  scale_x_date(
+    breaks = seq(min(SW.chem_clean$Date), max(SW.chem_clean$Date), by = "1 month"),
+    labels = date_format("%b"),
+    expand = expansion(mult = 0.05)
+  ) +
+  labs(x = NULL, y = NULL) +
+  theme_bw() +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 15),
+    #strip.placement = "outside",
+    strip.text = element_text(size = 20, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "black", size = 30),
+    panel.spacing = unit(1, "lines")
+  ); daily_plot
+ggsave("output/Environmental/Daily/Daily_Measurements.By.Date_facet.pdf", daily_plot, width = 15, height = 20)
+ggsave("output/Environmental/Daily/Daily_Measurements.By.Date_facet.png", daily_plot, width = 15, height = 20)
+```
+
+
+# Plot DMs for acclimation 
+
+# Subset Acclimation 
+```{r}
+daily <- read.csv("data/DailyMeasurements.csv", header = T)
+daily <- daily[-13,] # remove tank 14 because it cracked 
+daily$Timepoint <- as.Date(daily$Timepoint, "%m/%d/%Y")
+daily$Tank <- as.factor(daily$Tank)
+daily_acc <- daily %>%
+  filter(Treatment == "Acclimation")
+```
+
+# Discrete pH calculations from Tris calibrations.
+```{r}
+path <-("data/Environmental/pH_Tris") #set path to calibration files
+file.names<-list.files(path = path, pattern = "csv$") #list all the file names in the folder to get only get the csv files
+pH.cals <- data.frame(matrix(NA, nrow=length(file.names), ncol=3, dimnames=list(file.names,c("Date", "Intercept", "Slope")))) #generate a 3 column dataframe with specific column names
+
+for(i in 1:length(file.names)) { # for every file in list start at the first and run this following function
+  Calib.Data <-read.table(file.path(path,file.names[i]), header=TRUE, sep=",", na.string="NA", as.is=TRUE) #reads in the data files
+  file.names[i]
+  model <-lm(mVTris ~ TTris, data=Calib.Data) #runs a linear regression of mV as a function of temperature
+  coe <- coef(model) #extracts the coeffecients
+  summary(model)$r.squared #extracts the r squared
+  plot(Calib.Data$mVTris, Calib.Data$TTris, main = summary(model)$r.squared) #plots the regression data
+  pH.cals[i,2:3] <- coe #inserts coefficients in the dataframe
+  pH.cals[i,1] <- substr(file.names[i],1,8) #stores the file name in the Date column
+}
+colnames(pH.cals) <- c("Calib.Date",  "Intercept",  "Slope") #rename columns
+pH.cals #view data
+
+#constants for use in pH calculation 
+R <- 8.31447215 #gas constant in J mol-1 K-1 
+F <- 96485.339924 #Faraday constant in coulombs mol-1
+
+#merge with Seawater chemistry file
+SW.chem_acc <- merge(daily_acc, pH.cals, by="Calib.Date")
+```
+
+# Calculate total pH. 
+```{r}
+mvTris <- SW.chem_acc$Temperature*SW.chem_acc$Slope+SW.chem_acc$Intercept #calculate the mV of the tris standard using the temperature mv relationships in the measured standard curves 
+STris<-35 #salinity of the Tris
+phTris<- (11911.08-18.2499*STris-0.039336*STris^2)*(1/(SW.chem_acc$Temperature+273.15))-366.27059+ 0.53993607*STris+0.00016329*STris^2+(64.52243-0.084041*STris)*log(SW.chem_acc$Temperature+273.15)-0.11149858*(SW.chem_acc$Temperature+273.15) #calculate the pH of the tris (Dickson A. G., Sabine C. L. and Christian J. R., SOP 6a)
+SW.chem_acc$pH.Total<-phTris+(mvTris/1000-SW.chem_acc$pH.MV/1000)/(R*(SW.chem_acc$Temperature+273.15)*log(10)/F) #calculate the pH on the total scale (Dickson A. G., Sabine C. L. and Christian J. R., SOP 6a)
+```
+
+# Plot 
+```{r}
+SW.chem_acc <- SW.chem_acc %>%
+  filter(pH.Total > 7) %>%
+  filter(Salinity.psu > 27) %>%
+  mutate(Temperature.C_adj = Temperature.C - 3)
+
+SW.chem_acc_clean <- SW.chem_acc %>%
+  mutate(
+    # Convert Timepoint with proper year format
+    Timepoint = as.Date(gsub("^0021", "2021", Timepoint)),
+    # Convert numeric Date to proper date format
+    Date = as.Date(as.character(Date), "%Y%m%d")
+  ) %>%
+  pivot_longer(
+    cols = c(Temperature.C_adj, Salinity.psu, pH.Total),
+    names_to = "Parameter",
+    values_to = "Value"
+  ) 
+
+# Create final plot with vertical line
+daily_plot <- ggplot(SW.chem_acc_clean, aes(x = Date, y = Value)) +
+  geom_point(size = 2.5) +
+  geom_smooth(method = "loess", se = FALSE) +
+  facet_wrap(~ Parameter, ncol = 1, scales = "free_y", strip.position = "right") +
+  scale_x_date(
+    breaks = seq(min(SW.chem_acc_clean$Date), 
+                max(SW.chem_acc_clean$Date), 
+                by = "1 week"),
+    labels = date_format("%b %d"),
+    expand = expansion(mult = 0.05)
+  ) +
+  labs(y = NULL, x = NULL) +
+  theme_bw() +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 15),
+    #strip.placement = "outside",
+    strip.text = element_text(size = 20, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "black", size = 30),
+    panel.spacing = unit(1, "lines")
+  ); daily_plot
+ggsave("output/Environmental/Daily/Acclimation_Daily_Measurements.By.Date_facet.pdf", daily_plot, width = 15, height = 20)
+ggsave("output/Environmental/Daily/Acclimation_Daily_Measurements.By.Date_facet.png", daily_plot, width = 15, height = 20)
+```
+
+Plot as boxplot 
+```{r}
+daily_plot_box <- ggplot(SW.chem_acc_clean, aes(x = Treatment, y = Value)) +
+  geom_boxplot()+
+  facet_wrap(~ Parameter, ncol = 1, scales = "free_y", strip.position = "right")+
+    labs(y = NULL, x = NULL) +
+  theme_bw() +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 15),
+    #strip.placement = "outside",
+    strip.text = element_text(size = 20, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "black", size = 30),
+    panel.spacing = unit(1, "lines")
+  ); daily_plot_box
+ggsave("output/Environmental/Daily/Acclimation_Daily_Measurements_facet.pdf", daily_plot_box, width = 15, height = 20)
+ggsave("output/Environmental/Daily/Acclimation_Daily_Measurements_facet.png", daily_plot_box, width = 15, height = 20)
+```
+
+# Plot PAR 
+```{r}
+# Load data
+daily <- read.csv("data/DailyMeasurements.csv", header = T)
+daily <- daily[-13,] # remove tank 14 because it cracked 
+daily$Timepoint <- as.Date(daily$Timepoint, "%m/%d/%Y")
+daily$Tank <- as.factor(daily$Tank)
+
+# Plot by trt
+daily_light <- ggplot(daily, aes(x = Treatment, y = Light, color = Treatment, fill = Treatment)) +
+  geom_boxplot(outlier.shape = NA, size = 1, alpha = 0.4) +  
+  labs(y = "PAR", x = NULL) +
+  scale_color_manual(values = c(Acclimation = "grey60", Ambient = "#377EB8", Heat = "#E41A1C")) +
+  scale_fill_manual(values = c(Acclimation = "grey60", Ambient = "#377EB8", Heat = "#E41A1C")) +
+  theme_bw() +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 15),
+    #strip.placement = "outside",
+    strip.text = element_text(size = 20, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(color = "black", size = 30),
+    axis.title = element_text(size = 32, color = "black"),
+    panel.spacing = unit(1, "lines")
+  ); daily_light
+
+ggsave("output/Environmental/Daily/Light_Measurements_Treatment.pdf", daily_light, width = 15, height = 10)
+ggsave("output/Environmental/Daily/Light_Measurements_Treatment.png", daily_light, width = 15, height = 10)
 ```
 
 

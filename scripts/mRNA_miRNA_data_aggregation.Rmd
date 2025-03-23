@@ -85,6 +85,21 @@ combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_inter
 
 length(unique(combined_data_pcc$miRNA))
 length(unique(combined_data_pcc$mRNA))
+
+# Count unique positive vs. negative correlations
+positive_cor <- sum(combined_data_pcc$PCC.cor > 0, na.rm = TRUE)
+negative_cor <- sum(combined_data_pcc$PCC.cor < 0, na.rm = TRUE)
+
+# Count significant correlations (using p < 0.05 threshold)
+sig_positive <- sum(combined_data_pcc$PCC.cor > 0 & combined_data_pcc$p_value < 0.05, na.rm = TRUE)
+sig_negative <- sum(combined_data_pcc$PCC.cor < 0 & combined_data_pcc$p_value < 0.05, na.rm = TRUE)
+
+# Print results
+cat("Total positive correlations:", positive_cor, "\n")
+cat("Total negative correlations:", negative_cor, "\n")
+cat("Significant positive (p < 0.05):", sig_positive, "\n")
+cat("Significant negative (p < 0.05):", sig_negative)
+
 ```
 
 Plot using igraph
@@ -308,6 +323,41 @@ length(unique(combined_data_pcc_mrna_mirna_de$miRNA))
 length(unique(combined_data_pcc_mrna_mirna_de$mRNA))
 # Save as csv 
 #write.csv(combined_data_pcc_mrna_mirna_de, "../output/Molecular/interactions/interactions_annot_pcc_de.csv")
+
+# Create a unique identifier for each miRNA-mRNA pair
+combined_data_pcc_mrna_mirna_de <- combined_data_pcc_mrna_mirna_de %>%
+  mutate(pair_id = paste(miRNA, mRNA, sep="_"))
+
+# Group by unique pairs and summarize
+unique_pairs <- combined_data_pcc_mrna_mirna_de %>%
+  group_by(pair_id) %>%
+  summarize(
+    avg_PCC = mean(PCC.cor, na.rm = TRUE),
+    min_p_value = min(p_value, na.rm = TRUE),
+    min_adj_p_value = min(adjusted_p_value, na.rm = TRUE)
+  )
+
+# Count unique positive and negative correlations
+positive_cor <- sum(unique_pairs$avg_PCC > 0, na.rm = TRUE)
+negative_cor <- sum(unique_pairs$avg_PCC < 0, na.rm = TRUE)
+
+# Count significant correlations (using p < 0.05 threshold)
+sig_positive <- sum(unique_pairs$avg_PCC > 0 & unique_pairs$min_p_value < 0.05, na.rm = TRUE)
+sig_negative <- sum(unique_pairs$avg_PCC < 0 & unique_pairs$min_p_value < 0.05, na.rm = TRUE)
+
+# Print results
+cat("Unique positive correlations:", positive_cor, "\n")
+cat("Unique negative correlations:", negative_cor, "\n")
+cat("Significant unique positive (p < 0.05):", sig_positive, "\n")
+cat("Significant unique negative (p < 0.05):", sig_negative, "\n")
+
+# Using adjusted p-values
+sig_adj_positive <- sum(unique_pairs$avg_PCC > 0 & unique_pairs$min_adj_p_value < 0.05, na.rm = TRUE)
+sig_adj_negative <- sum(unique_pairs$avg_PCC < 0 & unique_pairs$min_adj_p_value < 0.05, na.rm = TRUE)
+
+cat("Significant unique positive (adj p < 0.05):", sig_adj_positive, "\n")
+cat("Significant unique negative (adj p < 0.05):", sig_adj_negative)
+
 ```
 
 Plot using igraph

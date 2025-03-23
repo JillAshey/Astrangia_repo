@@ -1,0 +1,82 @@
+---
+title: "Acclimation temperature data"
+author: "Jill Ashey"
+date: "2025-03-21"
+output: html_document
+---
+
+This script will plot the acclimation temperature profiles from my AST 2021 experiment.  
+
+## Load libraries 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(tidyr)
+library(ggplot2)
+library(plotrix)
+library(tidyverse)
+library(dplyr)
+library(reshape2)
+library(gridExtra)
+library(FSA)
+library(naniar)
+library(scales)
+```
+
+Read in data 
+```{r}
+acc_data <- read.csv("../output/Environmental/Hobo/temp_light_logger/Acclimation/20210206_Acclimation.Temperature_data.csv")
+```
+
+```{r}
+# Convert Date.Time column to POSIXct
+acc_data <- acc_data %>%
+  mutate(Date.Time = as.POSIXct(Date.Time, format="%Y-%m-%d %H:%M:%S"))
+
+# Replace values >10 with NA and subtract 3 from all values
+acc_data[, grep("Tank", names(acc_data))] <- lapply(acc_data[, grep("Tank", names(acc_data))], 
+                                                    function(x) ifelse(x > 10, NA, x - 3))
+
+# Compute mean and standard error, ignoring NA values
+acc_data <- acc_data %>%
+  rowwise() %>%
+  mutate(mean_temp = mean(c_across(Tank1:Tank12), na.rm = TRUE),
+         se_temp = sd(c_across(Tank1:Tank12), na.rm = TRUE) / sqrt(sum(!is.na(c_across(Tank1:Tank12))))) %>%
+  ungroup()
+```
+
+```{r}
+# Plot with mean pH and standard error as ribbon
+acc_temp_plot <- ggplot(acc_data, aes(x = Date.Time, y = mean_temp)) +
+  geom_line(color = "black", size = 1) + 
+  #geom_ribbon(aes(ymin = mean_temp - se_temp, ymax = mean_temp + se_temp), alpha = 0.3, fill = "black") +
+  #geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  #geom_smooth(method="loess", span=0.1, se=FALSE, alpha=1, show.legend=TRUE, size = 3) +
+  scale_x_datetime(date_breaks = "1 week", date_labels = "%b %d") +  # Weekly ticks
+  ylab("Temperature (°C)")+
+  xlab("")+
+  theme_classic()+
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = c(0.95, 0.95),
+          legend.justification = c("right", "top")) +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.x = element_text(size = 30,
+                                   color = "black"), 
+        axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 100, r = 20, b = 20, l = 20, unit = "pt"))); acc_temp_plot 
+
+ggsave("../output/Environmental/Acclimation_Temperature_logger.pdf", acc_temp_plot, width=20, height=13)
+ggsave("../output/Environmental/Acclimation_Temperature_logger.png", acc_temp_plot, width=20, height=13)
+```
+
+
+
+
+
+

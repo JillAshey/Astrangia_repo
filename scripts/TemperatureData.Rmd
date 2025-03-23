@@ -47,7 +47,6 @@ my.data <- my.data[,c("Date.Time",
 my.data <- na.omit(my.data) ### should I omit NAs????
 ```
 
-
 I am filtering out the random temp data points (ie when the logger was removed from the water to be read) that do not fit the specific temp window that was set at a specific time. 
 
 AMBIENT
@@ -330,8 +329,8 @@ temp_plot <- ggplot(data = noaa_data, aes(x=Date.Time, y=Temperature))+
                                     face = "bold",
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
 
-ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.png", temp_plot, width=20, height=13)
-ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.pdf", temp_plot, width=20, height=13)
+#ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.png", temp_plot, width=20, height=13)
+#ggsave("../output/Environmental/NOAA_temperature_smooth_TP0_5_7.pdf", temp_plot, width=20, height=13)
 ```
 
 Make NOAA plot for 2021 histology field samples
@@ -370,50 +369,111 @@ ggsave("../output/Environmental/NOAA_temperature_smooth_field_histology.png", te
 ggsave("../output/Environmental/NOAA_temperature_smooth_field_histology.pdf", temp_plot, width=20, height=13)
 ```
 
-Bind dfs together 
+Bind dfs together (my data + NOAA)
 ```{r}
 test <- rbind(all, noaa_data)
 ```
 
-Plot
+Plot my data and NOAA data 
 ```{r}
 temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
   #geom_line()+
   geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
   geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE, size = 3) +
-  geom_vline(xintercept=as.POSIXct("2021-02-04 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP0
-  #geom_vline(xintercept=as.POSIXct("2021-03-04 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP1
-  #geom_vline(xintercept=as.POSIXct("2021-04-02 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP2
-  #geom_vline(xintercept=as.POSIXct("2021-04-29 13:00:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP3
-  #geom_vline(xintercept=as.POSIXct("2021-05-28 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP4
-  geom_vline(xintercept=as.POSIXct("2021-06-25 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP5 
-  #geom_vline(xintercept=as.POSIXct("2021-07-23 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 1.5)+ # TP6
-  geom_vline(xintercept=as.POSIXct("2021-08-20 13:30:00", tz = "EST"), linetype="dashed", color="black", size = 4)+ # TP7
-  #ylim(26, 30)+
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25), limits = c(0, 32), expand = c(0, 0)) +  # Remove padding at bottom
+  geom_segment(aes(x = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), xend = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP0
+  geom_segment(aes(x = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), xend = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP1
+  geom_segment(aes(x = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), xend = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP2
+  geom_segment(aes(x = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), xend = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP3
+  geom_segment(aes(x = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), xend = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP4
+  geom_segment(aes(x = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), xend = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP5
+  geom_segment(aes(x = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), xend = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP6
+  geom_segment(aes(x = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), xend = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP7
+  annotate("text", x = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), y = 27.9, label = "February (2/4)", angle = 45, hjust = 0, size = 8) + # TP0
+  annotate("text", x = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), y = 27.9, label = "March (3/5)", angle = 45, hjust = 0, size = 8) + # TP1
+  annotate("text", x = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), y = 27.9, label = "Early April (4/2)", angle = 45, hjust = 0, size = 8) + # TP2
+  annotate("text", x = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), y = 27.9, label = "Late April (4/29)", angle = 45, hjust = 0, size = 8) + # TP3
+  annotate("text", x = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), y = 27.9, label = "May (5/28)", angle = 45, hjust = 0, size = 8) + # TP4
+  annotate("text", x = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), y = 27.9, label = "June (6/25)", angle = 45, hjust = 0, size = 8) + # TP5
+  annotate("text", x = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), y = 27.9, label = "July (7/23)", angle = 45, hjust = 0, size = 8) + # TP6
+  annotate("text", x = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), y = 27.9, label = "August (8/25)", angle = 45, hjust = 0, size = 8) + # TP7
   ylab("Temperature (°C)")+
   xlab("")+
-  scale_colour_manual(values=c("blue", "red", "black"), name="Temperature")+
-  scale_fill_manual(values=c("blue", "red", "black"), name="Temperature")+
+  scale_colour_manual(values=c("#377EB8", "#E41A1C", "black"), name="Temperature")+
+  scale_fill_manual(values=c("#377EB8", "#E41A1C", "black"), name="Temperature")+
   scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
   theme_classic()+
-    theme(legend.title = element_text(size = 28, face = "bold"),
+  theme(legend.title = element_text(size = 28, face = "bold"),
           legend.text = element_text(size = 25),
-          legend.position = "right") +
-  theme(axis.text.x = element_text(size = 30,
-                                   color = "black")) +
-   theme(axis.text.y = element_text(size = 30,
+          legend.position = c(0.95, 0.95),
+          legend.justification = c("right", "top")) +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.x = element_text(size = 30,
+                                   color = "black"), 
+        axis.text.y = element_text(size = 30,
                                    color = "black"),
         axis.title.y = element_text(size = 35,
                                     face = "bold",
-                                    margin = margin(t = 0, r = 20, b = 0, l = 0))); temp_plot 
+                                    margin = margin(t = 100, r = 20, b = 20, l = 20, unit = "pt"))); temp_plot 
 
-ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_TP0_5_7.png", temp_plot, width=20, height=13)
-ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_TP0_5_7.pdf", temp_plot, width=20, height=13)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.png", temp_plot, width=20, height=14)
+ggsave("../output/Environmental/MyData_NOAA_temperature_smooth.pdf", temp_plot, width=20, height=14)
 ```
 
 BEAUTIFUL!!!!!!!!! Still need to QC my temp data to get rid of the weird spikes. 
 
-Make NOAA plot for 2021 histology experimental samples
+Plot my ambient data and NOAA data -- for ambient molecular results 
+```{r}
+test_amb <- test %>%
+  filter(Treatment != "Heat")
+  
+temp_plot <- ggplot(data = test_amb, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
+  #geom_line()+
+  geom_ribbon(aes(ymin = lower, ymax = upper, colour=Treatment), alpha = 0.4, colour = NA, show.legend=FALSE) +
+  geom_smooth(method="loess", span=0.1, se=FALSE, aes(colour=Treatment), alpha=1, show.legend=TRUE, size = 3) +
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25), limits = c(0, 32), expand = c(0, 0)) +  # Remove padding at bottom
+  geom_segment(aes(x = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), xend = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP0
+  #geom_segment(aes(x = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), xend = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP1
+  #geom_segment(aes(x = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), xend = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP2
+  #geom_segment(aes(x = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), xend = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP3
+  #geom_segment(aes(x = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), xend = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP4
+  geom_segment(aes(x = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), xend = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP5
+  #geom_segment(aes(x = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), xend = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP6
+  geom_segment(aes(x = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), xend = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), y = 0, yend = 27.5), linetype="dashed", color="black", size = 1.5) + # TP7
+  annotate("text", x = as.POSIXct("2021-02-04 13:00:00", tz = "EST"), y = 27.9, label = "February (2/4)", angle = 45, hjust = 0, size = 8) + # TP0
+  #annotate("text", x = as.POSIXct("2021-03-04 13:00:00", tz = "EST"), y = 27.9, label = "March (3/5)", angle = 45, hjust = 0, size = 8) + # TP1
+  #annotate("text", x = as.POSIXct("2021-04-02 13:00:00", tz = "EST"), y = 27.9, label = "Early April (4/2)", angle = 45, hjust = 0, size = 8) + # TP2
+  #annotate("text", x = as.POSIXct("2021-04-29 13:00:00", tz = "EST"), y = 27.9, label = "Late April (4/29)", angle = 45, hjust = 0, size = 8) + # TP3
+  #annotate("text", x = as.POSIXct("2021-05-28 13:30:00", tz = "EST"), y = 27.9, label = "May (5/28)", angle = 45, hjust = 0, size = 8) + # TP4
+  annotate("text", x = as.POSIXct("2021-06-25 13:30:00", tz = "EST"), y = 27.9, label = "June (6/25)", angle = 45, hjust = 0, size = 8) + # TP5
+  #annotate("text", x = as.POSIXct("2021-07-23 13:30:00", tz = "EST"), y = 27.9, label = "July (7/23)", angle = 45, hjust = 0, size = 8) + # TP6
+  annotate("text", x = as.POSIXct("2021-08-20 13:30:00", tz = "EST"), y = 27.9, label = "August (8/25)", angle = 45, hjust = 0, size = 8) + # TP7
+  ylab("Temperature (°C)")+
+  xlab("")+
+  scale_colour_manual(values=c("#377EB8", "black"), name="Temperature")+
+  scale_fill_manual(values=c("#377EB8", "black"), name="Temperature")+
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_classic()+
+  theme(legend.title = element_text(size = 28, face = "bold"),
+          legend.text = element_text(size = 25),
+          legend.position = c(0.95, 0.95),
+          legend.justification = c("right", "top")) +
+  theme(axis.ticks = element_line(size = 1, color = "black"),
+        axis.ticks.length = unit(0.3, "cm"),
+        axis.text.x = element_text(size = 30,
+                                   color = "black"), 
+        axis.text.y = element_text(size = 30,
+                                   color = "black"),
+        axis.title.y = element_text(size = 35,
+                                    face = "bold",
+                                    margin = margin(t = 100, r = 20, b = 20, l = 20, unit = "pt"))); temp_plot 
+
+ggsave("../output/Environmental/MolecularAmbientData_NOAA_temperature_smooth.png", temp_plot, width=20, height=14)
+ggsave("../output/Environmental/MolecularAmbientData_NOAA_temperature_smooth.pdf", temp_plot, width=20, height=14)
+```
+
+Make my data and NOAA plot for 2021 histology experimental samples
 ```{r}
 temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatment, fill=Treatment))+
   #geom_line()+
@@ -445,3 +505,5 @@ temp_plot <- ggplot(data = test, aes(x=Date.Time, y=Temperature, colour=Treatmen
 ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_exp_histology.png", temp_plot, width=20, height=13)
 ggsave("../output/Environmental/MyData_NOAA_temperature_smooth_exp_histology.pdf", temp_plot, width=20, height=13)
 ```
+
+
