@@ -357,7 +357,6 @@ sig_adj_negative <- sum(unique_pairs$avg_PCC < 0 & unique_pairs$min_adj_p_value 
 
 cat("Significant unique positive (adj p < 0.05):", sig_adj_positive, "\n")
 cat("Significant unique negative (adj p < 0.05):", sig_adj_negative)
-
 ```
 
 Plot using igraph
@@ -376,14 +375,24 @@ V(g)$type <- ifelse(V(g)$name %in% combined_data_pcc_mrna_mirna_de$miRNA, "miRNA
 g_tbl <- as_tbl_graph(g)
 
 # Create the plot
+# p <- ggraph(g_tbl, layout = "fr") +
+#   geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+#   geom_node_point(aes(color = type), size = 5) +
+#   #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+#   scale_edge_width(range = c(0.5, 3)) +
+#   scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange", "Positive correlation" = "blue", "Negative correlation" = "red")) +
+#   theme_graph();p
+# ggsave("../output/Molecular/interactions/miRNA_mRNA_network_de.png", p, width = 15, height = 10, dpi = 300)
+
+# Create the plot w/ labels 
 p <- ggraph(g_tbl, layout = "fr") +
   geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
   geom_node_point(aes(color = type), size = 5) +
-  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
   scale_edge_width(range = c(0.5, 3)) +
   scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange", "Positive correlation" = "blue", "Negative correlation" = "red")) +
   theme_graph();p
-ggsave("../output/Molecular/interactions/miRNA_mRNA_network_de.png", p, width = 15, height = 10, dpi = 300)
+ggsave("../output/Molecular/interactions/miRNA_mRNA_network_de_labels.png", p, width = 15, height = 10, dpi = 300)
 ```
 
 Plot!
