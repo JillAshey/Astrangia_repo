@@ -1138,4 +1138,411 @@ ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sd.png
 
 ```
 
+# Remove February and rerun stats
+
+## Photosynthesis 
+
+Read in data
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+
+photo_exp <- exp %>%
+  filter(Light_Value > 0)
+```
+
+Set dates as timepoints
+```{r}
+photo_exp <- photo_exp %>%
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7")) %>%
+  filter(!Timepoint == "TP0")
+```
+
+Check for outliers
+```{r}
+# Look for outliers visually
+ggplot(photo_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(photo_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(photo_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- photo_exp[photo_exp$micromol.cm2.h < lower_bound | photo_exp$micromol.cm2.h > upper_bound, ]
+print(outliers)
+
+# Z-score method
+photo_exp$z_score <- scale(photo_exp$micromol.cm2.h)
+outliers_z <- photo_exp[abs(photo_exp$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(photo_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(photo_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+photo_exp_filtered <- photo_exp[photo_exp$micromol.cm2.h >= lower_bound & photo_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(photo_exp)
+dim(photo_exp_filtered)
+```
+
+15 outliers removed. 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(photo_exp_filtered, aes(x = micromol.cm2.h)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(photo_exp_filtered$micromol.cm2.h)
+qqline(photo_exp_filtered$micromol.cm2.h, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(photo_exp_filtered$micromol.cm2.h)
+```
+
+Data is normal. Run a two-way ANOVA. 
+```{r}
+# Ensure factors are properly set
+photo_exp_filtered$Treatment <- as.factor(photo_exp_filtered$Treatment)
+photo_exp_filtered$Timepoint <- as.factor(photo_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(micromol.cm2.h ~ Treatment * Timepoint, data = photo_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(micromol.cm2.h ~ Treatment * Timepoint, data = photo_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+Timepoint and the interaction are significant, but treatment is not 
+
+Run post-hoc tests
+```{r}
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+
+# Create interaction factor and run post hoc test
+photo_exp_filtered$TrtTime <- interaction(photo_exp_filtered$Treatment, photo_exp_filtered$Timepoint)
+anova_result2 <- aov(micromol.cm2.h ~ TrtTime, data = photo_exp_filtered)
+TukeyHSD(anova_result2, "TrtTime")
+```
+
+Assign month to TPs
+```{r}
+photo_exp_filtered <- photo_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+photo_summary <- photo_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_photo = micromol.cm2.h / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+photo_summary$Month <- factor(photo_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_photo - sem_photo, 
+                    ymax = mean_photo + sem_photo), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); photo_dot_sem
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem_noFeb.pdf", photo_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem_noFeb.png", photo_dot_sem, width = 20, height = 15)
+
+# sd
+photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_photo - sd_photo, 
+                    ymax = mean_photo + sd_photo),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );photo_dot_sd
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd_noFeb.pdf", photo_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd_noFeb.png", photo_dot_sd, width = 22, height = 12)
+```
+
+## Respiration 
+
+Read in data
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+
+resp_exp <- exp %>%
+  filter(Light_Value == 0)
+```
+
+Set dates as timepoints
+```{r}
+resp_exp <- resp_exp %>%
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7")) %>%
+  filter(!Timepoint == "TP0")
+```
+
+Check for outliers
+```{r}
+# Look for outliers visually
+ggplot(resp_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(resp_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(resp_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- resp_exp[resp_exp$micromol.cm2.h < lower_bound | resp_exp$micromol.cm2.h > upper_bound, ]
+print(outliers)
+
+# Z-score method
+resp_exp$z_score <- scale(resp_exp$micromol.cm2.h)
+outliers_z <- resp_exp[abs(resp_exp$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(resp_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(resp_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+resp_exp_filtered <- resp_exp[resp_exp$micromol.cm2.h >= lower_bound & resp_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(resp_exp)
+dim(resp_exp_filtered)
+```
+
+12 outliers removed 
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(resp_exp_filtered, aes(x = micromol.cm2.h)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(resp_exp_filtered$micromol.cm2.h)
+qqline(resp_exp_filtered$micromol.cm2.h, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(resp_exp_filtered$micromol.cm2.h)
+```
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+resp_exp_filtered$Treatment <- as.factor(resp_exp_filtered$Treatment)
+resp_exp_filtered$Timepoint <- as.factor(resp_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(micromol.cm2.h ~ Treatment * Timepoint, data = resp_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(micromol.cm2.h ~ Treatment * Timepoint, data = resp_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+
+Timepoint and the interaction are significant, but treatment is not 
+
+Run post-hoc tests
+```{r}
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+
+# Create interaction factor and run post hoc test
+resp_exp_filtered$TrtTime <- interaction(resp_exp_filtered$Treatment, resp_exp_filtered$Timepoint)
+anova_result2 <- aov(micromol.cm2.h ~ TrtTime, data = resp_exp_filtered)
+TukeyHSD(anova_result2, "TrtTime")
+```
+
+Assign month to TPs
+```{r}
+resp_exp_filtered <- resp_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+resp_summary <- resp_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_resp = micromol.cm2.h / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+resp_summary$Month <- factor(resp_summary$Month, levels = c("March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_resp - sem_resp, 
+                    ymax = mean_resp + sem_resp), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); resp_dot_sem
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem_noFeb.pdf", resp_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem_noFeb.png", resp_dot_sem, width = 20, height = 15)
+
+# sd
+resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_resp - sd_resp, 
+                    ymax = mean_resp + sd_resp),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );resp_dot_sd
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sd_noFeb.pdf", resp_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sd_noFeb.png", resp_dot_sd, width = 22, height = 12)
+```
 

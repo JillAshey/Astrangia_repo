@@ -473,7 +473,217 @@ ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd.
 ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd.png", chla_dot_sd, width = 22, height = 12)
 ```
 
+# Remove February and rerun stats
 
+Read in chl data
+```{r}
+chl <- read.csv("../output/Physiology/Chlorophyll/Chlorophyll.csv")
+```
 
+Remove field and Feb samples 
+```{r}
+chl_exp <- chl %>%
+  filter(!Treatment == "Field") %>%
+  filter(!Timepoint == "TP0")
+```
+
+Check for outliers 
+```{r}
+# Look for outliers visually
+ggplot(chl_exp, aes(x = Treatment, y = chla.ug.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# IQR method 
+Q1 <- quantile(chl_exp$chla.ug.cm2, 0.25)
+Q3 <- quantile(chl_exp$chla.ug.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+outliers <- chl_exp[chl_exp$chla.ug.cm2 < lower_bound | chl_exp$chla.ug.cm2 > upper_bound, ]
+print(outliers)
+
+# Z-score method
+chl_exp$z_score <- scale(chl_exp$chla.ug.cm2)
+outliers_z <- chl_exp[abs(chl_exp$z_score) > 3, ]
+print(outliers_z)
+```
+
+Remove outliers based on IQR
+```{r}
+# Calculate IQR
+Q1 <- quantile(chl_exp$chla.ug.cm2, 0.25)
+Q3 <- quantile(chl_exp$chla.ug.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+chl_exp_filtered <- chl_exp[chl_exp$chla.ug.cm2 >= lower_bound & chl_exp$chla.ug.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(chl_exp)
+dim(chl_exp_filtered)
+```
+
+Assess normality of data 
+```{r}
+# Histogram
+ggplot(chl_exp_filtered, aes(x = chla.ug.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(chl_exp_filtered$chla.ug.cm2)
+qqline(chl_exp_filtered$chla.ug.cm2, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(chl_exp_filtered$chla.ug.cm2)
+```
+
+Data is not normal, perform sqrt transformation
+```{r}
+ggplot(chl_exp_filtered, aes(x = chla.ug.cm2)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+chl_exp_filtered$chla_sqrt <- sqrt(chl_exp_filtered$chla.ug.cm2)
+shapiro.test(chl_exp_filtered$chla_sqrt)
+qqnorm(chl_exp_filtered$chla_sqrt)
+qqline(chl_exp_filtered$chla_sqrt, col = "red")
+```
+
+Assess normality of sqrt transformed data 
+```{r}
+# Histogram
+ggplot(chl_exp_filtered, aes(x = chla_sqrt)) + 
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") + 
+  theme_minimal()
+
+# Q-Q Plot
+qqnorm(chl_exp_filtered$chla_sqrt)
+qqline(chl_exp_filtered$chla_sqrt, col = "red")
+
+# Shapiro-Wilk Test
+shapiro.test(chl_exp_filtered$chla_sqrt)
+```
+
+Run a two-way ANOVA
+```{r}
+# Ensure factors are properly set
+chl_exp_filtered$Treatment <- as.factor(chl_exp_filtered$Treatment)
+chl_exp_filtered$Timepoint <- as.factor(chl_exp_filtered$Timepoint)
+
+# Run two-way ANOVA
+anova_result <- aov(chla_sqrt ~ Treatment * Timepoint, data = chl_exp_filtered)
+summary(anova_result)
+
+# Check for homogenity of variance 
+leveneTest(chla_sqrt ~ Treatment * Timepoint, data = chl_exp_filtered)
+
+# Check residuals 
+# Residuals vs Fitted Plot (Check homoscedasticity)
+plot(anova_result, which = 1)
+
+# Q-Q Plot of Residuals (Check normality)
+plot(anova_result, which = 2)
+```
+Timepoint is marginally significant (p=0.043) but Treatment and interaction is not. 
+
+Run post-hoc test for Timepoint
+```{r}
+TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
+```
+
+Assign month to TPs
+```{r}
+chl_exp_filtered <- chl_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+chla_summary <- chl_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_chla = mean(chla.ug.cm2, na.rm = TRUE),
+    sd_chla = sd(chla.ug.cm2, na.rm = TRUE),
+    sem_chla = sd_chla / sqrt(n),  # SEM formula
+    mean_chlasqrt = mean(chla_sqrt, na.rm = TRUE),
+    sd_chlasqrt = sd(chla_sqrt, na.rm = TRUE),
+    sem_chlasqrt = sd_chlasqrt / sqrt(n),
+    .groups = "drop"
+  )
+```
+
+Plot as dot and whisker plots
+```{r}
+# Set Month as factor 
+chla_summary$Month <- factor(chla_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+chla_dot_sem <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_errorbar(aes(ymin = mean_chla - sem_chla, 
+                    ymax = mean_chla + sem_chla), 
+                width = 0.2) +
+  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",  # Blue
+                               "Heat" = "#E41A1C")) +  # Red
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  labs(y = expression(Chlorophyll-a~(µg~cm^{-2})), x = "") +
+  theme_classic(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "right"); chla_dot_sem
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem_noFeb.pdf", chla_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem_noFeb.png", chla_dot_sem, width = 20, height = 15)
+
+# sd
+chla_dot_sd <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_chla - sd_chla, 
+                    ymax = mean_chla + sd_chla),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  labs(y = expression(bold(Chlorophyll-a~(µg~cm^{-2}))), x = "") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );chla_dot_sd
+
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd_noFeb.pdf", chla_dot_sd, width = 22, height = 12)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sd_noFeb.png", chla_dot_sd, width = 22, height = 12)
+```
 
 
