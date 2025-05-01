@@ -617,7 +617,7 @@ prot_exp <- prot %>%
   filter(!Timepoint == "TP0")
 ```
 
-## Check for outliers 
+Check for outliers 
 ```{r}
 # Look for outliers visually
 ggplot(prot_exp, aes(x = Treatment, y = prot_mg.cm2)) + 
