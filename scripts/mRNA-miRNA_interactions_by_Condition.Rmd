@@ -706,7 +706,6 @@ ggplot(all_data_filtered_annot_dem, aes(x = treatment, y = PCC.cor, group = inte
 
 Look at comparisons for tp0vtp5 amb, etc 
 
-
 ### TP0 v TP5 amb
 
 There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
@@ -722,18 +721,40 @@ tp5_amb_unique <- tp5_amb %>%
   ungroup()
 
 comparison_df <- tp0_unique %>%
-  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor) %>%
-  inner_join(tp5_amb_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp5_amb = PCC.cor), by = c("miRNA", "mRNA"))
+  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor, p_value_tp0 = p_value) %>%
+  inner_join(tp5_amb_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp5_amb = PCC.cor, p_value_tp5_amb = p_value), by = c("miRNA", "mRNA"))
 ```
 
 Look for PCC sign switch from tp0 to tp5 amb 
 ```{r}
 comparison_df <- comparison_df %>%
   mutate(sign_switch = sign(PCC.cor_tp0) != sign(PCC.cor_tp5_amb)) %>%
-  filter(sign_switch == "TRUE") %>%
-  filter(abs(PCC.cor_tp0) > 0.7) %>%
-  filter(abs(PCC.cor_tp5_amb) > 0.7) 
+  filter(sign_switch == "TRUE") #%>%
+  # filter(p_value_tp0 < 0.05) %>%
+  # filter(p_value_tp5_amb < 0.05)
+  # filter(abs(PCC.cor_tp0) > 0.7) %>%
+  # filter(abs(PCC.cor_tp5_amb) > 0.7) 
+
+
 ```
+
+I left off here on 5/13/25 trying to decide cutoffs for PCC and looking at sign switches. maybe just do all and then discuss only the sig ones? Maybe we make no cutoffs...and look at the DEGs with TRUE 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Read in DEGs
 ```{r}
@@ -753,6 +774,16 @@ Join with annot
 ```{r}
 comparison_df_degs_annot <- comparison_df_degs %>%
   inner_join(annot, by = c("mRNA" = "Protein_ID"))
+
+comparison_df_degs_annot <- comparison_df_degs_annot %>%
+  mutate(miRNA_repression_inferred = case_when(
+    PCC.cor_tp0 >  0 & PCC.cor_tp5_amb <  0 & log2FoldChange > 0  ~ "miRNA repression of mRNA at TP5 ambient",
+    PCC.cor_tp0 <  0 & PCC.cor_tp5_amb >  0 & log2FoldChange < 0  ~ "miRNA repression of mRNA at TP0",
+    PCC.cor_tp0 >  0 & PCC.cor_tp5_amb <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP5 ambient, regardless of correlation",
+    PCC.cor_tp0 <  0 & PCC.cor_tp5_amb >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of correlation",
+
+    TRUE ~ "no inference"
+  ))
 ```
 
 Select mRNAs of interest from counts 
@@ -866,6 +897,9 @@ comparison_df_degs_annot <- comparison_df_degs_annot %>%
 
     TRUE ~ "no inference"
   ))
+
+# Save as csv 
+write.csv(comparison_df_degs_annot, "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_amb_pcc_lfc_annot.png")
 ```
 
 Plot PCC, LFC and inference as heatmap
@@ -1101,6 +1135,9 @@ comparison_df_degs_annot <- comparison_df_degs_annot %>%
 
     TRUE ~ "no inference"
   ))
+
+# Save as csv 
+write.csv(comparison_df_degs_annot, "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_heat_pcc_lfc_annot.png")
 ```
 
 Plot PCC, LFC and inference as heatmap
@@ -1336,6 +1373,9 @@ comparison_df_degs_annot <- comparison_df_degs_annot %>%
 
     TRUE ~ "no inference"
   ))
+
+# Save as csv 
+write.csv(comparison_df_degs_annot, "../output/Molecular/interactions/miRNA_mRNA_TP5_amb_v_TP5_heat_pcc_lfc_annot.png")
 ```
 
 Plot PCC, LFC and inference as heatmap
@@ -1571,6 +1611,9 @@ comparison_df_degs_annot <- comparison_df_degs_annot %>%
 
     TRUE ~ "no inference"
   ))
+
+# Save as csv 
+write.csv(comparison_df_degs_annot, "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_lfc_annot.png")
 ```
 
 Plot PCC, LFC and inference as heatmap
@@ -1647,5 +1690,287 @@ draw(ht1 + ht2 + row_annot,
 dev.off()
 ```
 
+### TP0 v TP7 heat
 
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp0_unique <- tp0 %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>% 
+  ungroup()
 
+tp7_heat_unique <- tp7_heat %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp0_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor) %>%
+  inner_join(tp7_heat_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp7_heat = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp0 to tp7 heat 
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp0) != sign(PCC.cor_tp7_heat)) %>%
+  filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp0) > 0.7) %>%
+  filter(abs(PCC.cor_tp7_heat) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+This represents the mRNA-miRNA pairs that have an abs(PCC.cor) > 0.7, switched correlation direction from tp0 to tp7 heat, and are differentially expressed between tp0 and tp7 heat. 
+
+Join with annot
+```{r}
+comparison_df_degs_annot <- comparison_df_degs %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Select mRNAs of interest from counts 
+```{r}
+mrna_interest <- unique(comparison_df_degs$mRNA)
+
+# Subset TP0 and TP7 heat samples from counts, calculate mean + se, and subset by mRNAs of interst 
+mrna_tp0_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mrna_tp7_heat_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp7_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP7 Heat")
+```
+
+Join mrna summary dfs and plot 
+```{r}
+mrna_summary <- rbind(mrna_tp0_summary, mrna_tp7_heat_summary)
+
+ggplot(mrna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Select miRNAs of interest from counts 
+```{r}
+mirna_interest <- unique(comparison_df_degs$miRNA)
+
+# Subset TP0 and TP7 heat samples from counts, calculate mean + se, and subset by miRNAs of interst 
+mirna_tp0_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mirna_tp7_heat_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp7_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP7 Heat")
+```
+
+Join mirna summary dfs and plot 
+```{r}
+mirna_summary <- rbind(mirna_tp0_summary, mirna_tp7_heat_summary)
+
+ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean miRNA Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Add inference label, which says if miRNA repression is predicted at a specific time point or not
+```{r}
+comparison_df_degs_annot <- comparison_df_degs_annot %>%
+  mutate(miRNA_repression_inferred = case_when(
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_heat <  0 & log2FoldChange > 0  ~ "miRNA repression of mRNA at TP7 heat",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_heat >  0 & log2FoldChange < 0  ~ "miRNA repression of mRNA at TP0",
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_heat <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP7 heat, regardless of correlation",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_heat >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of correlation",
+
+    TRUE ~ "no inference"
+  ))
+
+# Save as csv 
+write.csv(comparison_df_degs_annot, "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_heat_pcc_lfc_annot.png")
+
+blah <- comparison_df_degs_annot %>%
+  filter(miRNA_repression_inferred == "miRNA repression of mRNA at TP7 heat")
+length(unique(blah$miRNA))
+length(unique(blah$mRNA))
+```
+
+Plot PCC, LFC and inference as heatmap
+```{r}
+# 1. Create matrices again if needed
+pcc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, PCC.cor_tp0, PCC.cor_tp7_heat) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+colnames(pcc_mat) <- c("TP0", "TP7 Heat")
+
+lfc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, log2FoldChange) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+
+# 2. Define color functions
+pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("#762a83", "white", "#1b7837"))
+lfc_col_fun <- colorRamp2(c(-4, 0, 5), c("blue", "white", "red"))
+
+# 3. Row annotation: repression inference
+row_annot <- rowAnnotation(
+  Inference = comparison_df_degs_annot$miRNA_repression_inferred,
+  col = list(Inference = c(
+    "miRNA repression of mRNA at TP7 heat" = "#7F58AF",
+    "miRNA repression of mRNA at TP0" = "#64C5EB",
+    "High mRNA expression at TP7 heat, regardless of correlation" = "#E84D8A",
+    "High mRNA expression at TP0, regardless of correlation" = "#FEB326",
+    "no inference" = "grey85"
+  )),
+  show_annotation_name = TRUE
+)
+
+# 4. Make heatmaps
+ht1 <- Heatmap(
+  pcc_mat,
+  name = "PCC",
+  col = pcc_col_fun,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_title = "Correlation (PCC)",
+  show_row_names = TRUE,
+  row_names_side = "left",
+  row_names_gp = gpar(fontsize = 8)
+); ht1
+
+ht2 <- Heatmap(
+  lfc_mat,
+  name = "mRNA log2FC",
+  col = lfc_col_fun,
+  cluster_rows = FALSE,
+  show_row_names = FALSE,
+  column_title = "mRNA log2 Fold Change"
+); ht2
+
+# 5. Draw with annotation
+draw(ht1 + ht2 + row_annot, 
+     heatmap_legend_side = "right", 
+     annotation_legend_side = "right")
+
+# Save 
+png("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_heat_pcc_lfc_heatmap.png", width = 5000, height = 3000, res = 300)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+
+pdf("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_heat_pcc_lfc_heatmap.pdf", width = 20, height = 15)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+```
+
+### TP7 amb v TP7 heat
+
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp7_amb_unique <- tp7_amb %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+tp7_heat_unique <- tp7_heat %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp7_amb_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp7_amb = PCC.cor) %>%
+  inner_join(tp7_heat_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp7_heat = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp7 amb to tp7 heat
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp7_amb) != sign(PCC.cor_tp7_heat)) %>%
+  #filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp7_amb) > 0.7) %>%
+  filter(abs(PCC.cor_tp7_heat) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+No DEGs found in comparison between TP7 amb and TP7 heat

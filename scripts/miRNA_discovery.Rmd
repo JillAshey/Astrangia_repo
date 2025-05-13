@@ -18,11 +18,25 @@ Load data
 mirna <- read.table("../output/Molecular/smRNA/shortstack/Results.txt", header = T) 
 ```
 
-Select only miRNAs with a Y in MIRNA column 
+Select only miRNAs with a Y in MIRNA column. Calculate length of miRNA 
 ```{r}
 mirna <- mirna %>%
-  dplyr::filter(MIRNA == "Y")
+  dplyr::filter(MIRNA == "Y") %>%
+  mutate(Length = End - Start) %>%
+  mutate(mature_length = nchar(MajorRNA))
 head(mirna)
+```
+
+Plot length distribution
+```{r}
+ggplot(mirna, aes(x = mature_length)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+  labs(
+    title = "Distribution of Mature miRNA Lengths",
+    x = "Mature miRNA Length (nt)",
+    y = "Count"
+  ) +
+  theme_minimal()
 ```
 
 Save putative miRNAs

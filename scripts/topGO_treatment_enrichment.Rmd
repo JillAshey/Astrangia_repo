@@ -24,8 +24,6 @@ library(ggraph)
 
 ## June ambient v heat DEGs
 
-
-
 Read in data. Positive LFC = upregulated in TP5 amb treatment. Negative LFC = upregulated in TP5 heat treatment
 ```{r}
 june_deg<- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
@@ -143,12 +141,13 @@ GO_En_sig_gene <- GO_En_sig_gene %>%
   mutate(sig.prop = Significant/Annotated) #%>%
   #inner_join(june_deg_amb, by = c("mRNA" = "gene_id"))
   #na.omit()
-length(unique(GO_En_sig_gene$Term))
-#length(unique(GO_En_sig_gene$mRNA))
-head(GO_En_sig_gene)
+
+# Join the datasets based on genes upregulated in June (ie those used for the functional enrichment)
+GO_En_sig_gene_june_amb <- GO_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
 
 # Save as csv 
-write.csv(GO_En_sig_gene, "../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv")
+write.csv(GO_En_sig_gene_june_amb, "../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv")
 ```
 
 Plot

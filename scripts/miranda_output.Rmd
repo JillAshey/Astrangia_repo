@@ -1,0 +1,42 @@
+---
+title: "miranda"
+author: "Jill Ashey"
+date: "2025-05-13"
+output: html_document
+---
+
+Looking at miranda output 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+Read in miranda data - entire mRNA binding
+```{r}
+miranda_data <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
+miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
+miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("model", "TU", miranda_data$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_data)
+length(unique(miranda_data$miRNA))
+length(unique(miranda_data$mRNA))
+```
+
+Plot total bp shared distribution
+```{r}
+ggplot(miranda_data, aes(x = total_bp_shared)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+  labs(
+    x = "Total bp shared",
+    y = "Count"
+  ) +
+  theme_minimal()
+```

@@ -98,7 +98,7 @@ GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
 GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
 ```
 
-Merge `GO_ast_BP_En_sig` with GO and gene info. 
+Merge `GO_ast_BP_En_sig` with GO and gene info. Then merge with Feb genes 
 ```{r}
 # Separate GO terms 
 ast_gene2go <- ast_gene2go %>%
@@ -113,27 +113,12 @@ GO_ast_BP_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
-# Add ontology column 
-GO_ast_BP_En_sig_gene$ontology <- "Biological Processes"
-```
-
-Merge `GO_BP_En_sig` with GO and gene info. 
-```{r}
-# Separate GO terms 
-ast_gene2go <- ast_gene2go %>%
-  separate_rows(GO, sep = ";")
-
-# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
-ast_gene2go$GO <- trimws(ast_gene2go$GO)
-GO_BP_En_sig$GO.ID <- trimws(GO_BP_En_sig$GO.ID)
-
-# Join the datasets based on GO term
-GO_BP_En_sig_gene <- ast_gene2go %>%
-  left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
-  na.omit()
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_ast_BP_En_sig_gene_feb <- GO_ast_BP_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
 
 # Add ontology column 
-GO_BP_En_sig_gene$ontology <- "Biological Processes"
+GO_ast_BP_En_sig_gene_feb$ontology <- "Biological Processes"
 ```
 
 ### Cellular Components 
@@ -174,8 +159,12 @@ GO_CC_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_CC_En_sig_gene_feb <- GO_CC_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_CC_En_sig_gene$ontology <- "Cellular Components"
+GO_CC_En_sig_gene_feb$ontology <- "Cellular Components"
 ```
 
 ### Molecular Functions
@@ -215,21 +204,26 @@ GO_MF_En_sig_gene <- ast_gene2go %>%
   left_join(GO_MF_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_MF_En_sig_gene_feb <- GO_MF_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_MF_En_sig_gene$ontology <- "Molecular Functions"
+GO_MF_En_sig_gene_feb$ontology <- "Molecular Functions"
 ```
 
 ### Join ontologies 
 
 Bind so there is a df that has significantly enriched GO terms for all ontologies 
 ```{r}
-GO_En_sig_gene <- rbind(GO_BP_En_sig_gene, GO_CC_En_sig_gene, GO_MF_En_sig_gene)
+GO_En_sig_gene <- rbind(GO_ast_BP_En_sig_gene_feb, GO_CC_En_sig_gene_feb, GO_MF_En_sig_gene_feb)
 
 # Calculate proportion of significant v annotated genes 
 GO_En_sig_gene <- GO_En_sig_gene %>%
   mutate(sig.prop = Significant/Annotated) %>%
   na.omit()
 length(unique(GO_En_sig_gene$Term))
+length(unique(GO_En_sig_gene$mRNA))
 
 # Save as csv 
 write.csv(GO_En_sig_gene, "../output/Molecular/mRNA/enrichment/GO_en_sig_February_expressed_genes.csv")
@@ -350,27 +344,12 @@ GO_ast_BP_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
-# Add ontology column 
-GO_ast_BP_En_sig_gene$ontology <- "Biological Processes"
-```
-
-Merge `GO_BP_En_sig` with GO and gene info. 
-```{r}
-# Separate GO terms 
-ast_gene2go <- ast_gene2go %>%
-  separate_rows(GO, sep = ";")
-
-# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
-ast_gene2go$GO <- trimws(ast_gene2go$GO)
-GO_BP_En_sig$GO.ID <- trimws(GO_BP_En_sig$GO.ID)
-
-# Join the datasets based on GO term
-GO_BP_En_sig_gene <- ast_gene2go %>%
-  left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
-  na.omit()
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_ast_BP_En_sig_gene_june <- GO_ast_BP_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
 
 # Add ontology column 
-GO_BP_En_sig_gene$ontology <- "Biological Processes"
+GO_ast_BP_En_sig_gene_june$ontology <- "Biological Processes"
 ```
 
 ### Cellular Components 
@@ -411,8 +390,12 @@ GO_CC_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_CC_En_sig_gene_june <- GO_CC_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_CC_En_sig_gene$ontology <- "Cellular Components"
+GO_CC_En_sig_gene_june$ontology <- "Cellular Components"
 ```
 
 ### Molecular Functions
@@ -452,15 +435,19 @@ GO_MF_En_sig_gene <- ast_gene2go %>%
   left_join(GO_MF_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in June (ie those used for the functional enrichment)
+GO_MF_En_sig_gene_june <- GO_MF_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_MF_En_sig_gene$ontology <- "Molecular Functions"
+GO_MF_En_sig_gene_june$ontology <- "Molecular Functions"
 ```
 
 ### Join ontologies 
 
 Bind so there is a df that has significantly enriched GO terms for all ontologies 
 ```{r}
-GO_En_sig_gene <- rbind(GO_BP_En_sig_gene, GO_CC_En_sig_gene, GO_MF_En_sig_gene)
+GO_En_sig_gene <- rbind(GO_ast_BP_En_sig_gene_june, GO_CC_En_sig_gene_june, GO_MF_En_sig_gene_june)
 
 # Calculate proportion of significant v annotated genes 
 GO_En_sig_gene <- GO_En_sig_gene %>%
@@ -587,27 +574,12 @@ GO_ast_BP_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
-# Add ontology column 
-GO_ast_BP_En_sig_gene$ontology <- "Biological Processes"
-```
-
-Merge `GO_BP_En_sig` with GO and gene info. 
-```{r}
-# Separate GO terms 
-ast_gene2go <- ast_gene2go %>%
-  separate_rows(GO, sep = ";")
-
-# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
-ast_gene2go$GO <- trimws(ast_gene2go$GO)
-GO_BP_En_sig$GO.ID <- trimws(GO_BP_En_sig$GO.ID)
-
-# Join the datasets based on GO term
-GO_BP_En_sig_gene <- ast_gene2go %>%
-  left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
-  na.omit()
+# Join the datasets based on genes upregulated in August (ie those used for the functional enrichment)
+GO_ast_BP_En_sig_gene_aug <- GO_ast_BP_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
 
 # Add ontology column 
-GO_BP_En_sig_gene$ontology <- "Biological Processes"
+GO_ast_BP_En_sig_gene_aug$ontology <- "Biological Processes"
 ```
 
 ### Cellular Components 
@@ -648,8 +620,12 @@ GO_CC_En_sig_gene <- ast_gene2go %>%
   left_join(GO_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in August (ie those used for the functional enrichment)
+GO_CC_En_sig_gene_aug <- GO_CC_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_CC_En_sig_gene$ontology <- "Cellular Components"
+GO_CC_En_sig_gene_aug$ontology <- "Cellular Components"
 ```
 
 ### Molecular Functions
@@ -689,15 +665,19 @@ GO_MF_En_sig_gene <- ast_gene2go %>%
   left_join(GO_MF_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in August (ie those used for the functional enrichment)
+GO_MF_En_sig_gene_aug <- GO_MF_En_sig_gene %>%
+  filter(mRNA %in% clust_genes)
+
 # Add ontology column 
-GO_MF_En_sig_gene$ontology <- "Molecular Functions"
+GO_MF_En_sig_gene_aug$ontology <- "Molecular Functions"
 ```
 
 ### Join ontologies 
 
 Bind so there is a df that has significantly enriched GO terms for all ontologies 
 ```{r}
-GO_En_sig_gene <- rbind(GO_BP_En_sig_gene, GO_CC_En_sig_gene, GO_MF_En_sig_gene)
+GO_En_sig_gene <- rbind(GO_ast_BP_En_sig_gene_aug, GO_CC_En_sig_gene_aug, GO_MF_En_sig_gene_aug)
 
 # Calculate proportion of significant v annotated genes 
 GO_En_sig_gene <- GO_En_sig_gene %>%
