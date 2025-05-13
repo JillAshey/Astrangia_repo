@@ -1,58 +1,46 @@
 "","GO.ID","Term","Annotated","Significant","Expected","Fisher","ontology","sig.prop"
-"1","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes",0.00706713780918728
-"2","GO:0051878","lateral element assembly",1,1,0,0.00139,"Biological Processes",1
-"3","GO:0035092","sperm DNA condensation",1,1,0,0.00139,"Biological Processes",1
-"4","GO:0017055","negative regulation of RNA polymerase II transcript...",1,1,0,0.00139,"Biological Processes",1
-"5","GO:0000711","meiotic DNA repair synthesis",2,1,0,0.00278,"Biological Processes",0.5
-"6","GO:0008348","negative regulation of antimicrobial humoral respon...",2,1,0,0.00278,"Biological Processes",0.5
-"7","GO:0009231","riboflavin biosynthetic process",2,1,0,0.00278,"Biological Processes",0.5
-"8","GO:0031508","pericentric heterochromatin formation",3,1,0,0.00417,"Biological Processes",0.333333333333333
-"9","GO:0051026","chiasma assembly",3,1,0,0.00417,"Biological Processes",0.333333333333333
-"10","GO:0061000","negative regulation of dendritic spine development",4,1,0.01,0.00556,"Biological Processes",0.25
-"11","GO:0006114","glycerol biosynthetic process",5,1,0.01,0.00694,"Biological Processes",0.2
-"12","GO:0006334","nucleosome assembly",100,2,0.14,0.00846,"Biological Processes",0.02
-"13","GO:0048671","negative regulation of collateral sprouting",7,1,0.01,0.00971,"Biological Processes",0.142857142857143
-"14","GO:0051712","positive regulation of killing of cells of another ...",8,1,0.01,0.01108,"Biological Processes",0.125
-"15","GO:0006346","DNA methylation-dependent heterochromatin formation",9,1,0.01,0.01246,"Biological Processes",0.111111111111111
-"16","GO:0098719","sodium ion import across plasma membrane",10,1,0.01,0.01384,"Biological Processes",0.1
-"17","GO:0007379","segment specification",10,1,0.01,0.01384,"Biological Processes",0.1
-"18","GO:0006268","DNA unwinding involved in DNA replication",10,1,0.01,0.01384,"Biological Processes",0.1
-"19","GO:0048240","sperm capacitation",13,1,0.02,0.01795,"Biological Processes",0.0769230769230769
-"20","GO:0051770","positive regulation of nitric-oxide synthase biosyn...",14,1,0.02,0.01932,"Biological Processes",0.0714285714285714
-"21","GO:0048681","negative regulation of axon regeneration",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"22","GO:0051000","positive regulation of nitric-oxide synthase activi...",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"23","GO:0090136","epithelial cell-cell adhesion",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"24","GO:0097374","sensory neuron axon guidance",17,1,0.02,0.02341,"Biological Processes",0.0588235294117647
-"25","GO:0043248","proteasome assembly",18,1,0.03,0.02477,"Biological Processes",0.0555555555555556
-"26","GO:0035036","sperm-egg recognition",19,1,0.03,0.02613,"Biological Processes",0.0526315789473684
-"27","GO:0002925","positive regulation of humoral immune response medi...",19,1,0.03,0.02613,"Biological Processes",0.0526315789473684
-"28","GO:0007275","multicellular organism development",4631,8,6.45,0.03492,"Biological Processes",0.00172748866335565
-"29","GO:0030517","negative regulation of axon extension",26,1,0.04,0.0356,"Biological Processes",0.0384615384615385
-"30","GO:0032570","response to progesterone",26,1,0.04,0.0356,"Biological Processes",0.0384615384615385
-"31","GO:0031110","regulation of microtubule polymerization or depolym...",28,1,0.04,0.03828,"Biological Processes",0.0357142857142857
-"32","GO:0035335","peptidyl-tyrosine dephosphorylation",28,1,0.04,0.03828,"Biological Processes",0.0357142857142857
-"33","GO:0035218","leg disc development",30,1,0.04,0.04096,"Biological Processes",0.0333333333333333
-"34","GO:0090073","positive regulation of protein homodimerization act...",35,1,0.05,0.04763,"Biological Processes",0.0285714285714286
-"35","GO:0000802","transverse filament",1,1,0,0.0015,"Cellular Components",1
-"36","GO:0000801","central element",2,1,0,0.003,"Cellular Components",0.5
-"37","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components",0.0192307692307692
-"38","GO:0005721","pericentric heterochromatin",9,1,0.01,0.0132,"Cellular Components",0.111111111111111
-"39","GO:0001673","male germ cell nucleus",9,1,0.01,0.0132,"Cellular Components",0.111111111111111
-"40","GO:0036128","CatSper complex",18,1,0.03,0.0263,"Cellular Components",0.0555555555555556
-"41","GO:0005838","proteasome regulatory particle",21,1,0.03,0.0306,"Cellular Components",0.0476190476190476
-"42","GO:0005881","cytoplasmic microtubule",22,1,0.03,0.0321,"Cellular Components",0.0454545454545455
-"43","GO:0005771","multivesicular body",28,1,0.04,0.0406,"Cellular Components",0.0357142857142857
-"44","GO:0000121","glycerol-1-phosphatase activity",2,1,0,0.0027,"Molecular Functions",0.5
-"45","GO:0043136","glycerol-3-phosphatase activity",2,1,0,0.0027,"Molecular Functions",0.5
-"46","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions",0.0253164556962025
-"47","GO:0019863","IgE binding",7,1,0.01,0.0093,"Molecular Functions",0.142857142857143
-"48","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions",0.0176991150442478
-"49","GO:0015386","potassium:proton antiporter activity",9,1,0.01,0.012,"Molecular Functions",0.111111111111111
-"50","GO:0008301","DNA binding, bending",13,1,0.02,0.0172,"Molecular Functions",0.0769230769230769
-"51","GO:0015385","sodium:proton antiporter activity",14,1,0.02,0.0186,"Molecular Functions",0.0714285714285714
-"52","GO:0043395","heparan sulfate proteoglycan binding",16,1,0.02,0.0212,"Molecular Functions",0.0625
-"53","GO:0008201","heparin binding",175,2,0.23,0.0227,"Molecular Functions",0.0114285714285714
-"54","GO:0017025","TBP-class protein binding",19,1,0.03,0.0251,"Molecular Functions",0.0526315789473684
-"55","GO:0003680","minor groove of adenine-thymine-rich DNA binding",20,1,0.03,0.0264,"Molecular Functions",0.05
-"56","GO:0001733","galactosylceramide sulfotransferase activity",26,1,0.03,0.0342,"Molecular Functions",0.0384615384615385
-"57","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions",0.00529100529100529
+"1","GO:0006824","cobalt ion transport",6,2,0,9.2e-06,"Biological Processes",0.333333333333333
+"2","GO:0015889","cobalamin transport",13,2,0.01,4.8e-05,"Biological Processes",0.153846153846154
+"3","GO:0060855","venous endothelial cell migration involved in lymph...",1,1,0,0.00081,"Biological Processes",1
+"4","GO:0060836","lymphatic endothelial cell differentiation",2,1,0,0.00162,"Biological Processes",0.5
+"5","GO:0035474","selective angioblast sprouting",4,1,0,0.00324,"Biological Processes",0.25
+"6","GO:2001150","positive regulation of dipeptide transmembrane tran...",7,1,0.01,0.00567,"Biological Processes",0.142857142857143
+"7","GO:0001946","lymphangiogenesis",8,1,0.01,0.00648,"Biological Processes",0.125
+"8","GO:0038166","angiotensin-activated signaling pathway",9,1,0.01,0.00729,"Biological Processes",0.111111111111111
+"9","GO:0007219","Notch signaling pathway",183,2,0.15,0.00938,"Biological Processes",0.0109289617486339
+"10","GO:0051939","gamma-aminobutyric acid import",12,1,0.01,0.0097,"Biological Processes",0.0833333333333333
+"11","GO:0030878","thyroid gland development",14,1,0.01,0.01131,"Biological Processes",0.0714285714285714
+"12","GO:0060841","venous blood vessel development",17,1,0.01,0.01372,"Biological Processes",0.0588235294117647
+"13","GO:0030947","regulation of vascular endothelial growth factor re...",18,1,0.01,0.01452,"Biological Processes",0.0555555555555556
+"14","GO:0032229","negative regulation of synaptic transmission, GABAe...",20,1,0.02,0.01612,"Biological Processes",0.05
+"15","GO:0010288","response to lead ion",21,1,0.02,0.01692,"Biological Processes",0.0476190476190476
+"16","GO:0038084","vascular endothelial growth factor signaling pathwa...",23,1,0.02,0.01852,"Biological Processes",0.0434782608695652
+"17","GO:0009235","cobalamin metabolic process",23,1,0.02,0.01852,"Biological Processes",0.0434782608695652
+"18","GO:0014054","positive regulation of gamma-aminobutyric acid secr...",24,1,0.02,0.01932,"Biological Processes",0.0416666666666667
+"19","GO:0044070","regulation of monoatomic anion transport",27,1,0.02,0.02171,"Biological Processes",0.037037037037037
+"20","GO:0009744","response to sucrose",29,1,0.02,0.0233,"Biological Processes",0.0344827586206897
+"21","GO:0006032","chitin catabolic process",30,1,0.02,0.0241,"Biological Processes",0.0333333333333333
+"22","GO:0060218","hematopoietic stem cell differentiation",35,1,0.03,0.02806,"Biological Processes",0.0285714285714286
+"23","GO:0090073","positive regulation of protein homodimerization act...",35,1,0.03,0.02806,"Biological Processes",0.0285714285714286
+"24","GO:0060346","bone trabecula formation",36,1,0.03,0.02885,"Biological Processes",0.0277777777777778
+"25","GO:0006730","one-carbon metabolic process",37,1,0.03,0.02964,"Biological Processes",0.027027027027027
+"26","GO:0008045","motor neuron axon guidance",44,1,0.04,0.03516,"Biological Processes",0.0227272727272727
+"27","GO:0035583","sequestering of TGFbeta in extracellular matrix",51,1,0.04,0.04064,"Biological Processes",0.0196078431372549
+"28","GO:0000272","polysaccharide catabolic process",59,1,0.05,0.04688,"Biological Processes",0.0169491525423729
+"29","GO:0035580","specific granule lumen",18,1,0.01,0.013,"Cellular Components",0.0555555555555556
+"30","GO:1904724","tertiary granule lumen",25,1,0.02,0.018,"Cellular Components",0.04
+"31","GO:0001527","microfibril",53,1,0.04,0.037,"Cellular Components",0.0188679245283019
+"32","GO:0035631","CD40 receptor complex",61,1,0.04,0.042,"Cellular Components",0.0163934426229508
+"33","GO:0031419","cobalamin binding",24,2,0.02,0.00016,"Molecular Functions",0.0833333333333333
+"34","GO:0031996","thioesterase binding",99,2,0.08,0.00279,"Molecular Functions",0.0202020202020202
+"35","GO:0005164","tumor necrosis factor receptor binding",140,2,0.11,0.00548,"Molecular Functions",0.0142857142857143
+"36","GO:0008270","zinc ion binding",1782,5,1.43,0.01039,"Molecular Functions",0.00280583613916947
+"37","GO:0030023","extracellular matrix constituent conferring elastic...",14,1,0.01,0.01118,"Molecular Functions",0.0714285714285714
+"38","GO:0004842","ubiquitin-protein transferase activity",604,3,0.48,0.01142,"Molecular Functions",0.00496688741721854
+"39","GO:0004089","carbonate dehydratase activity",17,1,0.01,0.01356,"Molecular Functions",0.0588235294117647
+"40","GO:0004563","beta-N-acetylhexosaminidase activity",20,1,0.02,0.01593,"Molecular Functions",0.05
+"41","GO:0005332","gamma-aminobutyric acid:sodium:chloride symporter a...",23,1,0.02,0.0183,"Molecular Functions",0.0434782608695652
+"42","GO:0005112","Notch binding",25,1,0.02,0.01988,"Molecular Functions",0.04
+"43","GO:0031625","ubiquitin protein ligase binding",324,2,0.26,0.02708,"Molecular Functions",0.00617283950617284
+"44","GO:0005328","neurotransmitter:sodium symporter activity",40,1,0.03,0.03162,"Molecular Functions",0.025
+"45","GO:0050699","WW domain binding",42,1,0.03,0.03318,"Molecular Functions",0.0238095238095238

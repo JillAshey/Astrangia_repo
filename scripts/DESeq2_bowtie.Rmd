@@ -462,7 +462,7 @@ filt_outrm_poa <- bowtie_matrix[filt_outrm_poa,] #keep only rows that passed fil
 
 all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
 
-write.csv(filt_outrm_poa, "../output/Molecular/mRNA/filtered_gene_counts.csv")
+#write.csv(filt_outrm_poa, "../output/Molecular/mRNA/filtered_gene_counts.csv")
 ```
 
 28720 genes remain after filtering. 

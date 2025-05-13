@@ -30,23 +30,23 @@ feb_june <- read_csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
 feb_aug <- read_csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
 ```
 
-Subset genes that are downregulated (ie those that were expressed in Feb relative to June and August)
+Subset genes that are upregulated (ie those that were expressed in Feb relative to June and August)
 ```{r}
 feb_june <- feb_june %>%
-  filter(log2FoldChange < 0)
+  filter(log2FoldChange > 0)
 feb_aug <- feb_aug %>%
-  filter(log2FoldChange < 0)
+  filter(log2FoldChange > 0)
 
 # Bind 
 feb_all <- rbind(feb_june,feb_aug)[,1]
 feb_all_unique <- feb_all %>%
-  rename(gene_id = ...1) %>%
+  dplyr::rename("gene_id" = "...1") %>%
   distinct(gene_id)
 ```
 
 Read in gene2go information (generated in `topGO.Rmd` file)
 ```{r}
-ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
 ```
 
 Make list of genes for input to topGO
@@ -285,17 +285,17 @@ feb_june <- read_csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
 june_aug <- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
 ```
 
-Subset genes that are upregulated relative to February and downregulated relative to August 
+Subset genes that are downregulated relative to February and upregulated relative to August 
 ```{r}
 feb_june <- feb_june %>%
-  filter(log2FoldChange > 0)
-june_aug <- june_aug %>%
   filter(log2FoldChange < 0)
+june_aug <- june_aug %>%
+  filter(log2FoldChange > 0)
 
 # Bind 
 june_all <- rbind(feb_june,june_aug)[,1]
 june_all_unique <- june_all %>%
-  rename(gene_id = ...1) %>%
+  dplyr::rename(gene_id = ...1) %>%
   distinct(gene_id)
 ```
 
@@ -522,17 +522,17 @@ feb_aug <- read_csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
 june_aug <- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
 ```
 
-Subset genes that are upregulated relative to February and upregulated relative to June 
+Subset genes that are downregulated relative to February and downregulated relative to June 
 ```{r}
 feb_aug <- feb_aug %>%
-  filter(log2FoldChange > 0)
+  filter(log2FoldChange < 0)
 june_aug <- june_aug %>%
   filter(log2FoldChange < 0)
 
 # Bind 
 aug_all <- rbind(feb_aug,june_aug)[,1]
 aug_all_unique <- aug_all %>%
-  rename(gene_id = ...1) %>%
+  dplyr::rename(gene_id = ...1) %>%
   distinct(gene_id)
 ```
 
@@ -770,28 +770,12 @@ feb_terms <- unique(feb_genes$Term)
 june_terms <- unique(june_genes$Term)
 aug_terms <- unique(aug_genes$Term)
 
-overlapping_terms_feb_june <- intersect(feb_terms, june_terms) # 5 overlapping terms
-overlapping_terms_feb_aug <- intersect(feb_terms, aug_terms) # 6 overlapping terms
-overlapping_terms_june_aug <- intersect(june_terms, aug_terms) # 39 overlapping terms
+overlapping_terms_feb_june <- intersect(feb_terms, june_terms) # 13 overlapping terms
+overlapping_terms_feb_aug <- intersect(feb_terms, aug_terms) # 1 overlapping term
+overlapping_terms_june_aug <- intersect(june_terms, aug_terms) # 70 overlapping terms
 
-common_terms <- Reduce(intersect, list(feb_terms, june_terms, aug_terms))
+common_terms <- Reduce(intersect, list(feb_terms, june_terms, aug_terms)) # 1 common term
 ```
-
-# Intersection of expressed genes with genes targeted by miRNAs
-
-Read in interaction data 
-```{r}
-combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions_annot.csv")
-```
-
-## February expressed genes targeted by miRNAs 
-
-Bind with Feb expressed genes 
-```{r}
-feb_combined <- feb_all_unique %>%
-  inner_join(combined_data_pcc, by = c("gene_id" = "mRNA"))
-```
-
 
 
 
