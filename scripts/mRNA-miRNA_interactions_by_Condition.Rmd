@@ -26,6 +26,7 @@ library(ppcor)
 library(tidyheatmaps)
 library(patchwork)
 library(circlize)
+library(ComplexHeatmap)
 ```
 
 Read in mRNA count data 
@@ -1324,10 +1325,92 @@ ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
   )
 ```
 
+Add inference label, which says if miRNA repression is predicted at a specific time point or not
+```{r}
+comparison_df_degs_annot <- comparison_df_degs_annot %>%
+  mutate(miRNA_repression_inferred = case_when(
+    PCC.cor_tp5_amb >  0 & PCC.cor_tp5_heat <  0 & log2FoldChange > 0  ~ "miRNA repression of mRNA at TP5 heat",
+    PCC.cor_tp5_amb <  0 & PCC.cor_tp5_heat >  0 & log2FoldChange < 0  ~ "miRNA repression of mRNA at TP5 ambient",
+    PCC.cor_tp5_amb >  0 & PCC.cor_tp5_heat <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP5 heat, regardless of correlation",
+    PCC.cor_tp5_amb <  0 & PCC.cor_tp5_heat >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP5 ambient, regardless of correlation",
 
+    TRUE ~ "no inference"
+  ))
+```
 
+Plot PCC, LFC and inference as heatmap
+```{r}
+# 1. Create matrices again if needed
+pcc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, PCC.cor_tp5_amb, PCC.cor_tp5_heat) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+colnames(pcc_mat) <- c("TP0", "TP5 Heat")
 
+lfc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, log2FoldChange) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
 
+# 2. Define color functions
+pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("#762a83", "white", "#1b7837"))
+lfc_col_fun <- colorRamp2(c(-5, 0, 2), c("blue", "white", "red"))
+
+# 3. Row annotation: repression inference
+row_annot <- rowAnnotation(
+  Inference = comparison_df_degs_annot$miRNA_repression_inferred,
+  col = list(Inference = c(
+    "miRNA repression of mRNA at TP5 heat" = "#7F58AF",
+    "miRNA repression of mRNA at TP5 ambient" = "#64C5EB",
+    "High mRNA expression at TP5 heat, regardless of correlation" = "#E84D8A",
+    "High mRNA expression at TP5 ambient, regardless of correlation" = "#FEB326",
+    "no inference" = "grey85"
+  )),
+  show_annotation_name = TRUE
+)
+
+# 4. Make heatmaps
+ht1 <- Heatmap(
+  pcc_mat,
+  name = "PCC",
+  col = pcc_col_fun,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_title = "Correlation (PCC)",
+  show_row_names = TRUE,
+  row_names_side = "left",
+  row_names_gp = gpar(fontsize = 8)
+); ht1
+
+ht2 <- Heatmap(
+  lfc_mat,
+  name = "mRNA log2FC",
+  col = lfc_col_fun,
+  cluster_rows = FALSE,
+  show_row_names = FALSE,
+  column_title = "mRNA log2 Fold Change"
+); ht2
+
+# 5. Draw with annotation
+draw(ht1 + ht2 + row_annot, 
+     heatmap_legend_side = "right", 
+     annotation_legend_side = "right")
+
+# Save 
+png("../output/Molecular/interactions/miRNA_mRNA_TP5_amb_v_TP5_heat_pcc_lfc_heatmap.png", width = 5000, height = 3000, res = 300)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+
+pdf("../output/Molecular/interactions/miRNA_mRNA_TP5_amb_v_TP5_heat_pcc_lfc_heatmap.pdf", width = 20, height = 15)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+```
 
 ### TP0 v TP7 amb
 
@@ -1481,10 +1564,10 @@ Add inference label, which says if miRNA repression is predicted at a specific t
 ```{r}
 comparison_df_degs_annot <- comparison_df_degs_annot %>%
   mutate(miRNA_repression_inferred = case_when(
-    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange > 0  ~ "miRNA repression at TP7 ambient",
-    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange < 0  ~ "miRNA repression at TP0",
-    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP7 ambient, regardless of repression",
-    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of repression",
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange > 0  ~ "miRNA repression of mRNA at TP7 ambient",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange < 0  ~ "miRNA repression of mRNA at TP0",
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP7 ambient, regardless of correlation",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of correlation",
 
     TRUE ~ "no inference"
   ))
@@ -1507,17 +1590,17 @@ lfc_mat <- comparison_df_degs_annot %>%
   as.matrix()
 
 # 2. Define color functions
-pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
-lfc_col_fun <- colorRamp2(c(-5, 0, 5), c("purple", "white", "orange"))
+pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("#762a83", "white", "#1b7837"))
+lfc_col_fun <- colorRamp2(c(-5, 0, 5), c("blue", "white", "red"))
 
 # 3. Row annotation: repression inference
 row_annot <- rowAnnotation(
   Inference = comparison_df_degs_annot$miRNA_repression_inferred,
   col = list(Inference = c(
-    "miRNA repression at TP7 ambient" = "#7F58AF",
-    "miRNA repression at TP0" = "#64C5EB",
-    "High mRNA expression at TP7 ambient, regardless of repression" = "#E84D8A",
-    "High mRNA expression at TP0, regardless of repression" = "#FEB326",
+    "miRNA repression of mRNA at TP7 ambient" = "#7F58AF",
+    "miRNA repression of mRNA at TP0" = "#64C5EB",
+    "High mRNA expression at TP7 ambient, regardless of correlation" = "#E84D8A",
+    "High mRNA expression at TP0, regardless of correlation" = "#FEB326",
     "no inference" = "grey85"
   )),
   show_annotation_name = TRUE
@@ -1533,7 +1616,7 @@ ht1 <- Heatmap(
   column_title = "Correlation (PCC)",
   show_row_names = TRUE,
   row_names_side = "left",
-  row_names_gp = gpar(fontsize = 6)
+  row_names_gp = gpar(fontsize = 8)
 ); ht1
 
 ht2 <- Heatmap(
@@ -1549,6 +1632,20 @@ ht2 <- Heatmap(
 draw(ht1 + ht2 + row_annot, 
      heatmap_legend_side = "right", 
      annotation_legend_side = "right")
+
+# Save 
+png("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_lfc_heatmap.png", width = 5000, height = 3000, res = 300)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+
+pdf("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_lfc_heatmap.pdf", width = 20, height = 15)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
 ```
+
 
 
