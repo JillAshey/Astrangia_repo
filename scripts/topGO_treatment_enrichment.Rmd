@@ -1,0 +1,329 @@
+---
+title: "topGO enrichment of June and August ambient v heat"
+author: "Jill Ashey"
+date: "2025-05-05"
+output: html_document
+---
+
+GO enrichment of DEGs expressed in June ambient v heat and August ambient v heat 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#devtools::install_github("stemangiola/tidyHeatmap")
+
+library(tidyverse)
+library(topGO)
+library(tidyHeatmap)
+library(purrr)
+library(scales)
+library(igraph)
+library(tidygraph)
+library(ggraph)
+```
+
+## June ambient v heat DEGs
+
+Read in data. Positive LFC = upregulated in TP5 heat treatment. Negative LFC = upregulated in TP5 ambient treatment
+```{r}
+june_deg<- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
+```
+
+### June heat DEGs 
+
+Subset genes that are upregulated in TP5 heat treatment (ie positive LFC)
+```{r}
+june_deg_heat <- june_deg %>%
+  filter(log2FoldChange > 0) %>%
+  rename(gene_id = ...1)
+
+length(unique(june_deg_heat$gene_id))
+```
+
+Read in gene2go information (generated in `topGO.Rmd` file)
+```{r}
+ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(june_deg_heat$gene_id)
+
+# All genes 
+all_genes <- as.character(ast_gene2go$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+```
+
+The following code will perform GO enrichment using the weighted Fisher's exact test to assess whether specific GO terms are overrepresented in the genes expressed in Feb. 
+
+Read in gene-to-go-mappings
+```{r}
+gene2go_topgo <- readMappings("../data/Molecular/Ast_gene2go.tab", IDsep=";")
+```
+
+Set function to select genes of interest (ie those that have pvalue < 0.05)
+```{r}
+topDiffGenes <- function(allScore) {
+return(allScore < 0.05)}
+```
+
+#### Biological Processes
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+
+# Add ontology col
+GO_BP_En_sig$ontology <- "Biological Processes"
+```
+
+#### Cellular Components 
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_CC <-new("topGOdata", ontology="CC", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_CC_FE <- runTest(GO_CC, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_CC_En <- GenTable(GO_CC, Fisher = GO_CC_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_CC_En$Fisher<-as.numeric(GO_CC_En$Fisher)
+GO_CC_En_sig<-GO_CC_En[GO_CC_En$Fisher<0.05,]
+
+# Add ontology col
+GO_CC_En_sig$ontology <- "Cellular Components"
+```
+
+#### Molecular Functions
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+Run GO enrichment test 
+```{r}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+
+# Add ontology column 
+GO_MF_En_sig$ontology <- "Molecular Functions"
+```
+
+#### Join ontologies 
+
+Bind so there is a df that has significantly enriched GO terms for all ontologies 
+```{r}
+GO_En_sig_gene <- rbind(GO_BP_En_sig, GO_CC_En_sig, GO_MF_En_sig)
+
+# Calculate proportion of significant v annotated genes 
+GO_En_sig_gene <- GO_En_sig_gene %>%
+  mutate(sig.prop = Significant/Annotated) #%>%
+  #inner_join(june_deg_heat, by = c("mRNA" = "gene_id"))
+  #na.omit()
+length(unique(GO_En_sig_gene$Term))
+#length(unique(GO_En_sig_gene$mRNA))
+head(GO_En_sig_gene)
+
+# Save as csv 
+write.csv(GO_En_sig_gene, "../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expressed_genes.csv")
+```
+
+Plot
+```{r}
+# Remove CC
+GO_En_sig_gene <- GO_En_sig_gene %>%
+  filter(!ontology == "Cellular Components")
+
+ggplot(GO_En_sig_gene, aes(x = -log10(Fisher), y = reorder(Term, -Fisher))) +
+    facet_grid(ontology ~ ., scales = "free_y", space = "free_y") +
+  geom_point() +
+  labs(
+    x = "-log10(Fisher p-value)",
+    y = "GO Term",
+    size = "Number of Significant Genes",
+    color = "LFC"
+  ) +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8))
+```
+
+### June ambient DEGs 
+
+Subset genes that are upregulated in TP5 ambient treatment (ie negative LFC)
+```{r}
+june_deg_amb <- june_deg %>%
+  filter(log2FoldChange < 0) %>%
+  rename(gene_id = ...1)
+
+length(unique(june_deg_amb$gene_id))
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(june_deg_amb$gene_id)
+
+# All genes 
+all_genes <- as.character(ast_gene2go$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+```
+
+#### Biological Processes
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+
+# Add ontology col
+GO_BP_En_sig$ontology <- "Biological Processes"
+```
+
+#### Cellular Components 
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_CC <-new("topGOdata", ontology="CC", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r}
+GO_CC_FE <- runTest(GO_CC, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_CC_En <- GenTable(GO_CC, Fisher = GO_CC_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_CC_En$Fisher<-as.numeric(GO_CC_En$Fisher)
+GO_CC_En_sig<-GO_CC_En[GO_CC_En$Fisher<0.05,]
+
+# Add ontology col
+GO_CC_En_sig$ontology <- "Cellular Components"
+```
+
+#### Molecular Functions
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+Run GO enrichment test 
+```{r}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+
+# Add ontology column 
+GO_MF_En_sig$ontology <- "Molecular Functions"
+```
+
+#### Join ontologies 
+
+Bind so there is a df that has significantly enriched GO terms for all ontologies 
+```{r}
+GO_En_sig_gene <- rbind(GO_BP_En_sig, GO_CC_En_sig, GO_MF_En_sig)
+
+# Calculate proportion of significant v annotated genes 
+GO_En_sig_gene <- GO_En_sig_gene %>%
+  mutate(sig.prop = Significant/Annotated) #%>%
+  #inner_join(june_deg_amb, by = c("mRNA" = "gene_id"))
+  #na.omit()
+length(unique(GO_En_sig_gene$Term))
+#length(unique(GO_En_sig_gene$mRNA))
+head(GO_En_sig_gene)
+
+# Save as csv 
+write.csv(GO_En_sig_gene, "../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv")
+```
+
+Plot
+```{r}
+# Remove CC
+GO_En_sig_gene <- GO_En_sig_gene %>%
+  filter(!ontology == "Cellular Components")
+
+ggplot(GO_En_sig_gene, aes(x = -log10(Fisher), y = reorder(Term, -Fisher))) +
+    facet_grid(ontology ~ ., scales = "free_y", space = "free_y") +
+  geom_point() +
+  labs(
+    x = "-log10(Fisher p-value)",
+    y = "GO Term",
+    size = "Number of Significant Genes",
+    color = "LFC"
+  ) +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8))
+```
+
+
+

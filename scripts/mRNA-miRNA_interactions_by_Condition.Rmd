@@ -1,0 +1,1459 @@
+---
+title: "mRNA-miRNA interaction by condition"
+author: "Jill Ashey"
+date: "2025-05-05"
+output: html_document
+---
+
+This script examines the mRNA-miRNA interactions in my Astrangia 2021 dataset for each condition (TP0 acc, TP5 amb, TP5 heat, TP7 amb, TP7 heat). I ran miranda, a miRNA target prediction software, to determine putative mRNA targets. Now I will calculate the Pearson's correlation coefficient for each mRNA-miRNA pair. This, along with the miranda data, will illustrate mRNA-miRNA interactions for each condition 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+#library(mirTarRnaSeq)
+library(reshape2)
+#library(SPONGE)
+library(pheatmap)
+library(energy)
+library(parallel)
+library(ggraph)
+library(tidygraph)
+library(igraph)
+library(genefilter)
+library(gridExtra)
+library(ppcor)
+library(tidyheatmaps)
+library(patchwork)
+library(circlize)
+```
+
+Read in mRNA count data 
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+
+# Set row names
+rownames(mrna_counts) <- mrna_counts[,1] #set first column that contains gene names as rownames
+mrna_counts <- mrna_counts[,-1] # remove column w/ gene names 
+```
+
+Read in miRNA count data
+```{r}
+mirna_counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
+
+Select only miRNAs with a Y in MIRNA column. Combine Name and Coords columns for miRNA name. Format miRNA names to only contain Cluster_XXX information. Remove MIRNA column 
+```{r}
+mirna_counts <- mirna_counts %>%
+  dplyr::filter(MIRNA == "Y") %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  mutate(miRNA_name = str_replace(miRNA_name, "^([^_]*_[^_]*)_.*$", "\\1")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+
+# Set row names 
+rownames(mirna_counts) <- mirna_counts[,20] #set column that contains names as rownames
+mirna_counts <- mirna_counts[,-20] # remove column w/ gene names 
+```
+
+Remove extra info from column names
+```{r}
+colnames(mirna_counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(mirna_counts))
+colnames(mirna_counts) <- gsub("AST.", "AST-", colnames(mirna_counts))
+colnames(mrna_counts) <- gsub("AST.", "AST-", colnames(mrna_counts))
+```
+
+Remove sample that did not sequence well
+```{r}
+mrna_counts <- mrna_counts %>%
+    dplyr::select(-"AST-1105")
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- meta %>%
+  dplyr::arrange(meta, ID) %>% # rearrange metadata so IDs are sorted in descending order 
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", Treatment)) %>%
+  dplyr::filter(ID != "AST-1105") # remove sample that did not sequence well 
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "Heat"))
+```
+
+Make list of samples in each condition 
+```{r}
+tp0_acc_list <- c("AST-1147", "AST-1567", "AST-1722", "AST-2398")
+tp5_amb_list <- c("AST-1412", "AST-1617", "AST-2000", "AST-2360")
+tp5_heat_list <- c("AST-2404", "AST-2412", "AST-2512", "AST-2563")
+tp7_amb_list <- c("AST-1560", "AST-2302", "AST-2523")
+tp7_heat_list <- c("AST-1065", "AST-2007", "AST-2729", "AST-2755")
+```
+
+Read in miranda data - 1kb 3'UTR binding 
+```{r}
+# miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+# colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+# 
+# # Format miranda df 
+# miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
+# miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
+# miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+# miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+# 
+# dim(miranda_data)
+```
+
+Read in miranda data - entire mRNA binding
+```{r}
+miranda_data <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
+miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
+miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("model", "TU", miranda_data$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_data)
+length(unique(miranda_data$miRNA))
+length(unique(miranda_data$mRNA))
+```
+
+## TP0 acclimation 
+
+Subset counts matrices by `tp0_acc_list`
+```{r}
+mrna_subset <- mrna_counts %>% 
+  select(all_of(tp0_acc_list))
+mirna_subset <- mirna_counts %>% 
+  select(all_of(tp0_acc_list))
+```
+
+Normalize counts using RPM normalization 
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_subset)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_subset)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_TP0amb.csv")
+```
+
+Merge with miranda data data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+Save as csv
+```{r}
+# Save as csv 
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+#combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
+```
+
+## TP5 ambient 
+
+Subset counts matrices by `tp5_amb_list`
+```{r}
+mrna_subset <- mrna_counts %>% 
+  select(all_of(tp5_amb_list))
+mirna_subset <- mirna_counts %>% 
+  select(all_of(tp5_amb_list))
+```
+
+Normalize counts using RPM normalization 
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_subset)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_subset)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_TP5amb.csv")
+```
+
+Merge with miranda data data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+Save as csv
+```{r}
+# Save as csv 
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+#combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
+```
+
+## TP5 heat 
+
+Subset counts matrices by `tp5_heat_list`
+```{r}
+mrna_subset <- mrna_counts %>% 
+  select(all_of(tp5_heat_list))
+mirna_subset <- mirna_counts %>% 
+  select(all_of(tp5_heat_list))
+```
+
+Normalize counts using RPM normalization 
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_subset)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_subset)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_TP5heat.csv")
+```
+
+Merge with miranda data data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+Save as csv
+```{r}
+# Save as csv 
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5heat.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+#combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5heat.csv")
+```
+
+## TP7 ambient 
+
+Subset counts matrices by `tp7_amb_list`
+```{r}
+mrna_subset <- mrna_counts %>% 
+  select(all_of(tp7_amb_list))
+mirna_subset <- mirna_counts %>% 
+  select(all_of(tp7_amb_list))
+```
+
+Normalize counts using RPM normalization 
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_subset)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_subset)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_TP7amb.csv")
+```
+
+Merge with miranda data data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+Save as csv
+```{r}
+# Save as csv 
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7amb.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+#combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7amb.csv")
+```
+
+## TP7 heat 
+
+Subset counts matrices by `tp7_heat_list`
+```{r}
+mrna_subset <- mrna_counts %>% 
+  select(all_of(tp7_heat_list))
+mirna_subset <- mirna_counts %>% 
+  select(all_of(tp7_heat_list))
+```
+
+Normalize counts using RPM normalization 
+```{r}
+# Function to normalize counts (simple RPM normalization)
+normalize_counts <- function(counts) {
+  rpm <- t(t(counts) / colSums(counts)) * 1e6
+  return(rpm)
+}
+
+# Normalize miRNA and mRNA counts
+miRNA_norm <- normalize_counts(mirna_subset)
+#mirna_norm <- as.matrix(miRNA_counts_filt)
+
+mRNA_norm <- normalize_counts(mrna_subset)
+#mRNA_norm <- as.matrix(mRNA_counts_filt)
+```
+
+Calculate PCC 
+```{r}
+# Function to calculate PCC and p-value for a pair of vectors
+calc_pcc <- function(x, y) {
+  result <- cor.test(x, y, method = "pearson")
+  return(c(PCC = result$estimate, p_value = result$p.value))
+}
+
+# Create a data frame of all miRNA-mRNA pairs
+pairs <- expand.grid(miRNA = rownames(miRNA_norm), mRNA = rownames(mRNA_norm))
+
+# Calculate PCC and p-value for each pair
+pcc_results <- pairs %>%
+  rowwise() %>%
+  dplyr::mutate(
+    pcc_stats = list(calc_pcc(miRNA_norm[miRNA,], mRNA_norm[mRNA,]))
+  ) %>%
+  unnest_wider(pcc_stats)
+
+# Adjust p-values for FDR
+pcc_results <- pcc_results %>%
+  mutate(adjusted_p_value = p.adjust(p_value, method = "fdr"))
+
+# Save as csv
+#write.csv(pcc_results, "../output/Molecular/interactions/miRNA_mRNA_pcc_all_TP7heat.csv")
+```
+
+Merge with miranda data data 
+```{r}
+combined_data_pcc <- pcc_results %>%
+  inner_join(miranda_data, by = c("miRNA", "mRNA"))
+dim(combined_data_pcc)
+```
+
+Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+Save as csv
+```{r}
+# Save as csv 
+write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7heat.csv")
+
+#Read in pcc information again so I do not need to rerun the pcc calculations again
+#combined_data_pcc <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7heat.csv")
+```
+
+## Compare across conditions 
+
+Read in data 
+```{r}
+tp0 <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
+tp5_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
+tp5_heat <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5heat.csv")
+tp7_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7amb.csv")
+tp7_heat <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7heat.csv")
+
+dim(tp0)
+dim(tp5_amb)
+dim(tp5_heat)
+dim(tp7_amb)
+dim(tp7_heat)
+
+tp0$treatment <- "tp0"
+tp5_amb$treatment <- "tp5_amb"
+tp5_heat$treatment <- "tp5_heat"
+tp7_amb$treatment <- "tp7_amb"
+tp7_heat$treatment <- "tp7_heat"
+```
+
+Subset by negative PCC and sig pvalue from each df 
+```{r}
+tp0_sub <- tp0 %>%
+  filter(PCC.cor < 0) %>%
+  filter(p_value < 0.05)
+
+tp5_amb_sub <- tp5_amb %>%
+  filter(PCC.cor < 0) %>%
+  filter(p_value < 0.05)
+
+tp5_heat_sub <- tp5_heat %>%
+  filter(PCC.cor < 0) %>%
+  filter(p_value < 0.05)
+
+tp7_amb_sub <- tp7_amb %>%
+  filter(PCC.cor < 0) %>%
+  filter(p_value < 0.05)
+
+tp7_heat_sub <- tp7_heat %>%
+  filter(PCC.cor < 0) %>%
+  filter(p_value < 0.05)
+
+all_data_sub <- rbind(tp0_sub, tp5_amb_sub, tp5_heat_sub, tp7_amb_sub, tp7_heat_sub)
+```
+
+Filter by sig interactions from each df
+```{r}
+tp0_filtered <- tp0 %>%
+  semi_join(all_data_sub, by = c("miRNA", "mRNA"))
+
+tp5_amb_filtered <- tp5_amb %>%
+  semi_join(all_data_sub, by = c("miRNA", "mRNA"))
+
+tp5_heat_filtered <- tp5_heat %>%
+  semi_join(all_data_sub, by = c("miRNA", "mRNA"))
+
+tp7_amb_filtered <- tp7_amb %>%
+  semi_join(all_data_sub, by = c("miRNA", "mRNA"))
+
+tp7_heat_filtered <- tp7_heat %>%
+  semi_join(all_data_sub, by = c("miRNA", "mRNA"))
+
+all_data_filtered <- rbind(tp0_filtered, tp5_amb_filtered, tp5_heat_filtered, tp7_amb_filtered, tp7_heat_filtered)
+
+all_data_filtered <- all_data_filtered %>%
+  mutate(sig = ifelse(p_value < 0.05, "TRUE", "FALSE"))
+
+ggplot(all_data_filtered, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.3) +
+  #geom_point(aes(color = sig))
+  labs(title = "Change in PCC over time/treatment")
+```
+
+Plot only a few
+```{r}
+set.seed(123)
+sample_pairs <- all_data_filtered %>%
+  distinct(miRNA, mRNA) %>%
+  sample_n(5)
+
+subset_data <- all_data_filtered %>%
+  semi_join(sample_pairs, by = c("miRNA", "mRNA"))
+
+ggplot(subset_data, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig)) +
+  labs(title = "Random sample of 10 pairs")
+
+summary_data <- all_data_filtered %>%
+  group_by(treatment) %>%
+  dplyr::summarize(mean_PCC = mean(PCC.cor, na.rm = TRUE),
+            sd_PCC = sd(PCC.cor, na.rm = TRUE),
+            .groups = "drop")
+
+# Summary 
+ggplot(summary_data, aes(x = treatment, y = mean_PCC)) +
+  geom_line(group = 1) +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean_PCC - sd_PCC, ymax = mean_PCC + sd_PCC), width = 0.2) +
+  labs(title = "Mean PCC over time ± SD")
+```
+
+How can we filter this down? 
+
+Filter by miRNAs of interest (ie miR-100 = Cluster_2003)
+```{r}
+filtered_data <- all_data_filtered %>%
+  filter(miRNA %in% c("Cluster_2003"))
+
+ggplot(filtered_data, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Filter by energy (ie interaction energy)
+```{r}
+filtered_data <- all_data_filtered %>%
+  filter(energy <= -30)
+
+ggplot(filtered_data, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Filter by pairing features 
+```{r}
+filtered_data <- all_data_filtered %>%
+  filter(as.numeric(gsub("%", "", query_similar)) >= 90,
+         as.numeric(gsub("%", "", subject_similar)) >= 90) %>%
+  filter(total_bp_shared >15)
+
+ggplot(filtered_data, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Filter by annotations of interest. Read in annot file 
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+```
+
+Merge annot df with `all_data_filtered`
+```{r}
+all_data_filtered_annot <- all_data_filtered %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+
+# Remove uncharacterized genes 
+all_data_filtered_annot <- all_data_filtered_annot %>%
+  filter(!grepl("uncharacterized", Swiss.Prot_Description, ignore.case = TRUE) &
+         !grepl("uncharacterized", NCBI_Description, ignore.case = TRUE))
+```
+
+Filter by keywords (stress)
+```{r}
+#stress_keywords <- c("heat shock", "stress", "chaperone", "oxidative", "MAPK", "signaling")
+stress_keywords <- c("ROS", "stress")
+
+stress_data_filtered_annot <- all_data_filtered_annot %>%
+  filter(grepl(paste(stress_keywords, collapse="|"), Swiss.Prot_Description, ignore.case = TRUE) |
+         grepl(paste(stress_keywords, collapse="|"), NCBI_Description, ignore.case = TRUE))
+
+ggplot(stress_data_filtered_annot, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Filter by keywords (transport)
+```{r}
+transport_keywords <- c("transport", "translocation", "transporter")
+
+transport_data_filtered_annot <- all_data_filtered_annot %>%
+  filter(grepl(paste(transport_keywords, collapse="|"), Swiss.Prot_Description, ignore.case = TRUE) |
+         grepl(paste(transport_keywords, collapse="|"), NCBI_Description, ignore.case = TRUE))
+
+ggplot(transport_data_filtered_annot, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Filter by GO terms 
+```{r}
+go_term <- c("GO:0030198")
+
+go_data_filtered_annot <- all_data_filtered_annot %>%
+  filter(grepl(paste(go_term, collapse="|"), GO_Swiss.Prot, ignore.case = TRUE))
+
+ggplot(go_data_filtered_annot, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Read in and filter by DEGs
+```{r}
+degs <- read_csv("../output/Molecular/mRNA/Unique_DEGs.csv")
+colnames(degs)[1] <- "gene_id"
+
+# Filter
+all_data_filtered_annot_deg <- all_data_filtered_annot %>%
+  inner_join(degs, by = c("mRNA" = "gene_id"))
+
+ggplot(all_data_filtered_annot_deg, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Read in and filter by DEMs
+```{r}
+dems <- read_csv("../output/Molecular/smRNA/shortstack/Unique_DEMs.csv")
+colnames(dems)[1] <- "miRNA_name"
+dems <- dems %>%
+  mutate(miRNA_name = str_replace(miRNA_name, "^([^_]*_[^_]*)_.*$", "\\1"))
+
+# Filter
+all_data_filtered_annot_dem <- all_data_filtered_annot_deg %>%
+  inner_join(dems, by = c("miRNA" = "miRNA_name")) 
+
+ggplot(all_data_filtered_annot_dem, aes(x = treatment, y = PCC.cor, group = interaction(miRNA, mRNA))) +
+  geom_line(alpha = 0.8) +
+  geom_point(aes(color = sig))
+```
+
+Look at comparisons for tp0vtp5 amb, etc 
+
+### TP0 v TP5 amb
+
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp0_unique <- tp0 %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>% 
+  ungroup()
+
+tp5_amb_unique <- tp5_amb %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp0_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor) %>%
+  inner_join(tp5_amb_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp5_amb = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp0 to tp5 amb 
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp0) != sign(PCC.cor_tp5_amb)) %>%
+  filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp0) > 0.7) %>%
+  filter(abs(PCC.cor_tp5_amb) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+This represents the mRNA-miRNA pairs that have an abs(PCC.cor) > 0.7, switched correlation direction from tp0 to tp5 amb, and are differentially expressed between tp0 and tp5 amb. 
+
+Join with annot
+```{r}
+comparison_df_degs_annot <- comparison_df_degs %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Select mRNAs of interest from counts 
+```{r}
+mrna_interest <- unique(comparison_df_degs$mRNA)
+
+# Subset TP0 and TP5 amb samples from counts, calculate mean + se, and subset by mRNAs of interst 
+mrna_tp0_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mrna_tp5_amb_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp5_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP5 Ambient")
+```
+
+Join mrna summary dfs and plot 
+```{r}
+mrna_summary <- rbind(mrna_tp0_summary, mrna_tp5_amb_summary)
+
+ggplot(mrna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Select miRNAs of interest from counts 
+```{r}
+mirna_interest <- unique(comparison_df_degs$miRNA)
+
+# Subset TP0 and TP5 amb samples from counts, calculate mean + se, and subset by miRNAs of interst 
+mirna_tp0_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mirna_tp5_amb_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp5_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP5 Ambient")
+```
+
+Join mirna summary dfs and plot 
+```{r}
+mirna_summary <- rbind(mirna_tp0_summary, mirna_tp5_amb_summary)
+
+ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean miRNA Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Add inference label, which says if miRNA repression is predicted at a specific time point or not
+```{r}
+comparison_df_degs_annot <- comparison_df_degs_annot %>%
+  mutate(miRNA_repression_inferred = case_when(
+    PCC.cor_tp0 >  0 & PCC.cor_tp5_amb <  0 & log2FoldChange > 0  ~ "miRNA repression of mRNA at TP5 ambient",
+    PCC.cor_tp0 <  0 & PCC.cor_tp5_amb >  0 & log2FoldChange < 0  ~ "miRNA repression of mRNA at TP0",
+    PCC.cor_tp0 >  0 & PCC.cor_tp5_amb <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP5 ambient, regardless of correlation",
+    PCC.cor_tp0 <  0 & PCC.cor_tp5_amb >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of correlation",
+
+    TRUE ~ "no inference"
+  ))
+```
+
+Plot PCC, LFC and inference as heatmap
+```{r}
+# 1. Create matrices again if needed
+pcc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, PCC.cor_tp0, PCC.cor_tp5_amb) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+colnames(pcc_mat) <- c("TP0", "TP5 Ambient")
+
+lfc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, log2FoldChange) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+
+# 2. Define color functions
+pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("#762a83", "white", "#1b7837"))
+lfc_col_fun <- colorRamp2(c(-5, 0, 2), c("blue", "white", "red"))
+
+# 3. Row annotation: repression inference
+row_annot <- rowAnnotation(
+  Inference = comparison_df_degs_annot$miRNA_repression_inferred,
+  col = list(Inference = c(
+    "miRNA repression of mRNA at TP5 ambient" = "#7F58AF",
+    "miRNA repression of mRNA at TP0" = "#64C5EB",
+    "High mRNA expression at TP5 ambient, regardless of correlation" = "#E84D8A",
+    "High mRNA expression at TP0, regardless of correlation" = "#FEB326",
+    "no inference" = "grey85"
+  )),
+  show_annotation_name = TRUE
+)
+
+# 4. Make heatmaps
+ht1 <- Heatmap(
+  pcc_mat,
+  name = "PCC",
+  col = pcc_col_fun,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_title = "Correlation (PCC)",
+  show_row_names = TRUE,
+  row_names_side = "left",
+  row_names_gp = gpar(fontsize = 8)
+); ht1
+
+ht2 <- Heatmap(
+  lfc_mat,
+  name = "mRNA log2FC",
+  col = lfc_col_fun,
+  cluster_rows = FALSE,
+  show_row_names = FALSE,
+  column_title = "mRNA log2 Fold Change"
+); ht2
+
+# 5. Draw with annotation
+draw(ht1 + ht2 + row_annot, 
+     heatmap_legend_side = "right", 
+     annotation_legend_side = "right")
+
+# Save 
+png("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_amb_pcc_lfc_heatmap.png", width = 5000, height = 3000, res = 300)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+
+pdf("../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_amb_pcc_lfc_heatmap.pdf", width = 20, height = 15)
+draw(ht1 + ht2 + row_annot,
+     heatmap_legend_side = "right",
+     annotation_legend_side = "right")
+dev.off()
+```
+
+### TP0 v TP5 heat
+
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp0_unique <- tp0 %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>% 
+  ungroup()
+
+tp5_heat_unique <- tp5_heat %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp0_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor) %>%
+  inner_join(tp5_heat_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp5_heat = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp0 to tp5 heat
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp0) != sign(PCC.cor_tp5_heat)) %>%
+  filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp0) > 0.7) %>%
+  filter(abs(PCC.cor_tp5_heat) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+This represents the mRNA-miRNA pairs that have an abs(PCC.cor) > 0.7, switched correlation direction from tp0 to tp5 heat, and are differentially expressed between tp0 and tp5 heat 
+
+Join with annot
+```{r}
+comparison_df_degs_annot <- comparison_df_degs %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Select mRNAs of interest from counts 
+```{r}
+mrna_interest <- unique(comparison_df_degs$mRNA)
+
+# Subset TP0 and TP5 heat samples from counts, calculate mean + se, and subset by mRNAs of interst 
+mrna_tp0_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mrna_tp5_heat_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp5_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP5 Heat")
+```
+
+Join mrna summary dfs and plot 
+```{r}
+mrna_summary <- rbind(mrna_tp0_summary, mrna_tp5_heat_summary)
+
+ggplot(mrna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Select miRNAs of interest from counts 
+```{r}
+mirna_interest <- unique(comparison_df_degs$miRNA)
+
+# Subset TP0 and TP5 heat samples from counts, calculate mean + se, and subset by miRNAs of interst 
+mirna_tp0_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mirna_tp5_heat_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp5_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP5 Heat")
+```
+
+Join mirna summary dfs and plot 
+```{r}
+mirna_summary <- rbind(mirna_tp0_summary, mirna_tp5_heat_summary)
+
+ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean miRNA Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+### TP5 amb v TP5 heat
+
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp5_amb_unique <- tp5_amb %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+tp5_heat_unique <- tp5_heat %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp5_amb_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp5_amb = PCC.cor) %>%
+  inner_join(tp5_heat_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp5_heat = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp5 amb to tp5 heat
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp5_amb) != sign(PCC.cor_tp5_heat)) %>%
+  filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp5_amb) > 0.7) %>%
+  filter(abs(PCC.cor_tp5_heat) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+This represents the mRNA-miRNA pairs that have an abs(PCC.cor) > 0.7, switched correlation direction from tp5 amb to tp5 heat, and are differentially expressed between tp5 amb and tp5 heat 
+
+Join with annot
+```{r}
+comparison_df_degs_annot <- comparison_df_degs %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Select mRNAs of interest from counts 
+```{r}
+mrna_interest <- unique(comparison_df_degs$mRNA)
+
+# Subset TP5 amb and TP5 heat samples from counts, calculate mean + se, and subset by mRNAs of interst 
+mrna_tp5_amb_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp5_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP5 Ambient")
+
+mrna_tp5_heat_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp5_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP5 Heat")
+```
+
+Join mrna summary dfs and plot 
+```{r}
+mrna_summary <- rbind(mrna_tp5_amb_summary, mrna_tp5_heat_summary)
+
+ggplot(mrna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Select miRNAs of interest from counts 
+```{r}
+mirna_interest <- unique(comparison_df_degs$miRNA)
+
+# Subset TP5 amb and TP5 heat samples from counts, calculate mean + se, and subset by miRNAs of interst 
+mirna_tp5_amb_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp5_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP5 Ambient")
+
+mirna_tp5_heat_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp5_heat_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP5 Heat")
+```
+
+Join mirna summary dfs and plot 
+```{r}
+mirna_summary <- rbind(mirna_tp5_amb_summary, mirna_tp5_heat_summary)
+
+ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean miRNA Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+### TP0 v TP7 amb
+
+There are some duplicate mRNA-miRNA pairs due to an miRNA binding multiple sites on the mRNA. Remove dups and bind 
+```{r}
+tp0_unique <- tp0 %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>% 
+  ungroup()
+
+tp7_amb_unique <- tp7_amb %>%
+  group_by(miRNA, mRNA) %>%
+  slice_max(abs(PCC.cor), n = 1, with_ties = FALSE) %>%
+  ungroup()
+
+comparison_df <- tp0_unique %>%
+  dplyr::select(miRNA, mRNA, PCC.cor_tp0 = PCC.cor) %>%
+  inner_join(tp7_amb_unique %>% dplyr::select(miRNA, mRNA, PCC.cor_tp7_amb = PCC.cor), by = c("miRNA", "mRNA"))
+```
+
+Look for PCC sign switch from tp0 to tp5 amb 
+```{r}
+comparison_df <- comparison_df %>%
+  mutate(sign_switch = sign(PCC.cor_tp0) != sign(PCC.cor_tp7_amb)) %>%
+  filter(sign_switch == "TRUE") %>%
+  filter(abs(PCC.cor_tp0) > 0.7) %>%
+  filter(abs(PCC.cor_tp7_amb) > 0.7) 
+```
+
+Read in DEGs
+```{r}
+degs <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")[,1:7]
+colnames(degs)[1] <- "mRNA"
+```
+
+Join with comparison df 
+```{r}
+comparison_df_degs <- comparison_df %>%
+  inner_join(degs, by = "mRNA")
+```
+
+This represents the mRNA-miRNA pairs that have an abs(PCC.cor) > 0.7, switched correlation direction from tp0 to tp7 amb, and are differentially expressed between tp0 and tp7 amb. 
+
+Join with annot
+```{r}
+comparison_df_degs_annot <- comparison_df_degs %>%
+  inner_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Select mRNAs of interest from counts 
+```{r}
+mrna_interest <- unique(comparison_df_degs$mRNA)
+
+# Subset TP0 and TP7 amb samples from counts, calculate mean + se, and subset by mRNAs of interst 
+mrna_tp0_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mrna_tp7_amb_summary <- mrna_counts %>%
+  dplyr::select(all_of(tp7_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mrna_interest) %>%
+  mutate(Timepoint = "TP7 Ambient")
+```
+
+Join mrna summary dfs and plot 
+```{r}
+mrna_summary <- rbind(mrna_tp0_summary, mrna_tp7_amb_summary)
+
+ggplot(mrna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Select miRNAs of interest from counts 
+```{r}
+mirna_interest <- unique(comparison_df_degs$miRNA)
+
+# Subset TP0 and TP7 amb samples from counts, calculate mean + se, and subset by miRNAs of interst 
+mirna_tp0_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp0_acc_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP0")
+
+mirna_tp7_amb_summary <- mirna_counts %>%
+  dplyr::select(all_of(tp7_amb_list)) %>%
+  rownames_to_column("gene_id") %>%
+  pivot_longer(-gene_id, names_to = "sample", values_to = "count") %>%
+  group_by(gene_id) %>%
+  summarise(
+    mean = mean(count, na.rm = TRUE),
+    se = sd(count, na.rm = TRUE) / sqrt(sum(!is.na(count))),
+    .groups = "drop"
+  ) %>%
+  filter(gene_id %in% mirna_interest) %>%
+  mutate(Timepoint = "TP7 Ambient")
+```
+
+Join mirna summary dfs and plot 
+```{r}
+mirna_summary <- rbind(mirna_tp0_summary, mirna_tp7_amb_summary)
+
+ggplot(mirna_summary, aes(x = Timepoint, y = mean)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~ gene_id, scales = "free_y") +
+  theme_bw() +
+  labs(
+    x = "Timepoint",
+    y = "Mean miRNA Expression") +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Add inference label, which says if miRNA repression is predicted at a specific time point or not
+```{r}
+comparison_df_degs_annot <- comparison_df_degs_annot %>%
+  mutate(miRNA_repression_inferred = case_when(
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange > 0  ~ "miRNA repression at TP7 ambient",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange < 0  ~ "miRNA repression at TP0",
+    PCC.cor_tp0 >  0 & PCC.cor_tp7_amb <  0 & log2FoldChange < 0  ~ "High mRNA expression at TP7 ambient, regardless of repression",
+    PCC.cor_tp0 <  0 & PCC.cor_tp7_amb >  0 & log2FoldChange > 0  ~ "High mRNA expression at TP0, regardless of repression",
+
+    TRUE ~ "no inference"
+  ))
+```
+
+Plot PCC, LFC and inference as heatmap
+```{r}
+# 1. Create matrices again if needed
+pcc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, PCC.cor_tp0, PCC.cor_tp7_amb) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+colnames(pcc_mat) <- c("TP0", "TP7 Ambient")
+
+lfc_mat <- comparison_df_degs_annot %>%
+  mutate(pair = paste(miRNA, mRNA, sep = " ~ ")) %>%
+  dplyr::select(pair, log2FoldChange) %>%
+  column_to_rownames("pair") %>%
+  as.matrix()
+
+# 2. Define color functions
+pcc_col_fun <- colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
+lfc_col_fun <- colorRamp2(c(-5, 0, 5), c("purple", "white", "orange"))
+
+# 3. Row annotation: repression inference
+row_annot <- rowAnnotation(
+  Inference = comparison_df_degs_annot$miRNA_repression_inferred,
+  col = list(Inference = c(
+    "miRNA repression at TP7 ambient" = "#7F58AF",
+    "miRNA repression at TP0" = "#64C5EB",
+    "High mRNA expression at TP7 ambient, regardless of repression" = "#E84D8A",
+    "High mRNA expression at TP0, regardless of repression" = "#FEB326",
+    "no inference" = "grey85"
+  )),
+  show_annotation_name = TRUE
+)
+
+# 4. Make heatmaps
+ht1 <- Heatmap(
+  pcc_mat,
+  name = "PCC",
+  col = pcc_col_fun,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  column_title = "Correlation (PCC)",
+  show_row_names = TRUE,
+  row_names_side = "left",
+  row_names_gp = gpar(fontsize = 6)
+); ht1
+
+ht2 <- Heatmap(
+  lfc_mat,
+  name = "mRNA log2FC",
+  col = lfc_col_fun,
+  cluster_rows = FALSE,
+  show_row_names = FALSE,
+  column_title = "mRNA log2 Fold Change"
+); ht2
+
+# 5. Draw with annotation
+draw(ht1 + ht2 + row_annot, 
+     heatmap_legend_side = "right", 
+     annotation_legend_side = "right")
+```
+
+

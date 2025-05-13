@@ -1,11 +1,11 @@
 ---
-title: "WGCNA mRNA"
+title: "WGCNA miRNA"
 author: "Jill Ashey"
-date: "2024-04-21"
+date: "2025-05-05"
 output: html_document
 ---
 
-WGCNA analysis of mRNA data for AST 2021 project. I'm using Ariana's [code](https://github.com/AHuffmyer/EarlyLifeHistory_Energetics/blob/master/Mcap2020/Scripts/TagSeq/Genome_V3/1_WGCNA_Mcap_V3.Rmd) as a reference. 
+WGCNA analysis of miRNA data for AST 2021 project. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -54,19 +54,37 @@ library("factoextra")
 library("dplyr")
 ```
 
-Read in filtered counts
+Read in data and select only counts data 
 ```{r}
-filt_counts <- read_csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
 
-# Remove AST-1105
-filt_counts_clean <- filt_counts %>%
-  rename(gene_id = `...1`) %>%  # rename the first column
-  select(-`AST-1105`) %>%
-  as.data.frame()
+Select only miRNAs with a Y in MIRNA column 
+```{r}
+counts <- counts %>%
+  dplyr::filter(MIRNA == "Y")
+```
 
-# Set gene_id as rownames
-rownames(filt_counts_clean) <- filt_counts_clean$gene_id
-filt_counts_clean <- filt_counts_clean[, -1]  # remove first column
+Should be 51 miRNAs.
+
+Combine Name and Coords columns for miRNA name. Remove MIRNA column 
+```{r}
+counts <- counts %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+```
+
+Make miRNA_name the row names and remove it as a column 
+```{r}
+rownames(counts) <- counts$miRNA_name
+counts <- counts %>%
+  dplyr::select(-miRNA_name)
+```
+
+Remove extra info from column names
+```{r}
+colnames(counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(counts))
+colnames(counts) <- gsub("AST.", "AST-", colnames(counts))
 ```
 
 Read in metadata
@@ -83,11 +101,11 @@ meta_clean <- meta %>%
 
 Reorder columns in filtered counts matrix so that it matches the metadata
 ```{r}
-filt_counts_clean <- filt_counts_clean[, meta_clean$ID]
+counts <- counts[, meta_clean$ID]
 
 # Sanity check! 
-meta_clean$ID %in% colnames(filt_counts_clean) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
-all(rownames(meta_clean$ID) == colnames(filt_counts_clean)) #are they the same in the same order? Should be TRUE
+meta_clean$ID %in% colnames(counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta_clean$ID) == colnames(counts)) #are they the same in the same order? Should be TRUE
 ```
 
 Merge Treatment and Timepoint into a single column and set levels of factor. 
@@ -98,7 +116,7 @@ meta_clean$Condition <- factor(meta_clean$Condition, levels = c("TP0_Ambient", "
 
 Construct DESeq data set
 ```{r}
-gdds <- DESeqDataSetFromMatrix(countData = filt_counts_clean, colData = meta_clean, design = ~Condition)
+gdds <- DESeqDataSetFromMatrix(countData = counts, colData = meta_clean, design = ~Condition)
 ```
 
 First we are going to log-transform the data using a variance stabilizing transforamtion (VST). This is only for visualization purposes. Essentially, this is roughly similar to putting the data on the log2 scale. It will deal with the sampling variability of low counts by calculating within-group variability (if blind=FALSE). Importantly, it does not use the design to remove variation in the data, and so can be used to examine if there may be any variability do to technical factors such as extraction batch effects.
@@ -111,7 +129,7 @@ print(sizeFactors(SF.gdds)) #View size factors
 
 Size factors are all less than 4, so we can use VST!
 ```{r}
-gvst <- vst(gdds, blind=FALSE) #apply a variance stabilizing transforamtion to minimize effects of small counts and normalize wrt library size
+gvst <- varianceStabilizingTransformation(gdds, blind=FALSE) #apply a variance stabilizing transforamtion to minimize effects of small counts and normalize wrt library size
 head(assay(gvst), 3) #view transformed gene count data
 ```
 
@@ -146,15 +164,15 @@ Network construction and consensus module detection
 First choose a soft-threshold power. The soft thresholding power (β) is the number to which the co-expression similarity is raised to calculate adjacency. The function pickSoftThreshold performs a network topology analysis. The user chooses a set of candidate powers, however the default parameters are suitable values.
 ```{r, message=FALSE, warning=FALSE}
 ##Soft threshold
-dim(datExpr) #  19 28720
+dim(datExpr) #  19 51
 # Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 # Call the network topology analysis function
 
 #the below takes a long time to run, so is commented out and the pre-run results are loaded in below. I need to save it to my desktop because it is too large to push to github. Instead, it will go on OSF
 sft <- pickSoftThreshold(datExpr, powerVector = powers, verbose = 5) #...wait for this to finish
-save(sft, file = "~/Desktop/PutnamLab/Astrangia/Molecular/sft_mRNA.RData")
-load("~/Desktop/PutnamLab/Astrangia/Molecular/sft_mRNA.RData")
+save(sft, file = "~/Desktop/PutnamLab/Astrangia/Molecular/sft_miRNA.RData")
+load("~/Desktop/PutnamLab/Astrangia/Molecular/sft_miRNA.RData")
 
 # pickSoftThreshold 
 #  performs the analysis of network topology and aids the
@@ -164,7 +182,7 @@ load("~/Desktop/PutnamLab/Astrangia/Molecular/sft_mRNA.RData")
 
 sizeGrWindow(9, 5) # set window size 
 # png to output 
-png("../output/Molecular/mRNA/WGCNA/sft_mRNA.png", 1000, 1000, pointsize=20)
+png("../output/Molecular/smRNA/shortstack/WGCNA/sft_miRNA.png", 1000, 1000, pointsize=20)
 par(mfrow = c(1,2));
 cex1 = 0.9;
 # # Scale-free topology fit index as a function of the soft-thresholding power
@@ -201,8 +219,8 @@ adjacency_sign = adjacency(datExpr, power = softPower, type="signed")  #Calculat
 ```{r}
 #the below takes a long time to run, so is commented out and the pre-run results are loaded in below
 TOM_sign = TOMsimilarity(adjacency_sign, TOMType="signed") #Translate adjacency into topological overlap matrix
-save(TOM_sign, file = "~/Desktop/PutnamLab/Astrangia/Molecular/TOM_sign_mRNA.Rdata")
-load("~/Desktop/PutnamLab/Astrangia/Molecular/TOM_sign_mRNA.Rdata")
+save(TOM_sign, file = "~/Desktop/PutnamLab/Astrangia/Molecular/TOM_sign_miRNA.Rdata")
+load("~/Desktop/PutnamLab/Astrangia/Molecular/TOM_sign_miRNA.Rdata")
 
 dissTOM_sign = 1-TOM_sign
 ```
@@ -225,7 +243,7 @@ plot(geneTree_sign, xlab="", sub="", main = "Gene clustering on TOM-based dissim
 
 ```{r}
 #Module identification is essentially cutting the branches off the tree in the dendrogram above. We like large modules, so we set the **minimum module size** relatively high, so we will set the minimum size at 30. 
-minModuleSize = 30; # set this for the subseqent call...
+minModuleSize = 2; # set this for the subseqent call...
 
 dynamicMods_sign = cutreeDynamic(dendro = geneTree_sign, distM = dissTOM_sign,
                             deepSplit = 1, pamRespectsDendro = FALSE,
@@ -247,7 +265,7 @@ plotDendroAndColors(geneTree_sign, dynamicColors_sign, "Dynamic Tree Cut - SIGNE
                     main = "Gene dendrogram and module colors 'SIGNED'")
 
 sizeGrWindow(8,6)
-png("../output/Molecular/mRNA/WGCNA/GeneDendrogram_mRNA.png", 1000, 1000, pointsize=20)
+png("../output/Molecular/smRNA/shortstack/WGCNA/GeneDendrogram_miRNA.png", 1000, 1000, pointsize=20)
 plotDendroAndColors(geneTree_sign, dynamicColors_sign, "Dynamic Tree Cut - SIGNED",
                     dendroLabels = FALSE, hang = 0.03,
                     addGuide = TRUE, guideHang = 0.05,
@@ -275,7 +293,7 @@ MEDiss = 1-cor(MEs, use = "pairwise.complete.obs");
 METree = hclust(as.dist(MEDiss), method = "average");
 # Plot the result
 sizeGrWindow(7, 6)
-png("../output/Molecular/mRNA/WGCNA/ClusterEigengenes_mRNA.png", 1000, 1000, pointsize=20)
+png("../output/Molecular/smRNA/shortstack/WGCNA/ClusterEigengenes_mRNA.png", 1000, 1000, pointsize=20)
 plot(METree, main = "Clustering of module eigengenes - SIGNED (dissimilarity calc = MEDiss = 1-cor(MEs))",
      xlab = "", sub = "")
 MEDissThres = 0.15 
@@ -284,7 +302,6 @@ dev.off()
 ```
 
 ###  Step 7: Specify the cut line for the dendrogram (module) - Calc MODULE EIGENGENES (mergeMEs)
-#### We had 37 modules before merging, and 30 modules after merging
 
 ```{r}
 MEDissThres = 0.15 # **Merge modules with >85% eigengene similarity.** Most studies use somewhere between 80-90% similarity. I will use 85% similarity as my merging threshold.
@@ -309,7 +326,7 @@ plot(METree2, main = "Clustering of module eigengenes - SIGNED (dissimilarity ca
      xlab = "", sub = "")
 
 sizeGrWindow(7, 6)
-png("../output/Molecular/mRNA/WGCNA/ClusterEigengenes_merged_mRNA.png", 1000, 1000, pointsize=20)
+png("../output/Molecular/smRNA/shortstack/WGCNA/ClusterEigengenes_merged_miRNA.png", 1000, 1000, pointsize=20)
 plot(METree2, main = "Clustering of module eigengenes - SIGNED (dissimilarity calc = MEDiss = 1-cor(MEs))",
      xlab = "", sub = "")
 dev.off()
@@ -325,7 +342,7 @@ plotDendroAndColors(geneTree_sign, cbind(dynamicColors_sign, mergedColors),
 
 sizeGrWindow(12, 9)
 
-png("../output/Molecular/mRNA/WGCNA/ClusterDendrogram_signed_mRNA.png", 1000, 1000, pointsize=20)
+png("../output/Molecular/smRNA/shortstack/WGCNA/ClusterDendrogram_signed_mRNA.png", 1000, 1000, pointsize=20)
 plotDendroAndColors(geneTree_sign, cbind(dynamicColors_sign, mergedColors),
                     c("Dynamic Tree Cut", "Merged dynamic"),
                     dendroLabels = FALSE, hang = 0.03,
@@ -342,22 +359,20 @@ colorOrder = c("grey", standardColors(50));
 moduleLabels = match(moduleColors, colorOrder)-1;
 MEs = mergedMEs;
 # Save module colors and labels for use in subsequent parts
-save(MEs, moduleLabels, moduleColors, geneTree_sign, file = "~/Desktop/PutnamLab/Astrangia/Molecular/networkConstruction-stepByStep_mRNA.RData")
-load("~/Desktop/PutnamLab/Astrangia/Molecular/networkConstruction-stepByStep_mRNA.RData")
+save(MEs, moduleLabels, moduleColors, geneTree_sign, file = "~/Desktop/PutnamLab/Astrangia/Molecular/networkConstruction-stepByStep_miRNA.RData")
 # write csv - save the module eigengenes
-write.csv(MEs, file = "../output/Molecular/mRNA/WGCNA/WGCNA_ModuleEigengenes_mRNA.csv")
+write.csv(MEs, file = "../output/Molecular/smRNA/shortstack/WGCNA/WGCNA_ModuleEigengenes_miRNA.csv")
 table(mergedColors)
 ```
 
-Join `moduleColors` and `filt_counts_clean`
+Join `mergedColors` and `filt_counts_clean`
 ```{r}
-filt_counts_clean$Gene <- rownames(filt_counts_clean)
-filt_counts_clean$Module <- moduleColors
-write.csv(filt_counts_clean, file = "../output/Molecular/mRNA/WGCNA/mRNA_modules.csv")
+counts$Gene <- rownames(counts)
+counts$Module <- mergedColors
+write.csv(counts, file = "../output/Molecular/smRNA/shortstack/WGCNA/miRNA_modules.csv")
 
 # Double check the numbers match above 
-module_counts <- table(filt_counts_clean$Module)
+module_counts <- table(counts$Module)
 module_counts
 ```
-
 

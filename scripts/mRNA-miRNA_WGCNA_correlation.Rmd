@@ -1,0 +1,352 @@
+---
+title: "mRNA-miRNA WGCNA correlation"
+author: "Jill Ashey"
+date: "2025-05-05"
+output: html_document
+---
+
+Using modules generated from mRNA and miRNA WGCNA to predict correlations between the modules. Then look at putative interactions 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ComplexHeatmap)
+library(circlize)
+library(tidyverse)
+library(igraph)
+library(ggraph)
+```
+
+Read in mRNA ME data (sample level)
+```{r}
+MEs_mRNA <- read.csv("../output/Molecular/mRNA/WGCNA/WGCNA_ModuleEigengenes_mRNA.csv")
+rownames(MEs_mRNA) <- MEs_mRNA$X
+MEs_mRNA$X <- NULL  # Remove the sample name column
+```
+
+Read in miRNA ME data (sample level)
+```{r}
+MEs_miRNA <- read.csv("../output/Molecular/smRNA/shortstack/WGCNA/WGCNA_ModuleEigengenes_miRNA.csv")
+rownames(MEs_miRNA) <- MEs_miRNA$X
+MEs_miRNA$X <- NULL  # Remove the sample name column
+```
+
+Correlate miRNA modules with mRNA modules
+```{r}
+cor_matrix <- cor(MEs_miRNA, MEs_mRNA, use = "pairwise.complete.obs")
+
+pheatmap(cor_matrix, cluster_rows = TRUE, cluster_cols = TRUE)
+```
+
+Calculate cor and pvalues and plot
+```{r}
+# Calculate cor and pvalues
+# Initialize empty matrices for p-values
+cor_matrix <- cor(MEs_miRNA, MEs_mRNA, use = "pairwise.complete.obs")
+p_matrix <- matrix(NA, nrow = nrow(cor_matrix), ncol = ncol(cor_matrix))
+rownames(p_matrix) <- rownames(cor_matrix)
+colnames(p_matrix) <- colnames(cor_matrix)
+
+# Calculate p-values for each pair
+for (i in 1:nrow(cor_matrix)) {
+  for (j in 1:ncol(cor_matrix)) {
+    test <- cor.test(MEs_miRNA[, i], MEs_mRNA[, j], use = "pairwise.complete.obs")
+    p_matrix[i, j] <- test$p.value
+  }
+}
+
+# Format r and p into a string like "r = 0.85\np = 0.01"
+text_matrix <- matrix(NA, nrow = nrow(cor_matrix), ncol = ncol(cor_matrix))
+for (i in 1:nrow(cor_matrix)) {
+  for (j in 1:ncol(cor_matrix)) {
+    text_matrix[i, j] <- sprintf("r = %.2f\np = %.3f", cor_matrix[i, j], p_matrix[i, j])
+  }
+}
+
+library(pheatmap)
+p <- pheatmap(cor_matrix,
+              cluster_rows = TRUE,
+              cluster_cols = TRUE,
+              display_numbers = text_matrix,
+              number_color = "black")
+
+# Save manually 
+pdf("../output/Molecular/interactions/WGCNA/mRNA_miRNA_module_cor.pdf", width = 20, height = 20)
+print(p)  # must print the object inside the pdf() context
+dev.off()
+png("../output/Molecular/interactions/WGCNA/mRNA_miRNA_module_cor.png", width = 2000, height = 2000)
+print(p)
+dev.off()
+```
+
+Plot with complexHeatmap
+```{r}
+# Define which cells are significant
+sig_matrix <- p_matrix < 0.05
+
+# Define a function to draw borders
+border_fun <- function(j, i, x, y, width, height, fill) {
+  grid.rect(x, y, width, height, 
+            gp = gpar(col = ifelse(sig_matrix[i,j], "black", NA), 
+                      lwd = ifelse(sig_matrix[i,j], 2, 1), 
+                      fill = NA))
+}
+
+modules_heatmap <- Heatmap(
+  cor_matrix,
+  cell_fun = border_fun,
+  rect_gp = gpar(col = NA),
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  width = unit(20, "cm"),
+  height = unit(20, "cm"),
+  heatmap_legend_param = list(
+    title = "Correlation")); modules_heatmap
+# Save manually 
+pdf("../output/Molecular/interactions/WGCNA/mRNA_miRNA_module_cor_clean.pdf", width = 25, height = 20)
+print(modules_heatmap)  # must print the object inside the pdf() context
+dev.off()
+png("../output/Molecular/interactions/WGCNA/mRNA_miRNA_module_cor_clean.png", width = 20, height = 20)
+print(modules_heatmap)
+dev.off()
+```
+
+Read in genes and miRNAs with module assignments
+```{r}
+# mRNA
+module_genes <- read.csv("../output/Molecular/mRNA/WGCNA/mRNA_modules.csv")
+colnames(module_genes)[colnames(module_genes) == "X"] <- "mRNA"
+
+# miRNA
+module_miRNA <- read.csv("../output/Molecular/smRNA/shortstack/WGCNA/miRNA_modules.csv")
+colnames(module_miRNA)[colnames(module_miRNA) == "X"] <- "miRNA"
+module_miRNA$miRNA <- sub("^(([^_]*_[^_]*))_.*", "\\1", module_miRNA$miRNA)
+```
+
+Read in miranda data 
+```{r}
+miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
+miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
+miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_data)
+```
+
+Merge the mRNAs and miRNAs to see if they are present in modules. 
+```{r}
+miranda_data_mRNA <- miranda_data %>%
+  left_join(module_genes, by = "mRNA")
+
+miranda_data_mRNA_miRNA <- miranda_data_mRNA %>%
+  left_join(module_miRNA, by = "miRNA") %>%
+  na.omit()
+
+# Remove excess cols 
+miranda_data_mRNA_miRNA <- miranda_data_mRNA_miRNA %>%
+  select(-starts_with("AST")) %>%
+  select(-starts_with("Gene")) %>%
+  rename(mrna_module = Module.x, mirna_module = Module.y)
+```
+
+Make cor and pvalue dfs 
+```{r}
+# Melt the correlation matrix
+cor_df <- reshape2::melt(cor_matrix)
+colnames(cor_df) <- c("miRNA_module", "mRNA_module", "cor_module")
+
+# Melt the pvalue matrix
+p_df <- reshape2::melt(p_matrix)
+colnames(p_df) <- c("miRNA_module", "mRNA_module", "p_value_module")
+
+# Merge dfs 
+cor_p_df <- merge(cor_df, p_df, by = c("miRNA_module", "mRNA_module"))
+
+# Remove ME from module names 
+cor_p_df$miRNA_module <- gsub("ME", "", cor_p_df$miRNA_module)
+cor_p_df$mRNA_module <- gsub("ME", "", cor_p_df$mRNA_module)
+```
+
+Merge miranda data and cor/pvalue df 
+```{r}
+merged_data <- left_join(
+  miranda_data_mRNA_miRNA,
+  cor_p_df,
+  by = c("mirna_module" = "miRNA_module", "mrna_module" = "mRNA_module")
+)
+```
+
+Read in PCC data
+```{r}
+pcc_df <- read.csv("../output/Molecular/interactions/miRNA_mRNA_interactions.csv")
+
+pcc_df <- pcc_df %>%
+  select(miRNA, mRNA, PCC.cor, p_value)
+```
+
+Merge with PCC data
+```{r}
+merged_data_pcc <- left_join(
+  merged_data,
+  pcc_df, 
+  by = c("mRNA", "miRNA")
+)
+write.csv(merged_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_modules_pcc_miranda.csv")
+```
+
+Plot 
+```{r}
+# Make edge list
+edges <- merged_data_pcc %>%
+  select(from = miRNA, to = mRNA, PCC.cor)
+
+# Make node list (unique miRNA/mRNA)
+nodes <- data.frame(
+  id = unique(c(merged_data_pcc$miRNA, merged_data_pcc$mRNA)),
+  # Assign module color: for miRNA use mirna_module, for mRNA use mrna_module
+  module = c(
+    merged_data_pcc$mirna_module[match(unique(merged_data_pcc$miRNA), merged_data_pcc$miRNA)],
+    merged_data_pcc$mrna_module[match(unique(merged_data_pcc$mRNA), merged_data_pcc$mRNA)]
+  ),
+  group = c(
+    rep("miRNA", length(unique(merged_data_pcc$miRNA))),
+    rep("mRNA", length(unique(merged_data_pcc$mRNA)))
+  )
+)
+
+g <- graph_from_data_frame(edges, vertices = nodes)
+
+ggraph(g, layout = "igraph", algorithm = 'kk') +
+  geom_edge_link(
+    aes(width = abs(PCC.cor), color = PCC.cor < 0),
+    alpha = 0.6) +
+  scale_edge_color_manual(
+    values = c("red", "blue"), # TRUE (negative) is blue, FALSE (positive) is red
+    labels = c("Positive", "Negative"), 
+    name = "PCC.cor sign") +
+  #geom_edge_link(aes(width = abs(PCC.cor)), alpha = 0.6, color = "grey50") +
+  geom_node_point(aes(color = module, size = 5, shape = group)) +
+  scale_edge_width_continuous(range = c(0.5, 3), name = "|PCC.cor|") +
+  scale_color_manual(values = c(
+    # Add your module colors here, e.g.:
+    # "turquoise" = "#1B9E77",
+    # "red" = "#D95F02",
+    # "yellow" = "#E6AB02",
+    # "brown" = "#A6761D",
+    # "lightcyan" = "#A6CEE3",
+    # "orange" = "#FF7F00",
+    # "grey60" = "#999999"
+    "turquoise" = "turquoise",
+    "red" = "red",
+    "yellow" = "yellow",
+    "brown" = "brown",
+    "lightcyan" = "lightcyan",
+    "orange" = "orange",
+    "grey60" = "grey60"
+    # ... add more as needed
+  ), name = "Module") +
+  scale_shape_manual(values = c(miRNA = 17, mRNA = 19)) +
+  #theme_minimal() +
+  theme(legend.position = "right") +
+  guides(size = "none") +
+  labs(
+    title = "miRNA-mRNA Interaction Network",
+    subtitle = "Node color by module, edge width by |PCC.cor|"
+  )
+
+```
+
+Filter so that pairs must have negative cor_module, p_value_module < 0.05, PCC.cor negative and PCC p_value < 0.05
+```{r}
+# How many pairs have negative cor_module, p_value_module < 0.05, PCC.cor negative and p_value < 0.05
+filtered_rows <- merged_data_pcc[
+  merged_data_pcc$cor_module < 0 &
+  merged_data_pcc$p_value_module < 0.05 &
+  merged_data_pcc$PCC.cor < 0 &
+  merged_data_pcc$p_value < 0.05,
+]
+```
+
+```{r}
+# Make edge list
+edges <- filtered_rows %>%
+  select(from = miRNA, to = mRNA, PCC.cor)
+
+# Make node list (unique miRNA/mRNA)
+nodes <- data.frame(
+  id = unique(c(filtered_rows$miRNA, filtered_rows$mRNA)),
+  # Assign module color: for miRNA use mirna_module, for mRNA use mrna_module
+  module = c(
+    filtered_rows$mirna_module[match(unique(filtered_rows$miRNA), filtered_rows$miRNA)],
+    filtered_rows$mrna_module[match(unique(filtered_rows$mRNA), filtered_rows$mRNA)]
+  ),
+  group = c(
+    rep("miRNA", length(unique(filtered_rows$miRNA))),
+    rep("mRNA", length(unique(filtered_rows$mRNA)))
+  )
+)
+
+g <- graph_from_data_frame(edges, vertices = nodes)
+
+ggraph(g, layout = "igraph", algorithm = 'kk') +
+  geom_edge_link(
+    aes(width = abs(PCC.cor), color = PCC.cor < 0),
+    alpha = 0.6) +
+  scale_edge_color_manual(
+    values = c("red", "blue"), # TRUE (negative) is blue, FALSE (positive) is red
+    labels = c("Positive", "Negative"), 
+    name = "PCC.cor sign") +
+  #geom_edge_link(aes(width = abs(PCC.cor)), alpha = 0.6, color = "grey50") +
+  geom_node_point(aes(color = module, size = 5, shape = group)) +
+  scale_edge_width_continuous(range = c(0.5, 3), name = "|PCC.cor|") +
+  scale_color_manual(values = c(
+    # Add your module colors here, e.g.:
+    # "turquoise" = "#1B9E77",
+    # "red" = "#D95F02",
+    # "yellow" = "#E6AB02",
+    # "brown" = "#A6761D",
+    # "lightcyan" = "#A6CEE3",
+    # "orange" = "#FF7F00",
+    # "grey60" = "#999999"
+    "turquoise" = "turquoise",
+    "red" = "red",
+    "yellow" = "yellow",
+    "brown" = "brown",
+    "lightcyan" = "lightcyan",
+    "orange" = "orange",
+    "grey60" = "grey60"
+    # ... add more as needed
+  ), name = "Module") +
+  scale_shape_manual(values = c(miRNA = 17, mRNA = 19)) +
+  #theme_minimal() +
+  theme(legend.position = "right") +
+  guides(size = "none") +
+  labs(
+    title = "miRNA-mRNA Interaction Network",
+    subtitle = "Node color by module, edge width by |PCC.cor|"
+  )
+```
+
+Read in annotation info
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+```
+
+Merge `filtered_rows` with annot data
+```{r}
+filtered_rows_annot <- filtered_rows %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+Merge `merged_data_pcc` with annot data
+```{r}
+merged_data_pcc_annot <- merged_data_pcc %>%
+  left_join(annot, by = c("mRNA" = "Protein_ID"))
+```
+
+I think I need to do PCC per condition...

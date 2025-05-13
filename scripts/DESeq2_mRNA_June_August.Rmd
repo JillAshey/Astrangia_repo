@@ -1,0 +1,142 @@
+---
+title: "DESeq2 June and August treatments"
+author: "Jill Ashey"
+date: "2025-05-01"
+output: html_document
+---
+
+DESeq2 analysis for June and August ambient and heat samples (ie February is removed).
+
+Load libraries 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
+library(tidyverse)
+library(car)
+
+library(genefilter)
+library(DESeq2)
+library(pheatmap)
+library(lme4)
+library(tidyverse)
+library(car)
+library(gplots)
+library(wesanderson)
+library(cowplot)
+library(gridExtra)
+```
+
+Read in filtered data 
+```{r}
+filt_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+rownames(filt_counts) <- filt_counts[,1] #set first column that contains gene names as rownames
+filt_counts <- filt_counts[,-1] # remove column w/ gene names 
+colnames(filt_counts) <- sub("AST\\.", "AST-", colnames(filt_counts))
+
+# Remove AST-1105, as it did not sequence well 
+filt_counts <- filt_counts[, !colnames(filt_counts) %in% "AST-1105"]
+```
+
+Read in metadata
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) %>% # rearrange metadata so IDs are sorted in descending order 
+  mutate(Treatment = ifelse(Treatment == "Acclimation", "Ambient", Treatment))
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+```
+
+Remove TP0 samples from metadata and AST-1105
+```{r}
+meta <- meta %>%
+  filter(!Timepoint == "TP0") %>%
+  filter(!ID == "AST-1105")
+```
+
+Remove TP0 samples from counts df based on metadata
+```{r}
+filt_counts <- filt_counts[, colnames(filt_counts) %in% meta$ID]
+```
+
+Set variables as factors 
+```{r}
+meta$Treatment <- factor(meta$Treatment, levels = c("Ambient", "Heat"))
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP5", "TP7"))
+```
+
+Data sanity check!
+```{r}
+meta$ID %in% colnames(filt_counts) #are all of the sample names (rows) in the metadata df in the gene count matrix? Should be TRUE. 
+all(rownames(meta$ID) == colnames(filt_counts)) #are they the same in the same order? Should be TRUE
+```
+
+No data filtering needed, as this has already been done. 
+
+Merge Treatment and Timepoint into a single column 
+```{r}
+meta$Condition <- paste(meta$Timepoint, meta$Treatment, sep = "_")
+meta$Condition <- factor(meta$Condition, levels = c("TP5_Ambient", "TP5_Heat", "TP7_Ambient", "TP7_Heat"))
+```
+
+Put data and metadata in DESeq2 matrix 
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_counts, colData = meta, design = ~Condition)
+# data <- DESeqDataSetFromMatrix(countData = filt_counts, colData = meta, design = ~Treatment*Timepoint)
+```
+
+Visualize expression
+```{r}
+rld <- rlog(data, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
+head(assay(rld), 3) #view data
+sampleDists <- dist(t(assay(rld))) #calculate distance matix
+sampleDistMatrix <- as.matrix(sampleDists) #distance matrix
+rownames(sampleDistMatrix) <- colnames(rld) #assign row names
+colnames(sampleDistMatrix) <- NULL #assign col names
+pheatmap(sampleDistMatrix, #plot matrix of expression similarity
+         clustering_distance_rows=sampleDists, #cluster rows
+         clustering_distance_cols=sampleDists) #cluster columns
+
+plotPCA(rld, intgroup = c("Treatment", "Timepoint")) #plot PCA of samples with all data
+```
+
+Run differential gene expression analysis 
+```{r}
+DEG.int <- DESeq(data) #run differential expression test by group using the wald test 
+resultsNames(DEG.int)
+```
+
+```{r}
+blah2 <- results(DEG.int, contrast = c("Condition", "TP7_Heat", "TP7_Ambient"))
+blah2 <- as.data.frame(blah2)
+head(blah2)
+sum(blah2$padj <0.05, na.rm = T)
+```
+
+
+
+### LRT
+
+```{r}
+data <- DESeqDataSetFromMatrix(countData = filt_counts, colData = meta, design = ~Treatment*Timepoint)
+```
+
+
+```{r}
+ddsLRT <- DESeq(data, test="LRT", reduced=~ Treatment + Timepoint)
+resultsNames(ddsLRT)
+```
+
+```{r}
+blah <- results(ddsLRT, name = "TreatmentHeat.TimepointTP7")
+blah <- as.data.frame(blah)
+head(blah)
+sum(blah$padj <0.05, na.rm = T)
+```
+
+
