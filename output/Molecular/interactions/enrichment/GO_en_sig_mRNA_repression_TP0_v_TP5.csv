@@ -1,0 +1,269 @@
+"","mRNA","GO","Term","Annotated","Significant","Expected","Fisher","ontology","sig.prop"
+"1","evm.TU.chromosome_1.1424","GO:0008344","adult locomotory behavior",55,1,0.05,0.04986,"Biological Processes",0.0181818181818182
+"2","evm.TU.chromosome_4.2164","GO:0030198","extracellular matrix organization",309,5,0.29,0.01214,"Biological Processes",0.0161812297734628
+"3","evm.TU.chromosome_4.2164","GO:0042744","hydrogen peroxide catabolic process",41,1,0.04,0.03739,"Biological Processes",0.024390243902439
+"4","evm.TU.chromosome_4.1375","GO:0097185","cellular response to azide",4,1,0,0.00371,"Biological Processes",0.25
+"5","evm.TU.chromosome_4.1375","GO:0071280","cellular response to copper ion",6,1,0.01,0.00556,"Biological Processes",0.166666666666667
+"6","evm.TU.chromosome_4.1375","GO:0035874","cellular response to copper ion starvation",4,1,0,0.00371,"Biological Processes",0.25
+"7","evm.TU.chromosome_4.1375","GO:0071504","cellular response to heparin",4,1,0,0.00371,"Biological Processes",0.25
+"8","evm.TU.chromosome_4.1375","GO:0071420","cellular response to histamine",30,1,0.03,0.02749,"Biological Processes",0.0333333333333333
+"9","evm.TU.chromosome_6.2759","GO:1900264","positive regulation of DNA-directed DNA polymerase ...",7,1,0.01,0.00648,"Biological Processes",0.142857142857143
+"10","evm.TU.chromosome_7.266","GO:0060292","long-term synaptic depression",23,1,0.02,0.02114,"Biological Processes",0.0434782608695652
+"11","evm.TU.chromosome_7.266","GO:0060291","long-term synaptic potentiation",45,1,0.04,0.04097,"Biological Processes",0.0222222222222222
+"12","evm.TU.chromosome_8.1567","GO:0060413","atrial septum morphogenesis",18,1,0.02,0.01658,"Biological Processes",0.0555555555555556
+"13","evm.TU.chromosome_8.1567","GO:0001709","cell fate determination",51,1,0.05,0.04631,"Biological Processes",0.0196078431372549
+"14","evm.TU.chromosome_8.1567","GO:0002315","marginal zone B cell differentiation",11,1,0.01,0.01016,"Biological Processes",0.0909090909090909
+"15","evm.TU.chromosome_8.1567","GO:0045967","negative regulation of growth rate",10,1,0.01,0.00924,"Biological Processes",0.1
+"16","evm.TU.chromosome_8.1567","GO:0061314","Notch signaling involved in heart development",22,1,0.02,0.02023,"Biological Processes",0.0454545454545455
+"17","evm.TU.chromosome_8.1567","GO:0046579","positive regulation of Ras protein signal transduct...",17,1,0.02,0.01567,"Biological Processes",0.0588235294117647
+"18","evm.TU.chromosome_8.1567","GO:0003184","pulmonary valve morphogenesis",17,1,0.02,0.01567,"Biological Processes",0.0588235294117647
+"19","evm.TU.chromosome_8.392","GO:0019886","antigen processing and presentation of exogenous pe...",39,1,0.04,0.0356,"Biological Processes",0.0256410256410256
+"20","evm.TU.chromosome_8.392","GO:0051382","kinetochore assembly",10,1,0.01,0.00924,"Biological Processes",0.1
+"21","evm.TU.chromosome_8.392","GO:0099607","lateral attachment of mitotic spindle microtubules ...",3,1,0,0.00278,"Biological Processes",0.333333333333333
+"22","evm.TU.chromosome_8.392","GO:0099606","microtubule plus-end directed mitotic chromosome mi...",3,1,0,0.00278,"Biological Processes",0.333333333333333
+"23","evm.TU.chromosome_8.392","GO:0007079","mitotic chromosome movement towards spindle pole",5,1,0,0.00463,"Biological Processes",0.2
+"24","evm.TU.chromosome_8.392","GO:0030071","regulation of mitotic metaphase/anaphase transition",42,1,0.04,0.03829,"Biological Processes",0.0238095238095238
+"25","evm.TU.chromosome_8.392","GO:0006890","retrograde vesicle-mediated transport, Golgi to end...",38,1,0.04,0.0347,"Biological Processes",0.0263157894736842
+"26","evm.TU.chromosome_8.392","GO:0007062","sister chromatid cohesion",48,1,0.04,0.04365,"Biological Processes",0.0208333333333333
+"27","evm.TU.chromosome_8.2664","GO:0035284","brain segmentation",4,1,0,0.00371,"Biological Processes",0.25
+"28","evm.TU.chromosome_8.2664","GO:0042074","cell migration involved in gastrulation",23,1,0.02,0.02114,"Biological Processes",0.0434782608695652
+"29","evm.TU.chromosome_8.2664","GO:0048263","determination of dorsal identity",4,1,0,0.00371,"Biological Processes",0.25
+"30","evm.TU.chromosome_8.2664","GO:0007398","ectoderm development",21,1,0.02,0.01932,"Biological Processes",0.0476190476190476
+"31","evm.TU.chromosome_8.2664","GO:0001710","mesodermal cell fate commitment",26,1,0.02,0.02387,"Biological Processes",0.0384615384615385
+"32","evm.TU.chromosome_8.2664","GO:0021999","neural plate anterior/posterior regionalization",12,1,0.01,0.01108,"Biological Processes",0.0833333333333333
+"33","evm.TU.chromosome_8.2664","GO:0030903","notochord development",34,1,0.03,0.0311,"Biological Processes",0.0294117647058824
+"34","evm.TU.chromosome_8.2664","GO:0045743","positive regulation of fibroblast growth factor rec...",7,1,0.01,0.00648,"Biological Processes",0.142857142857143
+"35","evm.TU.chromosome_8.2664","GO:0036342","post-anal tail morphogenesis",55,1,0.05,0.04986,"Biological Processes",0.0181818181818182
+"36","evm.TU.chromosome_8.2664","GO:2000742","regulation of anterior head development",3,1,0,0.00278,"Biological Processes",0.333333333333333
+"37","evm.TU.chromosome_8.2664","GO:0060061","Spemann organizer formation",5,1,0,0.00463,"Biological Processes",0.2
+"38","evm.TU.chromosome_8.2664","GO:0021512","spinal cord anterior/posterior patterning",2,1,0,0.00186,"Biological Processes",0.5
+"39","evm.TU.chromosome_9.133","GO:0001568","blood vessel development",585,3,0.54,0.01565,"Biological Processes",0.00512820512820513
+"40","evm.TU.chromosome_9.133","GO:0071230","cellular response to amino acid stimulus",77,3,0.07,4.6e-05,"Biological Processes",0.038961038961039
+"41","evm.TU.chromosome_9.133","GO:0071300","cellular response to retinoic acid",82,3,0.08,5.6e-05,"Biological Processes",0.0365853658536585
+"42","evm.TU.chromosome_9.133","GO:0097067","cellular response to thyroid hormone stimulus",18,3,0.02,5.3e-07,"Biological Processes",0.166666666666667
+"43","evm.TU.chromosome_9.133","GO:0030199","collagen fibril organization",84,3,0.08,6e-05,"Biological Processes",0.0357142857142857
+"44","evm.TU.chromosome_9.133","GO:0070208","protein heterotrimerization",44,3,0.04,8.5e-06,"Biological Processes",0.0681818181818182
+"45","evm.TU.chromosome_9.133","GO:0008217","regulation of blood pressure",362,3,0.34,0.0042,"Biological Processes",0.00828729281767956
+"46","evm.TU.chromosome_9.133","GO:0071873","response to norepinephrine",8,3,0.01,3.7e-08,"Biological Processes",0.375
+"47","evm.TU.chromosome_9.133","GO:0007266","Rho protein signal transduction",162,3,0.15,0.00042,"Biological Processes",0.0185185185185185
+"48","evm.TU.chromosome_9.133","GO:0001501","skeletal system development",565,3,0.52,0.01426,"Biological Processes",0.00530973451327434
+"49","evm.TU.chromosome_9.133","GO:0043589","skin morphogenesis",15,3,0.01,3e-07,"Biological Processes",0.2
+"50","evm.TU.chromosome_9.133","GO:0007179","transforming growth factor beta receptor signaling ...",193,3,0.18,0.00069,"Biological Processes",0.0155440414507772
+"51","evm.TU.chromosome_9.120","GO:0001568","blood vessel development",585,3,0.54,0.01565,"Biological Processes",0.00512820512820513
+"52","evm.TU.chromosome_9.120","GO:0071230","cellular response to amino acid stimulus",77,3,0.07,4.6e-05,"Biological Processes",0.038961038961039
+"53","evm.TU.chromosome_9.120","GO:0071300","cellular response to retinoic acid",82,3,0.08,5.6e-05,"Biological Processes",0.0365853658536585
+"54","evm.TU.chromosome_9.120","GO:0097067","cellular response to thyroid hormone stimulus",18,3,0.02,5.3e-07,"Biological Processes",0.166666666666667
+"55","evm.TU.chromosome_9.120","GO:0030199","collagen fibril organization",84,3,0.08,6e-05,"Biological Processes",0.0357142857142857
+"56","evm.TU.chromosome_9.120","GO:0070208","protein heterotrimerization",44,3,0.04,8.5e-06,"Biological Processes",0.0681818181818182
+"57","evm.TU.chromosome_9.120","GO:0008217","regulation of blood pressure",362,3,0.34,0.0042,"Biological Processes",0.00828729281767956
+"58","evm.TU.chromosome_9.120","GO:0071873","response to norepinephrine",8,3,0.01,3.7e-08,"Biological Processes",0.375
+"59","evm.TU.chromosome_9.120","GO:0007266","Rho protein signal transduction",162,3,0.15,0.00042,"Biological Processes",0.0185185185185185
+"60","evm.TU.chromosome_9.120","GO:0001501","skeletal system development",565,3,0.52,0.01426,"Biological Processes",0.00530973451327434
+"61","evm.TU.chromosome_9.120","GO:0043589","skin morphogenesis",15,3,0.01,3e-07,"Biological Processes",0.2
+"62","evm.TU.chromosome_9.120","GO:0007179","transforming growth factor beta receptor signaling ...",193,3,0.18,0.00069,"Biological Processes",0.0155440414507772
+"63","evm.TU.chromosome_9.231","GO:0006020","inositol metabolic process",7,1,0.01,0.00648,"Biological Processes",0.142857142857143
+"64","evm.TU.chromosome_9.231","GO:0015798","myo-inositol transport",3,1,0,0.00278,"Biological Processes",0.333333333333333
+"65","evm.TU.chromosome_9.231","GO:0043576","regulation of respiratory gaseous exchange",11,1,0.01,0.01016,"Biological Processes",0.0909090909090909
+"66","evm.TU.chromosome_9.213","GO:0045736","negative regulation of cyclin-dependent protein ser...",14,1,0.01,0.01292,"Biological Processes",0.0714285714285714
+"67","evm.TU.chromosome_9.213","GO:1901798","positive regulation of signal transduction by p53 c...",8,1,0.01,0.0074,"Biological Processes",0.125
+"68","evm.TU.chromosome_9.2201","GO:0001568","blood vessel development",585,3,0.54,0.01565,"Biological Processes",0.00512820512820513
+"69","evm.TU.chromosome_9.2201","GO:0071230","cellular response to amino acid stimulus",77,3,0.07,4.6e-05,"Biological Processes",0.038961038961039
+"70","evm.TU.chromosome_9.2201","GO:0071300","cellular response to retinoic acid",82,3,0.08,5.6e-05,"Biological Processes",0.0365853658536585
+"71","evm.TU.chromosome_9.2201","GO:0097067","cellular response to thyroid hormone stimulus",18,3,0.02,5.3e-07,"Biological Processes",0.166666666666667
+"72","evm.TU.chromosome_9.2201","GO:0030199","collagen fibril organization",84,3,0.08,6e-05,"Biological Processes",0.0357142857142857
+"73","evm.TU.chromosome_9.2201","GO:0070208","protein heterotrimerization",44,3,0.04,8.5e-06,"Biological Processes",0.0681818181818182
+"74","evm.TU.chromosome_9.2201","GO:0008217","regulation of blood pressure",362,3,0.34,0.0042,"Biological Processes",0.00828729281767956
+"75","evm.TU.chromosome_9.2201","GO:0071873","response to norepinephrine",8,3,0.01,3.7e-08,"Biological Processes",0.375
+"76","evm.TU.chromosome_9.2201","GO:0007266","Rho protein signal transduction",162,3,0.15,0.00042,"Biological Processes",0.0185185185185185
+"77","evm.TU.chromosome_9.2201","GO:0001501","skeletal system development",565,3,0.52,0.01426,"Biological Processes",0.00530973451327434
+"78","evm.TU.chromosome_9.2201","GO:0043589","skin morphogenesis",15,3,0.01,3e-07,"Biological Processes",0.2
+"79","evm.TU.chromosome_9.2201","GO:0007179","transforming growth factor beta receptor signaling ...",193,3,0.18,0.00069,"Biological Processes",0.0155440414507772
+"80","evm.TU.chromosome_13.228","GO:0006579","amino-acid betaine catabolic process",11,1,0.01,0.01016,"Biological Processes",0.0909090909090909
+"81","evm.TU.chromosome_13.228","GO:0009086","methionine biosynthetic process",33,1,0.03,0.0302,"Biological Processes",0.0303030303030303
+"82","evm.TU.chromosome_13.228","GO:0003323","type B pancreatic cell development",19,1,0.02,0.01749,"Biological Processes",0.0526315789473684
+"83","evm.TU.chromosome_13.228","GO:0009086","methionine biosynthetic process",33,1,0.03,0.0302,"Biological Processes",0.0303030303030303
+"84","evm.TU.chromosome_13.3854","GO:0030198","extracellular matrix organization",309,5,0.29,0.01214,"Biological Processes",0.0161812297734628
+"85","evm.TU.chromosome_14.3580","GO:0075732","viral penetration into host nucleus",45,1,0.04,0.04097,"Biological Processes",0.0222222222222222
+"86","evm.TU.chromosome_4.2164","GO:0031012","extracellular matrix",564,5,0.6,0.0245,"Cellular Components",0.00886524822695036
+"87","evm.TU.chromosome_4.1375","GO:0070062","extracellular exosome",960,5,1.02,0.0027,"Cellular Components",0.00520833333333333
+"88","evm.TU.chromosome_4.1375","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"89","evm.TU.chromosome_4.1375","GO:0035580","specific granule lumen",18,1,0.02,0.019,"Cellular Components",0.0555555555555556
+"90","evm.TU.chromosome_6.2759","GO:0031390","Ctf18 RFC-like complex",7,1,0.01,0.0074,"Cellular Components",0.142857142857143
+"91","evm.TU.chromosome_6.2759","GO:0005663","DNA replication factor C complex",8,1,0.01,0.0085,"Cellular Components",0.125
+"92","evm.TU.chromosome_8.1567","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"93","evm.TU.chromosome_8.392","GO:0005828","kinetochore microtubule",11,1,0.01,0.0117,"Cellular Components",0.0909090909090909
+"94","evm.TU.chromosome_8.392","GO:1990023","mitotic spindle midzone",20,1,0.02,0.0211,"Cellular Components",0.05
+"95","evm.TU.chromosome_9.133","GO:0005584","collagen type I trimer",12,3,0.01,2.2e-07,"Cellular Components",0.25
+"96","evm.TU.chromosome_9.133","GO:0070062","extracellular exosome",960,5,1.02,0.0027,"Cellular Components",0.00520833333333333
+"97","evm.TU.chromosome_9.133","GO:0031012","extracellular matrix",564,5,0.6,0.0245,"Cellular Components",0.00886524822695036
+"98","evm.TU.chromosome_9.133","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"99","evm.TU.chromosome_9.133","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"100","evm.TU.chromosome_9.113","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"101","evm.TU.chromosome_9.120","GO:0005584","collagen type I trimer",12,3,0.01,2.2e-07,"Cellular Components",0.25
+"102","evm.TU.chromosome_9.120","GO:0070062","extracellular exosome",960,5,1.02,0.0027,"Cellular Components",0.00520833333333333
+"103","evm.TU.chromosome_9.120","GO:0031012","extracellular matrix",564,5,0.6,0.0245,"Cellular Components",0.00886524822695036
+"104","evm.TU.chromosome_9.120","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"105","evm.TU.chromosome_9.2201","GO:0005584","collagen type I trimer",12,3,0.01,2.2e-07,"Cellular Components",0.25
+"106","evm.TU.chromosome_9.2201","GO:0070062","extracellular exosome",960,5,1.02,0.0027,"Cellular Components",0.00520833333333333
+"107","evm.TU.chromosome_9.2201","GO:0031012","extracellular matrix",564,5,0.6,0.0245,"Cellular Components",0.00886524822695036
+"108","evm.TU.chromosome_9.2201","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"109","evm.TU.chromosome_12.372","GO:0009279","cell outer membrane",10,1,0.01,0.0106,"Cellular Components",0.1
+"110","evm.TU.chromosome_12.372","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"111","evm.TU.chromosome_13.3854","GO:0070062","extracellular exosome",960,5,1.02,0.0027,"Cellular Components",0.00520833333333333
+"112","evm.TU.chromosome_13.3854","GO:0031012","extracellular matrix",564,5,0.6,0.0245,"Cellular Components",0.00886524822695036
+"113","evm.TU.chromosome_13.3854","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"114","evm.TU.chromosome_14.624","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"115","evm.TU.chromosome_14.624","GO:0005576","extracellular region",3164,11,3.37,0.0107,"Cellular Components",0.00347661188369153
+"116","evm.TU.chromosome_1.1534","GO:0047837","D-xylose 1-dehydrogenase (NADP+) activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"117","evm.TU.chromosome_1.1534","GO:0047115","trans-1,2-dihydrobenzene-1,2-diol dehydrogenase act...",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"118","evm.TU.chromosome_2.771","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"119","evm.TU.chromosome_2.771","GO:0048273","mitogen-activated protein kinase p38 binding",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"120","evm.TU.chromosome_2.771","GO:0051525","NFAT protein binding",1,1,0.01,0.0087,"Molecular Functions",1
+"121","evm.TU.chromosome_2.771","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"122","evm.TU.chromosome_2.644","GO:0051879","Hsp90 protein binding",20,2,0.17,0.0129,"Molecular Functions",0.1
+"123","evm.TU.chromosome_2.644","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"124","evm.TU.chromosome_2.644","GO:0051787","misfolded protein binding",4,1,0.03,0.0344,"Molecular Functions",0.25
+"125","evm.TU.chromosome_2.644","GO:0048156","tau protein binding",7,2,0.06,0.0015,"Molecular Functions",0.285714285714286
+"126","evm.TU.chromosome_2.644","GO:0042903","tubulin deacetylase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"127","evm.TU.chromosome_2.644","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"128","evm.TU.chromosome_3.2012","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"129","evm.TU.chromosome_3.2012","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"130","evm.TU.chromosome_3.1928","GO:0052909","18S rRNA (adenine(1779)-N(6)/adenine(1780)-N(6))-di...",2,1,0.02,0.0174,"Molecular Functions",0.5
+"131","evm.TU.chromosome_4.1254","GO:0051879","Hsp90 protein binding",20,2,0.17,0.0129,"Molecular Functions",0.1
+"132","evm.TU.chromosome_4.2503","GO:0004586","ornithine decarboxylase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"133","evm.TU.chromosome_4.29","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"134","evm.TU.chromosome_4.29","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"135","evm.TU.chromosome_4.627","GO:0000386","second spliceosomal transesterification activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"136","evm.TU.chromosome_4.627","GO:0030620","U2 snRNA binding",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"137","evm.TU.chromosome_4.627","GO:0030623","U5 snRNA binding",1,1,0.01,0.0087,"Molecular Functions",1
+"138","evm.TU.chromosome_4.627","GO:0030623","U5 snRNA binding",1,1,0.01,0.0087,"Molecular Functions",1
+"139","evm.TU.chromosome_5.1754","GO:0001046","core promoter sequence-specific DNA binding",39,2,0.34,0.0453,"Molecular Functions",0.0512820512820513
+"140","evm.TU.chromosome_5.1840","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"141","evm.TU.chromosome_5.1840","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"142","evm.TU.chromosome_5.1067","GO:0050038","L-xylulose reductase (NADPH) activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"143","evm.TU.chromosome_5.1665","GO:0016300","tRNA (uridine) methyltransferase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"144","evm.TU.chromosome_5.372","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"145","evm.TU.chromosome_5.372","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"146","evm.TU.chromosome_5.372","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"147","evm.TU.chromosome_6.1115","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"148","evm.TU.chromosome_6.1115","GO:0036033","mediator complex binding",4,1,0.03,0.0344,"Molecular Functions",0.25
+"149","evm.TU.chromosome_6.2473","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"150","evm.TU.chromosome_6.2473","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"151","evm.TU.chromosome_6.2907","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"152","evm.TU.chromosome_6.2907","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"153","evm.TU.chromosome_6.2924","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"154","evm.TU.chromosome_6.2924","GO:0004819","glutamine-tRNA ligase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"155","evm.TU.chromosome_6.2924","GO:0004823","leucine-tRNA ligase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"156","evm.TU.chromosome_6.2924","GO:0004832","valine-tRNA ligase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"157","evm.TU.chromosome_6.2924","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"158","evm.TU.chromosome_6.2924","GO:0004819","glutamine-tRNA ligase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"159","evm.TU.chromosome_6.2924","GO:0004823","leucine-tRNA ligase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"160","evm.TU.chromosome_6.640","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"161","evm.TU.chromosome_6.640","GO:0005133","type II interferon receptor binding",2,1,0.02,0.0174,"Molecular Functions",0.5
+"162","evm.TU.chromosome_6.640","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"163","evm.TU.chromosome_6.2326","GO:0043423","3-phosphoinositide-dependent protein kinase binding",1,1,0.01,0.0087,"Molecular Functions",1
+"164","evm.TU.chromosome_6.2326","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"165","evm.TU.chromosome_6.2326","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"166","evm.TU.chromosome_6.2326","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"167","evm.TU.chromosome_6.941","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"168","evm.TU.chromosome_6.941","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"169","evm.TU.chromosome_6.941","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"170","evm.TU.chromosome_7.299","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"171","evm.TU.chromosome_7.299","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"172","evm.TU.chromosome_7.854","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"173","evm.TU.chromosome_7.2451","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"174","evm.TU.chromosome_7.365","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"175","evm.TU.chromosome_7.365","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"176","evm.TU.chromosome_8.1515","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"177","evm.TU.chromosome_8.2734","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"178","evm.TU.chromosome_8.2734","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"179","evm.TU.chromosome_8.1187","GO:0008449","N-acetylglucosamine-6-sulfatase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"180","evm.TU.chromosome_8.2061","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"181","evm.TU.chromosome_8.2061","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"182","evm.TU.chromosome_9.1523","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"183","evm.TU.chromosome_9.2817","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"184","evm.TU.chromosome_9.2817","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"185","evm.TU.chromosome_9.2817","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"186","evm.TU.chromosome_9.2817","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"187","evm.TU.chromosome_9.2736","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"188","evm.TU.chromosome_9.2736","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"189","evm.TU.chromosome_9.1516","GO:0008265","molybdenum cofactor sulfurtransferase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"190","evm.TU.chromosome_9.1516","GO:0008265","molybdenum cofactor sulfurtransferase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"191","evm.TU.chromosome_9.2357","GO:0000016","lactase activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"192","evm.TU.chromosome_9.1549","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"193","evm.TU.chromosome_9.1549","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"194","evm.TU.chromosome_9.1549","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"195","evm.TU.chromosome_9.1771","GO:0004579","dolichyl-diphosphooligosaccharide-protein glycotran...",5,1,0.04,0.0428,"Molecular Functions",0.2
+"196","evm.TU.chromosome_9.1771","GO:0004579","dolichyl-diphosphooligosaccharide-protein glycotran...",5,1,0.04,0.0428,"Molecular Functions",0.2
+"197","evm.TU.chromosome_9.249","GO:0015232","heme transmembrane transporter activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"198","evm.TU.chromosome_9.249","GO:0015232","heme transmembrane transporter activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"199","evm.TU.chromosome_10.3018","GO:0050111","mycocerosate synthase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"200","evm.TU.chromosome_10.3018","GO:0031177","phosphopantetheine binding",13,2,0.11,0.0055,"Molecular Functions",0.153846153846154
+"201","evm.TU.chromosome_10.3018","GO:0016788","hydrolase activity, acting on ester bonds",1467,12,12.79,0.0271,"Molecular Functions",0.0081799591002045
+"202","evm.TU.chromosome_10.2472","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"203","evm.TU.chromosome_10.2472","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"204","evm.TU.chromosome_10.2390","GO:0005049","nuclear export signal receptor activity",5,1,0.04,0.0428,"Molecular Functions",0.2
+"205","evm.TU.chromosome_10.3030","GO:0016788","hydrolase activity, acting on ester bonds",1467,12,12.79,0.0271,"Molecular Functions",0.0081799591002045
+"206","evm.TU.chromosome_10.3030","GO:0031177","phosphopantetheine binding",13,2,0.11,0.0055,"Molecular Functions",0.153846153846154
+"207","evm.TU.chromosome_10.3030","GO:0016788","hydrolase activity, acting on ester bonds",1467,12,12.79,0.0271,"Molecular Functions",0.0081799591002045
+"208","evm.TU.chromosome_11.2778","GO:0005164","tumor necrosis factor receptor binding",140,4,1.22,0.0343,"Molecular Functions",0.0285714285714286
+"209","evm.TU.chromosome_11.2778","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"210","evm.TU.chromosome_11.3053","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"211","evm.TU.chromosome_11.3053","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"212","evm.TU.chromosome_11.3053","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"213","evm.TU.chromosome_11.320","GO:0004346","glucose-6-phosphatase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"214","evm.TU.chromosome_11.320","GO:0004346","glucose-6-phosphatase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"215","evm.TU.chromosome_11.1357","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"216","evm.TU.chromosome_11.1357","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"217","evm.TU.chromosome_11.2445","GO:0017174","glycine N-methyltransferase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"218","evm.TU.chromosome_11.2445","GO:0098603","selenol Se-methyltransferase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"219","evm.TU.chromosome_11.2445","GO:0017174","glycine N-methyltransferase activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"220","evm.TU.chromosome_11.2803","GO:0005164","tumor necrosis factor receptor binding",140,4,1.22,0.0343,"Molecular Functions",0.0285714285714286
+"221","evm.TU.chromosome_11.2803","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"222","evm.TU.chromosome_11.496","GO:0005164","tumor necrosis factor receptor binding",140,4,1.22,0.0343,"Molecular Functions",0.0285714285714286
+"223","evm.TU.chromosome_11.496","GO:0005164","tumor necrosis factor receptor binding",140,4,1.22,0.0343,"Molecular Functions",0.0285714285714286
+"224","evm.TU.chromosome_11.1863","GO:0004447","iodide peroxidase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"225","evm.TU.chromosome_11.1863","GO:0036393","thiocyanate peroxidase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"226","evm.TU.chromosome_12.1199","GO:0048156","tau protein binding",7,2,0.06,0.0015,"Molecular Functions",0.285714285714286
+"227","evm.TU.chromosome_12.2038","GO:0016531","copper chaperone activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"228","evm.TU.chromosome_12.3614","GO:0017172","cysteine dioxygenase activity",1,1,0.01,0.0087,"Molecular Functions",1
+"229","evm.TU.chromosome_12.185","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"230","evm.TU.chromosome_12.185","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"231","evm.TU.chromosome_12.185","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"232","evm.TU.chromosome_12.3587","GO:0051538","3 iron, 4 sulfur cluster binding",4,1,0.03,0.0344,"Molecular Functions",0.25
+"233","evm.TU.chromosome_12.3587","GO:0003994","aconitate hydratase activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"234","evm.TU.chromosome_12.3587","GO:0030350","iron-responsive element binding",2,1,0.02,0.0174,"Molecular Functions",0.5
+"235","evm.TU.chromosome_12.3587","GO:0003994","aconitate hydratase activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"236","evm.TU.chromosome_12.210","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"237","evm.TU.chromosome_12.210","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"238","evm.TU.chromosome_12.210","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"239","evm.TU.chromosome_12.3832","GO:0004325","ferrochelatase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"240","evm.TU.chromosome_12.3832","GO:0004325","ferrochelatase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"241","evm.TU.chromosome_12.1891","GO:0004573","Glc3Man9GlcNAc2 oligosaccharide glucosidase activit...",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"242","evm.TU.chromosome_12.1891","GO:0004573","Glc3Man9GlcNAc2 oligosaccharide glucosidase activit...",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"243","evm.TU.chromosome_12.1913","GO:0008017","microtubule binding",145,4,1.26,0.0382,"Molecular Functions",0.0275862068965517
+"244","evm.TU.chromosome_13.1161","GO:1990446","U1 snRNP binding",2,1,0.02,0.0174,"Molecular Functions",0.5
+"245","evm.TU.chromosome_13.2650","GO:0001046","core promoter sequence-specific DNA binding",39,2,0.34,0.0453,"Molecular Functions",0.0512820512820513
+"246","evm.TU.chromosome_13.4082","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"247","evm.TU.chromosome_13.4082","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"248","evm.TU.chromosome_13.3614","GO:0008009","chemokine activity",1,1,0.01,0.0087,"Molecular Functions",1
+"249","evm.TU.chromosome_14.6590","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"250","evm.TU.chromosome_14.6590","GO:0004176","ATP-dependent peptidase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"251","evm.TU.chromosome_14.6590","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"252","evm.TU.chromosome_14.6590","GO:0004176","ATP-dependent peptidase activity",4,1,0.03,0.0344,"Molecular Functions",0.25
+"253","evm.TU.chromosome_14.166","GO:0070025","carbon monoxide binding",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"254","evm.TU.chromosome_14.166","GO:0070026","nitric oxide binding",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"255","evm.TU.chromosome_14.166","GO:0019826","oxygen sensor activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"256","evm.TU.chromosome_14.6941","GO:0031071","cysteine desulfurase activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"257","evm.TU.chromosome_14.6941","GO:0031071","cysteine desulfurase activity",3,1,0.03,0.0259,"Molecular Functions",0.333333333333333
+"258","evm.TU.chromosome_14.5088_evm.TU.chromosome_14.5091","GO:0004613","phosphoenolpyruvate carboxykinase (GTP) activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"259","evm.TU.chromosome_14.5088_evm.TU.chromosome_14.5091","GO:0004613","phosphoenolpyruvate carboxykinase (GTP) activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"260","evm.TU.chromosome_14.6829","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"261","evm.TU.chromosome_14.6829","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"262","evm.TU.chromosome_14.6829","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"263","evm.TU.chromosome_14.6829","GO:0004386","helicase activity",274,7,2.39,0.0075,"Molecular Functions",0.0255474452554745
+"264","evm.TU.chromosome_14.5366","GO:0005164","tumor necrosis factor receptor binding",140,4,1.22,0.0343,"Molecular Functions",0.0285714285714286
+"265","evm.TU.chromosome_14.5366","GO:0031625","ubiquitin protein ligase binding",324,7,2.82,0.0237,"Molecular Functions",0.0216049382716049
+"266","evm.TU.chromosome_14.6144","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
+"267","evm.TU.chromosome_14.6144","GO:0015410","ABC-type manganese transporter activity",2,1,0.02,0.0174,"Molecular Functions",0.5
+"268","evm.TU.chromosome_14.6144","GO:0005524","ATP binding",2243,31,19.55,0.0061,"Molecular Functions",0.0138207757467677
