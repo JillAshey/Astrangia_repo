@@ -987,25 +987,29 @@ plot_data <- comparison_df_true_pcc_degs_annot_inf %>%
   ) %>%
   mutate(
     Timepoint = dplyr::recode(Timepoint,
-                       "tp0" = "TP0",
-                       "tp5_amb" = "TP5 Ambient")
+                       "tp0" = "February",
+                       "tp5_amb" = "June Ambient")
   )
 
 # Step 2: Plot
 ggplot(plot_data, aes(x = Timepoint, y = PCC.cor, group = interaction(miRNA, mRNA))) +
-  geom_line(aes(color = p_value), alpha = 0.8) +
-  geom_point(aes(color = p_value), size = 2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", linewidth = 0.8) +
+  geom_line(alpha = 0.8, linewidth = 1) +
+  geom_point(aes(color = p_value), size = 15) +
   scale_color_gradient(low = "red", high = "blue", name = "p-value") +
-  labs(
-    x = "Timepoint",
-    y = "Pearson Correlation (PCC)",
-    title = "miRNA–mRNA Correlation Across Timepoints"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))
-```
+  labs(y = "Pearson's Correlation Coefficient (PCC)", x = "") +
+  theme_bw() +
+   theme(
+    axis.title = element_text(size = 36, face = "bold"),        # Axis title size
+    axis.text = element_text(size = 34, colour = "black"),                        # Axis text size
+    legend.title = element_text(size = 25, face = "bold"),      # Legend title size
+    legend.text = element_text(size = 23),                      # Legend text size
+    axis.line = element_line(size = 1, colour = "black"),       # Enhanced axis lines
+    axis.ticks = element_line(size = 1))                        # Thicker axis ticks
 
-Need to make this plot prettier
+ggsave(filename = "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_amb_pcc_change.pdf", last_plot(), width = 15, height = 15)
+ggsave(filename = "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP5_amb_pcc_change.png", last_plot(), width = 15, height = 15)
+```
 
 ### TP0 v TP5 heat
 
