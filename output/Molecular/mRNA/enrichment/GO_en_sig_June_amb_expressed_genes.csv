@@ -1,58 +1,83 @@
-"","GO.ID","Term","Annotated","Significant","Expected","Fisher","ontology","sig.prop"
-"1","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes",0.00706713780918728
-"2","GO:0051878","lateral element assembly",1,1,0,0.00139,"Biological Processes",1
-"3","GO:0035092","sperm DNA condensation",1,1,0,0.00139,"Biological Processes",1
-"4","GO:0017055","negative regulation of RNA polymerase II transcript...",1,1,0,0.00139,"Biological Processes",1
-"5","GO:0000711","meiotic DNA repair synthesis",2,1,0,0.00278,"Biological Processes",0.5
-"6","GO:0008348","negative regulation of antimicrobial humoral respon...",2,1,0,0.00278,"Biological Processes",0.5
-"7","GO:0009231","riboflavin biosynthetic process",2,1,0,0.00278,"Biological Processes",0.5
-"8","GO:0031508","pericentric heterochromatin formation",3,1,0,0.00417,"Biological Processes",0.333333333333333
-"9","GO:0051026","chiasma assembly",3,1,0,0.00417,"Biological Processes",0.333333333333333
-"10","GO:0061000","negative regulation of dendritic spine development",4,1,0.01,0.00556,"Biological Processes",0.25
-"11","GO:0006114","glycerol biosynthetic process",5,1,0.01,0.00694,"Biological Processes",0.2
-"12","GO:0006334","nucleosome assembly",100,2,0.14,0.00846,"Biological Processes",0.02
-"13","GO:0048671","negative regulation of collateral sprouting",7,1,0.01,0.00971,"Biological Processes",0.142857142857143
-"14","GO:0051712","positive regulation of killing of cells of another ...",8,1,0.01,0.01108,"Biological Processes",0.125
-"15","GO:0006346","DNA methylation-dependent heterochromatin formation",9,1,0.01,0.01246,"Biological Processes",0.111111111111111
-"16","GO:0098719","sodium ion import across plasma membrane",10,1,0.01,0.01384,"Biological Processes",0.1
-"17","GO:0007379","segment specification",10,1,0.01,0.01384,"Biological Processes",0.1
-"18","GO:0006268","DNA unwinding involved in DNA replication",10,1,0.01,0.01384,"Biological Processes",0.1
-"19","GO:0048240","sperm capacitation",13,1,0.02,0.01795,"Biological Processes",0.0769230769230769
-"20","GO:0051770","positive regulation of nitric-oxide synthase biosyn...",14,1,0.02,0.01932,"Biological Processes",0.0714285714285714
-"21","GO:0048681","negative regulation of axon regeneration",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"22","GO:0051000","positive regulation of nitric-oxide synthase activi...",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"23","GO:0090136","epithelial cell-cell adhesion",15,1,0.02,0.02069,"Biological Processes",0.0666666666666667
-"24","GO:0097374","sensory neuron axon guidance",17,1,0.02,0.02341,"Biological Processes",0.0588235294117647
-"25","GO:0043248","proteasome assembly",18,1,0.03,0.02477,"Biological Processes",0.0555555555555556
-"26","GO:0035036","sperm-egg recognition",19,1,0.03,0.02613,"Biological Processes",0.0526315789473684
-"27","GO:0002925","positive regulation of humoral immune response medi...",19,1,0.03,0.02613,"Biological Processes",0.0526315789473684
-"28","GO:0007275","multicellular organism development",4631,8,6.45,0.03492,"Biological Processes",0.00172748866335565
-"29","GO:0030517","negative regulation of axon extension",26,1,0.04,0.0356,"Biological Processes",0.0384615384615385
-"30","GO:0032570","response to progesterone",26,1,0.04,0.0356,"Biological Processes",0.0384615384615385
-"31","GO:0031110","regulation of microtubule polymerization or depolym...",28,1,0.04,0.03828,"Biological Processes",0.0357142857142857
-"32","GO:0035335","peptidyl-tyrosine dephosphorylation",28,1,0.04,0.03828,"Biological Processes",0.0357142857142857
-"33","GO:0035218","leg disc development",30,1,0.04,0.04096,"Biological Processes",0.0333333333333333
-"34","GO:0090073","positive regulation of protein homodimerization act...",35,1,0.05,0.04763,"Biological Processes",0.0285714285714286
-"35","GO:0000802","transverse filament",1,1,0,0.0015,"Cellular Components",1
-"36","GO:0000801","central element",2,1,0,0.003,"Cellular Components",0.5
-"37","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components",0.0192307692307692
-"38","GO:0005721","pericentric heterochromatin",9,1,0.01,0.0132,"Cellular Components",0.111111111111111
-"39","GO:0001673","male germ cell nucleus",9,1,0.01,0.0132,"Cellular Components",0.111111111111111
-"40","GO:0036128","CatSper complex",18,1,0.03,0.0263,"Cellular Components",0.0555555555555556
-"41","GO:0005838","proteasome regulatory particle",21,1,0.03,0.0306,"Cellular Components",0.0476190476190476
-"42","GO:0005881","cytoplasmic microtubule",22,1,0.03,0.0321,"Cellular Components",0.0454545454545455
-"43","GO:0005771","multivesicular body",28,1,0.04,0.0406,"Cellular Components",0.0357142857142857
-"44","GO:0000121","glycerol-1-phosphatase activity",2,1,0,0.0027,"Molecular Functions",0.5
-"45","GO:0043136","glycerol-3-phosphatase activity",2,1,0,0.0027,"Molecular Functions",0.5
-"46","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions",0.0253164556962025
-"47","GO:0019863","IgE binding",7,1,0.01,0.0093,"Molecular Functions",0.142857142857143
-"48","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions",0.0176991150442478
-"49","GO:0015386","potassium:proton antiporter activity",9,1,0.01,0.012,"Molecular Functions",0.111111111111111
-"50","GO:0008301","DNA binding, bending",13,1,0.02,0.0172,"Molecular Functions",0.0769230769230769
-"51","GO:0015385","sodium:proton antiporter activity",14,1,0.02,0.0186,"Molecular Functions",0.0714285714285714
-"52","GO:0043395","heparan sulfate proteoglycan binding",16,1,0.02,0.0212,"Molecular Functions",0.0625
-"53","GO:0008201","heparin binding",175,2,0.23,0.0227,"Molecular Functions",0.0114285714285714
-"54","GO:0017025","TBP-class protein binding",19,1,0.03,0.0251,"Molecular Functions",0.0526315789473684
-"55","GO:0003680","minor groove of adenine-thymine-rich DNA binding",20,1,0.03,0.0264,"Molecular Functions",0.05
-"56","GO:0001733","galactosylceramide sulfotransferase activity",26,1,0.03,0.0342,"Molecular Functions",0.0384615384615385
-"57","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions",0.00529100529100529
+"","GO.ID","Term","Annotated","Significant","Expected","Fisher","ontology","mRNA"
+"1","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes","evm.TU.chromosome_7.1243"
+"2","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes","evm.TU.chromosome_7.1243"
+"3","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes","evm.TU.chromosome_9.2235"
+"4","GO:0007017","microtubule-based process",566,4,0.79,0.00085,"Biological Processes","evm.TU.chromosome_9.2235"
+"5","GO:0051878","lateral element assembly",1,1,0,0.00139,"Biological Processes","evm.TU.chromosome_12.3101"
+"6","GO:0035092","sperm DNA condensation",1,1,0,0.00139,"Biological Processes","evm.TU.chromosome_12.3101"
+"7","GO:0017055","negative regulation of RNA polymerase II transcript...",1,1,0,0.00139,"Biological Processes","evm.TU.chromosome_6.1006"
+"8","GO:0000711","meiotic DNA repair synthesis",2,1,0,0.00278,"Biological Processes","evm.TU.chromosome_12.3101"
+"9","GO:0008348","negative regulation of antimicrobial humoral respon...",2,1,0,0.00278,"Biological Processes","evm.TU.chromosome_6.1006"
+"10","GO:0009231","riboflavin biosynthetic process",2,1,0,0.00278,"Biological Processes","evm.TU.chromosome_7.1323"
+"11","GO:0031508","pericentric heterochromatin formation",3,1,0,0.00417,"Biological Processes","evm.TU.chromosome_4.1315"
+"12","GO:0051026","chiasma assembly",3,1,0,0.00417,"Biological Processes","evm.TU.chromosome_12.3101"
+"13","GO:0061000","negative regulation of dendritic spine development",4,1,0.01,0.00556,"Biological Processes","evm.TU.chromosome_3.624"
+"14","GO:0006114","glycerol biosynthetic process",5,1,0.01,0.00694,"Biological Processes","evm.TU.chromosome_7.1323"
+"15","GO:0006334","nucleosome assembly",100,2,0.14,0.00846,"Biological Processes","evm.TU.chromosome_3.370"
+"16","GO:0006334","nucleosome assembly",100,2,0.14,0.00846,"Biological Processes","evm.TU.chromosome_13.358"
+"17","GO:0006334","nucleosome assembly",100,2,0.14,0.00846,"Biological Processes","evm.TU.chromosome_13.358"
+"18","GO:0048671","negative regulation of collateral sprouting",7,1,0.01,0.00971,"Biological Processes","evm.TU.chromosome_3.624"
+"19","GO:0051712","positive regulation of killing of cells of another ...",8,1,0.01,0.01108,"Biological Processes","evm.TU.chromosome_8.2695"
+"20","GO:0006346","DNA methylation-dependent heterochromatin formation",9,1,0.01,0.01246,"Biological Processes","evm.TU.chromosome_4.1315"
+"21","GO:0098719","sodium ion import across plasma membrane",10,1,0.01,0.01384,"Biological Processes","evm.TU.chromosome_5.2273"
+"22","GO:0007379","segment specification",10,1,0.01,0.01384,"Biological Processes","evm.TU.chromosome_6.1006"
+"23","GO:0006268","DNA unwinding involved in DNA replication",10,1,0.01,0.01384,"Biological Processes","evm.TU.chromosome_6.1006"
+"24","GO:0048240","sperm capacitation",13,1,0.02,0.01795,"Biological Processes","evm.TU.chromosome_12.906"
+"25","GO:0051770","positive regulation of nitric-oxide synthase biosyn...",14,1,0.02,0.01932,"Biological Processes","evm.TU.chromosome_8.2695"
+"26","GO:0048681","negative regulation of axon regeneration",15,1,0.02,0.02069,"Biological Processes","evm.TU.chromosome_3.624"
+"27","GO:0051000","positive regulation of nitric-oxide synthase activi...",15,1,0.02,0.02069,"Biological Processes","evm.TU.chromosome_8.2695"
+"28","GO:0090136","epithelial cell-cell adhesion",15,1,0.02,0.02069,"Biological Processes","evm.TU.chromosome_7.806"
+"29","GO:0097374","sensory neuron axon guidance",17,1,0.02,0.02341,"Biological Processes","evm.TU.chromosome_3.1557"
+"30","GO:0043248","proteasome assembly",18,1,0.03,0.02477,"Biological Processes","evm.TU.chromosome_3.1678"
+"31","GO:0043248","proteasome assembly",18,1,0.03,0.02477,"Biological Processes","evm.TU.chromosome_3.1678"
+"32","GO:0035036","sperm-egg recognition",19,1,0.03,0.02613,"Biological Processes","evm.TU.chromosome_12.906"
+"33","GO:0002925","positive regulation of humoral immune response medi...",19,1,0.03,0.02613,"Biological Processes","evm.TU.chromosome_8.2695"
+"34","GO:0007275","multicellular organism development",4631,8,6.45,0.03492,"Biological Processes","evm.TU.chromosome_4.1315"
+"35","GO:0007275","multicellular organism development",4631,8,6.45,0.03492,"Biological Processes","evm.TU.chromosome_5.2273"
+"36","GO:0007275","multicellular organism development",4631,8,6.45,0.03492,"Biological Processes","evm.TU.chromosome_12.906"
+"37","GO:0030517","negative regulation of axon extension",26,1,0.04,0.0356,"Biological Processes","evm.TU.chromosome_3.624"
+"38","GO:0032570","response to progesterone",26,1,0.04,0.0356,"Biological Processes","evm.TU.chromosome_12.906"
+"39","GO:0031110","regulation of microtubule polymerization or depolym...",28,1,0.04,0.03828,"Biological Processes","evm.TU.chromosome_4.28"
+"40","GO:0031110","regulation of microtubule polymerization or depolym...",28,1,0.04,0.03828,"Biological Processes","evm.TU.chromosome_4.28"
+"41","GO:0035335","peptidyl-tyrosine dephosphorylation",28,1,0.04,0.03828,"Biological Processes","evm.TU.chromosome_3.624"
+"42","GO:0035218","leg disc development",30,1,0.04,0.04096,"Biological Processes","evm.TU.chromosome_6.1006"
+"43","GO:0090073","positive regulation of protein homodimerization act...",35,1,0.05,0.04763,"Biological Processes","evm.TU.chromosome_11.2667"
+"44","GO:0000802","transverse filament",1,1,0,0.0015,"Cellular Components","evm.TU.chromosome_12.3101"
+"45","GO:0000801","central element",2,1,0,0.003,"Cellular Components","evm.TU.chromosome_12.3101"
+"46","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components","evm.TU.chromosome_3.370"
+"47","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components","evm.TU.chromosome_3.370"
+"48","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components","evm.TU.chromosome_13.358"
+"49","GO:0000786","nucleosome",104,2,0.15,0.0103,"Cellular Components","evm.TU.chromosome_13.358"
+"50","GO:0005721","pericentric heterochromatin",9,1,0.01,0.0132,"Cellular Components","evm.TU.chromosome_4.1315"
+"51","GO:0001673","male germ cell nucleus",9,1,0.01,0.0132,"Cellular Components","evm.TU.chromosome_12.3101"
+"52","GO:0036128","CatSper complex",18,1,0.03,0.0263,"Cellular Components","evm.TU.chromosome_12.906"
+"53","GO:0036128","CatSper complex",18,1,0.03,0.0263,"Cellular Components","evm.TU.chromosome_12.906"
+"54","GO:0005838","proteasome regulatory particle",21,1,0.03,0.0306,"Cellular Components","evm.TU.chromosome_2.218"
+"55","GO:0005881","cytoplasmic microtubule",22,1,0.03,0.0321,"Cellular Components","evm.TU.chromosome_9.2235"
+"56","GO:0005771","multivesicular body",28,1,0.04,0.0406,"Cellular Components","evm.TU.chromosome_3.1678"
+"57","GO:0000121","glycerol-1-phosphatase activity",2,1,0,0.0027,"Molecular Functions","evm.TU.chromosome_7.1323"
+"58","GO:0043136","glycerol-3-phosphatase activity",2,1,0,0.0027,"Molecular Functions","evm.TU.chromosome_7.1323"
+"59","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions","evm.TU.chromosome_7.1243"
+"60","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions","evm.TU.chromosome_7.1243"
+"61","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions","evm.TU.chromosome_9.2235"
+"62","GO:0005200","structural constituent of cytoskeleton",79,2,0.11,0.005,"Molecular Functions","evm.TU.chromosome_9.2235"
+"63","GO:0019863","IgE binding",7,1,0.01,0.0093,"Molecular Functions","evm.TU.chromosome_8.2695"
+"64","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions","evm.TU.chromosome_3.624"
+"65","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions","evm.TU.chromosome_3.624"
+"66","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions","evm.TU.chromosome_3.1557"
+"67","GO:0004725","protein tyrosine phosphatase activity",113,2,0.15,0.0099,"Molecular Functions","evm.TU.chromosome_3.1557"
+"68","GO:0015386","potassium:proton antiporter activity",9,1,0.01,0.012,"Molecular Functions","evm.TU.chromosome_5.2273"
+"69","GO:0008301","DNA binding, bending",13,1,0.02,0.0172,"Molecular Functions","evm.TU.chromosome_6.1006"
+"70","GO:0015385","sodium:proton antiporter activity",14,1,0.02,0.0186,"Molecular Functions","evm.TU.chromosome_5.2273"
+"71","GO:0043395","heparan sulfate proteoglycan binding",16,1,0.02,0.0212,"Molecular Functions","evm.TU.chromosome_3.624"
+"72","GO:0008201","heparin binding",175,2,0.23,0.0227,"Molecular Functions","evm.TU.chromosome_3.624"
+"73","GO:0008201","heparin binding",175,2,0.23,0.0227,"Molecular Functions","evm.TU.chromosome_3.1557"
+"74","GO:0017025","TBP-class protein binding",19,1,0.03,0.0251,"Molecular Functions","evm.TU.chromosome_6.1006"
+"75","GO:0003680","minor groove of adenine-thymine-rich DNA binding",20,1,0.03,0.0264,"Molecular Functions","evm.TU.chromosome_13.358"
+"76","GO:0001733","galactosylceramide sulfotransferase activity",26,1,0.03,0.0342,"Molecular Functions","evm.TU.chromosome_3.611"
+"77","GO:0001733","galactosylceramide sulfotransferase activity",26,1,0.03,0.0342,"Molecular Functions","evm.TU.chromosome_3.611"
+"78","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions","evm.TU.chromosome_2.641"
+"79","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions","evm.TU.chromosome_2.641"
+"80","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions","evm.TU.chromosome_8.2695"
+"81","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions","evm.TU.chromosome_13.2779"
+"82","GO:0030246","carbohydrate binding",567,3,0.76,0.0389,"Molecular Functions","evm.TU.chromosome_13.2779"
