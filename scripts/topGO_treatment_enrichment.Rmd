@@ -403,11 +403,19 @@ ggsave(filename = "../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expre
 
 Look at any overlaps between June ambient and heat 
 ```{r}
-june_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv")
+june_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv") %>%
+    filter(ontology != "Cellular Components")
 length(unique(june_amb_genes$Term))
+blah <- june_amb_genes %>%
+  group_by(ontology) %>%
+  summarise(gene_count = n_distinct(Term)) 
 
-june_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expressed_genes.csv")
+june_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expressed_genes.csv")%>%
+    filter(ontology != "Cellular Components")
 length(unique(june_heat_genes$Term))
+blah2 <- june_heat_genes %>%
+  group_by(ontology) %>%
+  summarise(gene_count = n_distinct(Term))
 
 june_amb_terms <- unique(june_amb_genes$Term)
 june_heat_terms <- unique(june_heat_genes$Term)
@@ -796,11 +804,19 @@ ggsave(filename = "../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_heat_expres
 
 Look at any overlaps between August ambient and heat 
 ```{r}
-aug_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_amb_expressed_genes.csv")
+aug_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_amb_expressed_genes.csv") %>%
+   filter(ontology != "Cellular Components")
 length(unique(aug_amb_genes$Term))
+blah <- aug_amb_genes %>%
+   group_by(Term,ontology) %>%
+   summarise(gene_count = n_distinct(mRNA))
 
-aug_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_heat_expressed_genes.csv")
+aug_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_heat_expressed_genes.csv") %>%
+   filter(ontology != "Cellular Components")
 length(unique(aug_heat_genes$Term))
+blah2 <- aug_heat_genes %>%
+    group_by(ontology) %>%
+    summarise(gene_count = n_distinct(Term))
 
 aug_amb_terms <- unique(aug_amb_genes$Term)
 aug_heat_terms <- unique(aug_heat_genes$Term)

@@ -1,0 +1,338 @@
+---
+title: "Weighted Jaccard Index for mRNA-miRNA networks"
+author: "Jill Ashey"
+date: "2025-07-16"
+output: html_document
+---
+
+Steps 
+- Subset samples for one treatment 
+- Run PCC for those samples 
+- Build networks using the PCC and miranda data 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(DESeq2)
+library(pbapply)
+library(igraph)
+library(ggraph)
+library(tidygraph)
+```
+
+Read in mRNA count data
+```{r}
+mrna_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+
+# Set row names
+rownames(mrna_counts) <- mrna_counts[,1] #set first column that contains gene names as rownames
+mrna_counts <- mrna_counts[,-1] # remove column w/ gene names 
+```
+
+Read in miRNA count data
+```{r}
+mirna_counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
+
+Select only miRNAs with a Y in MIRNA column. Combine Name and Coords columns for miRNA name. Remove MIRNA column 
+```{r}
+mirna_counts <- mirna_counts %>%
+  dplyr::filter(MIRNA == "Y") %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+
+# Set row names 
+rownames(mirna_counts) <- mirna_counts[,20] #set column that contains names as rownames
+mirna_counts <- mirna_counts[,-20] # remove column w/ gene names 
+```
+
+Remove extra info from column names
+```{r}
+colnames(mirna_counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(mirna_counts))
+colnames(mirna_counts) <- gsub("AST.", "AST-", colnames(mirna_counts))
+colnames(mrna_counts) <- gsub("AST.", "AST-", colnames(mrna_counts))
+```
+
+Remove sample that did not sequence well
+```{r}
+mrna_counts <- mrna_counts %>%
+    dplyr::select(-"AST-1105")
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) # rearrange metadata so IDs are sorted in descending order 
+#meta$ID <- gsub("AST-", "AST.", meta$ID)
+
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation", "Ambient", "Heat"))
+
+# Remove sample that did not sequence well 
+meta <- meta %>%
+    dplyr::filter(!ID=="AST-1105")
+```
+
+## February network 
+
+Subset February samples from counts dfs
+```{r}
+# Get TP0 sample IDs
+tp0_ids <- meta$ID[meta$Timepoint == "TP0"]
+
+# Subset columns in counts
+mirna_tp0 <- mirna_counts[, tp0_ids]
+mrna_tp0  <- mrna_counts[, tp0_ids]
+rownames(mirna_tp0) <- rownames(mirna_counts)
+rownames(mrna_tp0)  <- rownames(mrna_counts)
+```
+
+Perform rlog on counts 
+```{r}
+# Filter meta for TP0
+tp0_meta <- meta[meta$Timepoint == "TP0", ]
+tp0_ids <- tp0_meta$ID
+
+# Subset counts to TP0 samples
+mirna_tp0 <- mirna_counts[, tp0_ids]
+mrna_tp0  <- mrna_counts[, tp0_ids]
+
+# Add dummy colData if you don’t have any covariates
+dds_mirna <- DESeqDataSetFromMatrix(countData = mirna_tp0,
+                                    colData = tp0_meta,
+                                    design = ~1)
+
+dds_mrna  <- DESeqDataSetFromMatrix(countData = mrna_tp0,
+                                    colData = tp0_meta,
+                                    design = ~1)
+
+# Run rlog (blind = TRUE for no design)
+rlog_mirna <- assay(rlog(dds_mirna, blind = TRUE))
+rlog_mrna  <- assay(rlog(dds_mrna, blind = TRUE))
+
+# Check shapes
+dim(rlog_mirna)
+dim(rlog_mrna)
+
+```
+
+Run PCC on February data 
+```{r}
+miRNA_ids <- rownames(rlog_mirna)
+mRNA_ids  <- rownames(rlog_mrna)
+
+# Make grid of all combos
+grid <- expand.grid(miRNA = miRNA_ids, mRNA = mRNA_ids, stringsAsFactors = FALSE)
+
+# Compute PCC and p-value
+results <- pbapply::pblapply(1:nrow(grid), function(i) {
+  mir <- rlog_mirna[grid$miRNA[i], ]
+  mr  <- rlog_mrna[grid$mRNA[i], ]
+  ct  <- cor.test(mir, mr, method = "pearson")
+  data.frame(miRNA = grid$miRNA[i],
+             mRNA = grid$mRNA[i],
+             PCC = ct$estimate,
+             Pvalue = ct$p.value)
+})
+
+results_df <- do.call(rbind, results)
+str(results_df)
+
+# format miRNA names 
+results_df <- results_df %>%
+    mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+### Full binding 
+
+Read in full binding miranda data 
+```{r}
+miranda_full <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_full) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_full$miRNA <- sub("^>", "", miranda_full$miRNA)  # Remove leading ">"
+miranda_full$miRNA <- sub("\\..*", "", miranda_full$miRNA)  # Remove everything from the first period onwards
+miranda_full$mRNA <- sub(";.*", "", miranda_full$mRNA)  # Remove everything from "::" onwards
+miranda_full$mRNA <- sub("ID=", "", miranda_full$mRNA)  # Remove everything from "::" onwards
+miranda_full$mRNA <- sub("model", "TU", miranda_full$mRNA)  # Remove everything from "::" onwards
+```
+
+Merge miranda results with pcc data
+```{r}
+full_pcc <- results_df %>%
+  inner_join(miranda_full, by = c("miRNA", "mRNA"))
+
+length(unique(full_pcc$miRNA))
+length(unique(full_pcc$mRNA))
+```
+
+Subset by significant PCCs
+```{r}
+full_pcc_05 <- full_pcc %>%
+  filter(Pvalue < 0.05)
+```
+
+Create network plot of the mRNA-miRNA interactions. 
+```{r}
+# Prepare edges
+edges <- full_pcc_05[, c("miRNA", "mRNA", "PCC", "Pvalue", "score", "energy")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue", "score", "energy")
+
+miRNAs <- unique(edges$from)
+mRNAs  <- unique(edges$to)
+
+nodes <- data.frame(
+  name = c(miRNAs, mRNAs),
+  type = c(rep("miRNA", length(miRNAs)), rep("mRNA", length(mRNAs)))
+)
+
+# Create graph
+graph <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE);graph
+
+# Plot 
+ggraph(graph, layout = "fr") +  # fr = Fruchterman-Reingold layout
+  geom_edge_link(aes(color = PCC), arrow = arrow(length = unit(4, 'mm')),
+                 end_cap = circle(3, 'mm'), width = 0.8) +
+  scale_edge_color_gradient2(low = "red", mid = "grey", high = "blue", midpoint = 0) +
+  geom_node_point(aes(shape = type, color = type), size = 4) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  theme_graph() +
+  labs(edge_color = "PCC") +
+  ggtitle("miRNA–mRNA PCC network")
+```
+
+Another version
+```{r}
+# Example edges — use your filtered data
+edges <- full_pcc_05[, c("miRNA", "mRNA", "PCC", "Pvalue")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue")
+
+# Create igraph object
+g <- graph_from_data_frame(edges, directed = FALSE)
+
+# Add edge weight and color
+E(g)$weight <- abs(E(g)$PCC)  # Absolute PCC for line thickness
+E(g)$color <- ifelse(E(g)$PCC > 0, "red", "blue")  # Red = positive, Blue = negative
+
+# Add node type attribute
+V(g)$type <- ifelse(V(g)$name %in% edges$from, "miRNA", "mRNA")
+
+# Convert to tidygraph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Plot
+p <- ggraph(g_tbl, layout = "fr") +  # Fruchterman-Reingold layout
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  # geom_node_text(aes(label = name), repel = TRUE, size = 3) +  # Uncomment to show labels
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_edge_color_identity() +  # Use exact edge colors we set
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(
+    title = "miRNA–mRNA Interaction Network",
+    subtitle = "Edge width = |PCC|, Red = positive, Blue = negative"
+  )
+
+# Show plot
+p
+```
+
+### 3'UTR
+
+Read in 3'UTR binding miranda data 
+```{r}
+miranda_3utr <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_3utr) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_3utr$miRNA <- sub("^>", "", miranda_3utr$miRNA)  # Remove leading ">"
+miranda_3utr$miRNA <- sub("\\..*", "", miranda_3utr$miRNA)  # Remove everything from the first period onwards
+miranda_3utr$mRNA <- sub(";.*", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("ID=", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("model", "TU", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+```
+
+Merge miranda results with pcc data
+```{r}
+utr_pcc <- results_df %>%
+  inner_join(miranda_3utr, by = c("miRNA", "mRNA"))
+
+length(unique(utr_pcc$miRNA))
+length(unique(utr_pcc$mRNA))
+```
+
+Subset by significant PCCs
+```{r}
+utr_pcc_05 <- utr_pcc %>%
+  filter(Pvalue < 0.05)
+```
+
+Create network plot of the mRNA-miRNA interactions. 
+```{r}
+# Prepare edges
+edges <- utr_pcc_05[, c("miRNA", "mRNA", "PCC", "Pvalue", "score", "energy")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue", "score", "energy")
+
+miRNAs <- unique(edges$from)
+mRNAs  <- unique(edges$to)
+
+nodes <- data.frame(
+  name = c(miRNAs, mRNAs),
+  type = c(rep("miRNA", length(miRNAs)), rep("mRNA", length(mRNAs)))
+)
+
+# Create graph
+graph <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE);graph
+
+# Plot 
+ggraph(graph, layout = "fr") +  # fr = Fruchterman-Reingold layout
+  geom_edge_link(aes(color = PCC), arrow = arrow(length = unit(4, 'mm')),
+                 end_cap = circle(3, 'mm'), width = 0.8) +
+  scale_edge_color_gradient2(low = "red", mid = "grey", high = "blue", midpoint = 0) +
+  geom_node_point(aes(shape = type, color = type), size = 4) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  theme_graph() +
+  labs(edge_color = "PCC") +
+  ggtitle("miRNA–mRNA PCC network")
+```
+
+Another version
+```{r}
+# Example edges — use your filtered data
+edges <- utr_pcc_05[, c("miRNA", "mRNA", "PCC", "Pvalue")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue")
+
+# Create igraph object
+g <- graph_from_data_frame(edges, directed = FALSE)
+
+# Add edge weight and color
+E(g)$weight <- abs(E(g)$PCC)  # Absolute PCC for line thickness
+E(g)$color <- ifelse(E(g)$PCC > 0, "red", "blue")  # Red = positive, Blue = negative
+
+# Add node type attribute
+V(g)$type <- ifelse(V(g)$name %in% edges$from, "miRNA", "mRNA")
+
+# Convert to tidygraph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Plot
+p <- ggraph(g_tbl, layout = "fr") +  # Fruchterman-Reingold layout
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  # geom_node_text(aes(label = name), repel = TRUE, size = 3) +  # Uncomment to show labels
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_edge_color_identity() +  # Use exact edge colors we set
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(
+    title = "miRNA–mRNA Interaction Network",
+    subtitle = "Edge width = |PCC|, Red = positive, Blue = negative"
+  )
+
+# Show plot
+p
+```

@@ -5,7 +5,7 @@ date: "2025-05-13"
 output: html_document
 ---
 
-Looking at miranda output 
+Looking at miranda output for 3'UTR and full mRNA binding. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -15,24 +15,24 @@ library(tidyverse)
 
 Read in miranda data - entire mRNA binding
 ```{r}
-miranda_data <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
-colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+miranda_full <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_full) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
 
 # Format miranda df 
-miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
-miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
-miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-miranda_data$mRNA <- sub("model", "TU", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_full$miRNA <- sub("^>", "", miranda_full$miRNA)  # Remove leading ">"
+miranda_full$miRNA <- sub("\\..*", "", miranda_full$miRNA)  # Remove everything from the first period onwards
+miranda_full$mRNA <- sub(";.*", "", miranda_full$mRNA)  # Remove everything from "::" onwards
+miranda_full$mRNA <- sub("ID=", "", miranda_full$mRNA)  # Remove everything from "::" onwards
+miranda_full$mRNA <- sub("model", "TU", miranda_full$mRNA)  # Remove everything from "::" onwards
 
-dim(miranda_data)
-length(unique(miranda_data$miRNA))
-length(unique(miranda_data$mRNA))
+dim(miranda_full)
+length(unique(miranda_full$miRNA))
+length(unique(miranda_full$mRNA))
 ```
 
 Plot total bp shared distribution
 ```{r}
-ggplot(miranda_data, aes(x = total_bp_shared)) +
+ggplot(miranda_full, aes(x = total_bp_shared)) +
   geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
   labs(
     x = "Total bp shared",
@@ -40,3 +40,90 @@ ggplot(miranda_data, aes(x = total_bp_shared)) +
   ) +
   theme_minimal()
 ```
+
+Read in miranda data - 3'UTR binding 
+```{r}
+miranda_3utr <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_3utr) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_3utr$miRNA <- sub("^>", "", miranda_3utr$miRNA)  # Remove leading ">"
+miranda_3utr$miRNA <- sub("\\..*", "", miranda_3utr$miRNA)  # Remove everything from the first period onwards
+miranda_3utr$mRNA <- sub(";.*", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("ID=", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("model", "TU", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_3utr)
+length(unique(miranda_3utr$miRNA))
+length(unique(miranda_3utr$mRNA))
+```
+
+Plot total bp shared distribution
+```{r}
+ggplot(miranda_3utr, aes(x = total_bp_shared)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+  labs(
+    x = "Total bp shared",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+How much overlap is there between these two datasets? 
+```{r}
+# Make a simple unique pair ID
+miranda_full$pair <- paste(miranda_full$miRNA, miranda_full$mRNA, sep = "_")
+miranda_3utr$pair <- paste(miranda_3utr$miRNA, miranda_3utr$mRNA, sep = "_")
+
+# How many pairs are in each
+length(unique(miranda_full$pair))
+length(unique(miranda_3utr$pair))
+
+# How many pairs overlap?
+overlap_pairs <- intersect(miranda_full$pair, miranda_3utr$pair)
+length(overlap_pairs)
+
+# What % overlap?
+length(overlap_pairs) / length(unique(miranda_3utr$pair)) * 100
+length(overlap_pairs) / length(suunique(miranda_full$pair)) * 100
+```
+
+If a pair is found in both, do the scores differ? 
+```{r}
+# Keep only overlapping pairs
+full_overlap <- miranda_full[miranda_full$pair %in% overlap_pairs, ]
+utr_overlap <- miranda_3utr[miranda_3utr$pair %in% overlap_pairs, ]
+
+# Merge by pair
+merged <- merge(full_overlap, utr_overlap, by = "pair", suffixes = c("_full", "_3utr"))
+
+# Compare scores/energy
+plot(merged$score_full, merged$score_3utr, 
+     xlab = "Full mRNA score", ylab = "3′UTR score")
+abline(0, 1, col = "red")
+
+plot(merged$energy_full, merged$energy_3utr,
+     xlab = "Full mRNA energy", ylab = "3′UTR energy")
+abline(0, 1, col = "red")
+
+```
+
+Summarize unique v shared
+```{r}
+only_full <- setdiff(miranda_full$pair, miranda_3utr$pair)
+only_3utr <- setdiff(miranda_3utr$pair, miranda_full$pair)
+
+length(only_full)
+length(only_3utr)
+
+summary_df <- data.frame(
+  total_full = length(unique(miranda_full$pair)),
+  total_3utr = length(unique(miranda_3utr$pair)),
+  overlap = length(overlap_pairs),
+  only_full = length(only_full),
+  only_3utr = length(only_3utr)
+)
+summary_df
+```
+
+Maybe use them both...
