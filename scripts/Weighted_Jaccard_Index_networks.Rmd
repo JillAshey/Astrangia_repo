@@ -19,6 +19,7 @@ library(pbapply)
 library(igraph)
 library(ggraph)
 library(tidygraph)
+library(DT)
 ```
 
 Read in mRNA count data
@@ -336,3 +337,257 @@ p <- ggraph(g_tbl, layout = "fr") +  # Fruchterman-Reingold layout
 # Show plot
 p
 ```
+
+## June ambient network 
+
+Subset June ambient samples from counts dfs
+```{r}
+# Get TP5 ambient sample IDs
+tp5_amb_ids <- meta$ID[meta$Timepoint == "TP5" & meta$Treatment == "Ambient"]
+
+# Subset columns in counts
+mirna_tp5_amb <- mirna_counts[, tp5_amb_ids]
+mrna_tp5_amb  <- mrna_counts[, tp5_amb_ids]
+rownames(mirna_tp5_amb) <- rownames(mirna_counts)
+rownames(mrna_tp5_amb)  <- rownames(mrna_counts)
+```
+
+Perform rlog on counts 
+```{r}
+# Filter meta for TP5 amb
+tp5_amb_meta <- meta[meta$Timepoint == "TP5" & meta$Treatment == "Ambient", ]
+tp5_amb_ids <- tp5_amb_meta$ID
+
+# Subset counts to TP5 amb samples
+mirna_tp5_amb <- mirna_counts[, tp5_amb_ids]
+mrna_tp5_amb  <- mrna_counts[, tp5_amb_ids]
+
+# Add dummy colData if you don’t have any covariates
+dds_mirna <- DESeqDataSetFromMatrix(countData = mirna_tp5_amb,
+                                    colData = tp5_amb_meta,
+                                    design = ~1)
+
+dds_mrna  <- DESeqDataSetFromMatrix(countData = mrna_tp5_amb,
+                                    colData = tp5_amb_meta,
+                                    design = ~1)
+
+# Run rlog (blind = TRUE for no design)
+rlog_mirna <- assay(rlog(dds_mirna, blind = TRUE))
+rlog_mrna  <- assay(rlog(dds_mrna, blind = TRUE))
+
+# Check shapes
+dim(rlog_mirna)
+dim(rlog_mrna)
+
+```
+
+Run PCC on February data 
+```{r}
+miRNA_ids <- rownames(rlog_mirna)
+mRNA_ids  <- rownames(rlog_mrna)
+
+# Make grid of all combos
+grid <- expand.grid(miRNA = miRNA_ids, mRNA = mRNA_ids, stringsAsFactors = FALSE)
+
+# Compute PCC and p-value
+results_tp5_amb <- pbapply::pblapply(1:nrow(grid), function(i) {
+  mir <- rlog_mirna[grid$miRNA[i], ]
+  mr  <- rlog_mrna[grid$mRNA[i], ]
+  ct  <- cor.test(mir, mr, method = "pearson")
+  data.frame(miRNA = grid$miRNA[i],
+             mRNA = grid$mRNA[i],
+             PCC = ct$estimate,
+             Pvalue = ct$p.value)
+})
+
+results_tp5_amb_df <- do.call(rbind, results_tp5_amb)
+str(results_tp5_amb_df)
+
+# format miRNA names 
+results_tp5_amb_df <- results_tp5_amb_df %>%
+    mutate(miRNA = str_replace(miRNA, "^([^_]*_[^_]*)_.*$", "\\1"))
+```
+
+### Full binding 
+
+Merge full miranda results with pcc data
+```{r}
+full_pcc_tp5_amb <- results_tp5_amb_df %>%
+  inner_join(miranda_full, by = c("miRNA", "mRNA"))
+
+length(unique(full_pcc_tp5_amb$miRNA))
+length(unique(full_pcc_tp5_amb$mRNA))
+```
+
+Subset by significant PCCs
+```{r}
+full_pcc_tp5_amb_05 <- full_pcc_tp5_amb %>%
+  filter(Pvalue < 0.05)
+```
+
+Create network plot of the mRNA-miRNA interactions. 
+```{r}
+# Prepare edges
+edges <- full_pcc_tp5_amb_05[, c("miRNA", "mRNA", "PCC", "Pvalue", "score", "energy")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue", "score", "energy")
+
+miRNAs <- unique(edges$from)
+mRNAs  <- unique(edges$to)
+
+nodes <- data.frame(
+  name = c(miRNAs, mRNAs),
+  type = c(rep("miRNA", length(miRNAs)), rep("mRNA", length(mRNAs)))
+)
+
+# Create graph
+graph <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE);graph
+
+# Plot 
+ggraph(graph, layout = "fr") +  # fr = Fruchterman-Reingold layout
+  geom_edge_link(aes(color = PCC), arrow = arrow(length = unit(4, 'mm')),
+                 end_cap = circle(3, 'mm'), width = 0.8) +
+  scale_edge_color_gradient2(low = "red", mid = "grey", high = "blue", midpoint = 0) +
+  geom_node_point(aes(shape = type, color = type), size = 4) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  theme_graph() +
+  labs(edge_color = "PCC") +
+  ggtitle("miRNA–mRNA PCC network")
+```
+
+Another version
+```{r}
+# Example edges — use your filtered data
+edges <- full_pcc_tp5_amb_05[, c("miRNA", "mRNA", "PCC", "Pvalue")]
+colnames(edges) <- c("from", "to", "PCC", "Pvalue")
+
+# Create igraph object
+g <- graph_from_data_frame(edges, directed = FALSE)
+
+# Add edge weight and color
+E(g)$weight <- abs(E(g)$PCC)  # Absolute PCC for line thickness
+E(g)$color <- ifelse(E(g)$PCC > 0, "red", "blue")  # Red = positive, Blue = negative
+
+# Add node type attribute
+V(g)$type <- ifelse(V(g)$name %in% edges$from, "miRNA", "mRNA")
+
+# Convert to tidygraph for ggraph
+g_tbl <- as_tbl_graph(g)
+
+# Plot
+p <- ggraph(g_tbl, layout = "fr") +  # Fruchterman-Reingold layout
+  geom_edge_link(aes(edge_width = weight, color = color), alpha = 0.6) +
+  geom_node_point(aes(color = type), size = 5) +
+  # geom_node_text(aes(label = name), repel = TRUE, size = 3) +  # Uncomment to show labels
+  scale_edge_width(range = c(0.5, 3)) +
+  scale_edge_color_identity() +  # Use exact edge colors we set
+  scale_color_manual(values = c("miRNA" = "purple", "mRNA" = "orange")) +
+  theme_graph() +
+  labs(
+    title = "miRNA–mRNA Interaction Network",
+    subtitle = "Edge width = |PCC|, Red = positive, Blue = negative"
+  )
+
+# Show plot
+p
+```
+
+### 3'UTR
+
+
+
+
+
+
+
+
+
+## Comparison of February and June ambient
+
+### Full binding 
+
+Weighted Jaccard index 
+```{r}
+# Add pair ID to each df
+full_pcc <- full_pcc %>%
+  mutate(pair = paste(miRNA, mRNA, sep = "_"))
+
+full_pcc_tp5_amb <- full_pcc_tp5_amb %>%
+  mutate(pair = paste(miRNA, mRNA, sep = "_"))
+
+# Bring Feb PCC
+df_feb <- full_pcc %>%
+  select(pair, PCC_feb = PCC)
+
+# Bring TP5 PCC
+df_tp5 <- full_pcc_tp5_amb %>%
+  select(pair, PCC_tp5 = PCC)
+
+# Combine
+jaccard_df <- full_join(df_feb, df_tp5, by = "pair")
+
+jaccard_df <- jaccard_df %>%
+  mutate(
+    abs_feb  = abs(PCC_feb),
+    abs_tp5  = abs(PCC_tp5),
+    weighted_jaccard = pmin(abs_feb, abs_tp5) / pmax(abs_feb, abs_tp5),
+    sign_change = sign(PCC_feb) != sign(PCC_tp5)
+  )
+
+jaccard_df <- jaccard_df %>%
+  mutate(
+    stability = case_when(
+      is.na(PCC_feb) | is.na(PCC_tp5) ~ "One missing",
+      sign_change ~ "Sign flip",
+      weighted_jaccard >= 0.8 ~ "Stable same sign",
+      weighted_jaccard < 0.8 ~ "Diverging same sign"
+    )
+  )
+
+jaccard_df <- unique(jaccard_df)
+
+# Show summary table
+table(jaccard_df$stability)
+```
+
+Subset by sign flip 
+```{r}
+jaccard_df_flip <- jaccard_df %>%
+  filter(stability == "Sign flip") %>%
+  separate(pair, into = c("miRNA", "mRNA"), sep = "_evm\\.", remove = FALSE)
+jaccard_df_flip$mRNA <- paste0("evm.", jaccard_df_flip$mRNA)
+```
+
+Direction of flip
+```{r}
+jaccard_df_flip <- jaccard_df_flip %>%
+  mutate(
+    flip_direction = case_when(
+      PCC_feb > 0 & PCC_tp5 < 0 ~ "PosToNeg",
+      PCC_feb < 0 & PCC_tp5 > 0 ~ "NegToPos",
+      TRUE ~ "Other"
+    )
+  )
+
+table(jaccard_df_flip$flip_direction)
+
+ggplot(jaccard_df_flip, aes(x = weighted_jaccard)) +
+  geom_histogram(fill = "steelblue", color = "black") +
+  labs(
+    x = "Weighted jaccard value",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+Read in mRNA DE results from Feb and June ambient 
+```{r}
+de_tp0_tp5_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")[,1:7]
+```
+
+Join DE results with jaccard 
+```{r}
+test <- de_tp0_tp5_amb %>%
+  inner_join(jaccard_df_flip, by = c("X" = "mRNA"))
+```
+
+Not sure where to go with this info...
