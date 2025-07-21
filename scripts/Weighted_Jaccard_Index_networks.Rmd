@@ -20,6 +20,7 @@ library(igraph)
 library(ggraph)
 library(tidygraph)
 library(DT)
+library(pheatmap)
 ```
 
 Read in mRNA count data
@@ -168,6 +169,9 @@ full_pcc <- results_df %>%
 
 length(unique(full_pcc$miRNA))
 length(unique(full_pcc$mRNA))
+
+# Save as csv 
+write.csv(full_pcc, "../output/Molecular/interactions/jaccard/feb_pcc_miranda_full_binding.csv")
 ```
 
 Subset by significant PCCs
@@ -264,6 +268,9 @@ utr_pcc <- results_df %>%
 
 length(unique(utr_pcc$miRNA))
 length(unique(utr_pcc$mRNA))
+
+# Save as csv 
+write.csv(utr_pcc, "../output/Molecular/interactions/jaccard/feb_pcc_miranda_3UTR_binding.csv")
 ```
 
 Subset by significant PCCs
@@ -381,7 +388,7 @@ dim(rlog_mrna)
 
 ```
 
-Run PCC on February data 
+Run PCC on June ambient data 
 ```{r}
 miRNA_ids <- rownames(rlog_mirna)
 mRNA_ids  <- rownames(rlog_mrna)
@@ -417,6 +424,10 @@ full_pcc_tp5_amb <- results_tp5_amb_df %>%
 
 length(unique(full_pcc_tp5_amb$miRNA))
 length(unique(full_pcc_tp5_amb$mRNA))
+
+
+# Save as csv 
+write.csv(full_pcc_tp5_amb, "../output/Molecular/interactions/jaccard/june_amb_pcc_miranda_full_binding.csv")
 ```
 
 Subset by significant PCCs
@@ -505,7 +516,7 @@ p
 
 ### Full binding 
 
-Weighted Jaccard index 
+Add pair ID to each df and then select the pairs and their associated PCC
 ```{r}
 # Add pair ID to each df
 full_pcc <- full_pcc %>%
@@ -521,10 +532,14 @@ df_feb <- full_pcc %>%
 # Bring TP5 PCC
 df_tp5 <- full_pcc_tp5_amb %>%
   select(pair, PCC_tp5 = PCC)
+```
 
-# Combine
+Join dfs and calculate Jaccard index 
+```{r}
+# Combine dfs
 jaccard_df <- full_join(df_feb, df_tp5, by = "pair")
 
+# Calculate jaccard index
 jaccard_df <- jaccard_df %>%
   mutate(
     abs_feb  = abs(PCC_feb),
@@ -533,6 +548,7 @@ jaccard_df <- jaccard_df %>%
     sign_change = sign(PCC_feb) != sign(PCC_tp5)
   )
 
+# Assess what the correlation is doing based on sign change and jaccard
 jaccard_df <- jaccard_df %>%
   mutate(
     stability = case_when(
@@ -557,28 +573,6 @@ jaccard_df_flip <- jaccard_df %>%
 jaccard_df_flip$mRNA <- paste0("evm.", jaccard_df_flip$mRNA)
 ```
 
-Direction of flip
-```{r}
-jaccard_df_flip <- jaccard_df_flip %>%
-  mutate(
-    flip_direction = case_when(
-      PCC_feb > 0 & PCC_tp5 < 0 ~ "PosToNeg",
-      PCC_feb < 0 & PCC_tp5 > 0 ~ "NegToPos",
-      TRUE ~ "Other"
-    )
-  )
-
-table(jaccard_df_flip$flip_direction)
-
-ggplot(jaccard_df_flip, aes(x = weighted_jaccard)) +
-  geom_histogram(fill = "steelblue", color = "black") +
-  labs(
-    x = "Weighted jaccard value",
-    y = "Count"
-  ) +
-  theme_minimal()
-```
-
 Read in mRNA DE results from Feb and June ambient 
 ```{r}
 de_tp0_tp5_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")[,1:7]
@@ -588,6 +582,94 @@ Join DE results with jaccard
 ```{r}
 test <- de_tp0_tp5_amb %>%
   inner_join(jaccard_df_flip, by = c("X" = "mRNA"))
+test<- unique(test)
+
+# DEGs where the miRNA-mRNA correlation flips sign or changes greatly in magnitude.
+highlights <- test %>%
+  filter(sign_change == TRUE) %>%
+  filter(weighted_jaccard < 0.2) %>%
+  mutate(
+    seasonal_direction = case_when(
+      log2FoldChange > 0 ~ "Up in February",
+      log2FoldChange < 0 ~ "Up in June",
+      TRUE               ~ "No Change"
+    )
+  )
+
+table(highlights$seasonal_direction, highlights$stability)
+ggplot(highlights, aes(x = seasonal_direction, fill = stability)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Seasonal DEGs with miRNA-mRNA Regulatory Rewiring",
+       x = "Gene Upregulation Season", y = "Number of Pairs", fill = "Regulatory Stability") +
+  theme_classic()
+
+heatmap_mat <- highlights %>%
+  select(pair, PCC_feb, PCC_tp5) %>%
+  tibble::column_to_rownames("pair") %>%
+  as.matrix()
+
+pheatmap(heatmap_mat, cluster_rows = TRUE, cluster_cols = FALSE,
+         main = "miRNA-mRNA Correlations: Feb vs June (Top Rewired Pairs)",
+         labels_col = c("February", "June"))
 ```
 
-Not sure where to go with this info...
+Filter for genes downregulated in Feb and have negative PCCs 
+```{r}
+blah <- highlights %>%
+  filter(log2FoldChange < 0) %>%
+  filter(PCC_feb < 0)
+```
+
+Read in annot and merge 
+```{r}
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+
+blah2 <- blah %>%
+  inner_join(annot, by = c("X" = "Protein_ID"))
+```
+
+Potential visualizations 
+```{r}
+heatmap_data <- blah %>%
+  dplyr::select(pair, PCC_feb, PCC_tp5) %>%
+  tibble::column_to_rownames("pair")
+
+pheatmap(as.matrix(heatmap_data), cluster_rows = TRUE, cluster_cols = FALSE,
+         main = "miRNA-mRNA Correlations: February vs June",
+         labels_col = c("February", "June"))
+
+blah$cor_diff <- abs(blah$PCC_feb - blah$PCC_tp5)
+ggplot(blah, aes(x = log2FoldChange, y = cor_diff, color = sign_change)) +
+  geom_point(size=3, alpha=0.7) +
+  labs(title="Expression Change vs. Regulatory Change by Pair",
+       x="log2 Fold Change (Feb vs June)", y="Abs Change in PCC",
+       color = "Sign Flip?") +
+  theme_minimal()
+
+pair1 <- blah$pair[1]
+df <- blah %>%
+  filter(pair == pair1) %>%
+  tidyr::pivot_longer(cols = c(PCC_feb, PCC_tp5),
+                      names_to = "Timepoint", values_to = "Correlation")
+ggplot(df, aes(x = Timepoint, y = Correlation, group = 1)) +
+  geom_line(size=1.5) +
+  geom_point(size=3) +
+  labs(title=paste("Correlation Dynamics for", pair1), 
+       x="Timepoint", y="Pearson Correlation") +
+  theme_classic()
+
+ggplot(highlights, aes(x = pair, y = 1, fill = PCC_feb)) +
+  geom_tile() +
+  geom_tile(aes(y = 2, fill = PCC_tp5)) +
+  scale_fill_gradient2(midpoint=0, low="blue", mid="white", high="red") +
+  facet_grid(~seasonal_direction, scales = "free_x", space = "free_x") +
+  labs(
+    title = "miRNA-mRNA Correlation Dynamics for DEGs",
+    x = "miRNA–Gene Pair", y = "Timepoint",
+    fill = "Pearson Corr."
+  ) +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+```
+
+
