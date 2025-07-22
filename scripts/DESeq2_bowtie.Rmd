@@ -505,7 +505,7 @@ head(TP0_v_5_amb)
 
 # Save results for all genes 
 TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
-write.csv(TP0_v_5_amb_df, file = "../output/Molecular/mRNA/TP0_v_5_amb.csv")
+#write.csv(TP0_v_5_amb_df, file = "../output/Molecular/mRNA/TP0_v_5_amb.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
@@ -534,17 +534,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_amb_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_amb_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_amb_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_amb_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_5_amb.sig <- as.data.frame(TP0_v_5_amb.sig)
 TP0_v_5_amb.sig.list <- as.data.frame(counts(TP0_v_5_amb.sig.list))
 TP0_v_5_amb.sig.list.full <- cbind(TP0_v_5_amb.sig, TP0_v_5_amb.sig.list)
-write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
+#write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")
 ```
 
 TP0 v TP7 Ambient
@@ -555,7 +555,7 @@ head(TP0_v_7_amb)
 
 # Save results for all genes 
 TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
-write.csv(TP0_v_7_amb_df, file = "../output/Molecular/mRNA/TP0_v_7_amb.csv")
+#write.csv(TP0_v_7_amb_df, file = "../output/Molecular/mRNA/TP0_v_7_amb.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
@@ -584,17 +584,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_amb_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_amb_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_7_amb.sig <- as.data.frame(TP0_v_7_amb.sig)
 TP0_v_7_amb.sig.list <- as.data.frame(counts(TP0_v_7_amb.sig.list))
 TP0_v_7_amb.sig.list.full <- cbind(TP0_v_7_amb.sig, TP0_v_7_amb.sig.list)
-write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
+#write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP7_amb_DEG.csv")
 ```
 
 TP5 v TP7 Ambient 
@@ -605,7 +605,7 @@ head(TP5_v_7_amb)
 
 # Save results for all genes 
 TP5_v_7_amb_df <- as.data.frame(TP5_v_7_amb)
-write.csv(TP5_v_7_amb_df, file = "../output/Molecular/mRNA/TP5_v_7_amb.csv")
+#write.csv(TP5_v_7_amb_df, file = "../output/Molecular/mRNA/TP5_v_7_amb.csv")
 
 # Volcano plot for LFC 
 ma_plot<- plotMA(TP5_v_7_amb); ma_plot
@@ -634,17 +634,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP7_amb_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP7_amb_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP5_v_7_amb.sig <- as.data.frame(TP5_v_7_amb.sig)
 TP5_v_7_amb.sig.list <- as.data.frame(counts(TP5_v_7_amb.sig.list))
 TP5_v_7_amb.sig.list.full <- cbind(TP5_v_7_amb.sig, TP5_v_7_amb.sig.list)
-write.csv(TP5_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
+#write.csv(TP5_v_7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP5_amb_v_TP7_amb_DEG.csv")
 ```
 
 TP0 v TP5 Heat
@@ -655,7 +655,7 @@ head(TP0_v_5_heat)
 
 # Save results for all genes 
 TP0_v_5_heat_df <- as.data.frame(TP0_v_5_heat)
-write.csv(TP0_v_5_heat_df, file = "../output/Molecular/mRNA/TP0_v_5_heat.csv")
+#write.csv(TP0_v_5_heat_df, file = "../output/Molecular/mRNA/TP0_v_5_heat.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_heat); ma_plot
@@ -684,17 +684,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_heat_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP5_heat_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_5_heat.sig <- as.data.frame(TP0_v_5_heat.sig)
 TP0_v_5_heat.sig.list <- as.data.frame(counts(TP0_v_5_heat.sig.list))
 TP0_v_5_heat.sig.list.full <- cbind(TP0_v_5_heat.sig, TP0_v_5_heat.sig.list)
-write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")
+#write.csv(TP0_v_5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP5_heat_DEG.csv")
 ```
 
 TP0 v TP7 Heat
@@ -705,7 +705,7 @@ head(TP0_v_7_heat)
 
 # Save results for all genes 
 TP0_v_7_heat_df <- as.data.frame(TP0_v_7_heat)
-write.csv(TP0_v_7_heat_df, file = "../output/Molecular/mRNA/TP0_v_7_heat.csv")
+#write.csv(TP0_v_7_heat_df, file = "../output/Molecular/mRNA/TP0_v_7_heat.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_heat); ma_plot
@@ -734,17 +734,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_heat_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP0_amb_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP0_amb_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP0_amb_v_TP7_heat_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP0_v_7_heat.sig <- as.data.frame(TP0_v_7_heat.sig)
 TP0_v_7_heat.sig.list <- as.data.frame(counts(TP0_v_7_heat.sig.list))
 TP0_v_7_heat.sig.list.full <- cbind(TP0_v_7_heat.sig, TP0_v_7_heat.sig.list)
-write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
+#write.csv(TP0_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP0_amb_v_TP7_heat_DEG.csv")
 ```
 
 TP5 Heat v TP7 Heat
@@ -755,7 +755,7 @@ head(TP5_heat_v_7_heat)
 
 # Save results for all genes 
 TP5_heat_v_7_heat_df <- as.data.frame(TP5_heat_v_7_heat)
-write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/mRNA/TP5_heat_v_7_heat.csv")
+#write.csv(TP5_heat_v_7_heat_df, file = "../output/Molecular/mRNA/TP5_heat_v_7_heat.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_7_heat); ma_plot
@@ -784,17 +784,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_heat_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_heat_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP5_heat_v_7_heat.sig <- as.data.frame(TP5_heat_v_7_heat.sig)
 TP5_heat_v_7_heat.sig.list <- as.data.frame(counts(TP5_heat_v_7_heat.sig.list))
 TP5_heat_v_7_heat.sig.list.full <- cbind(TP5_heat_v_7_heat.sig, TP5_heat_v_7_heat.sig.list)
-write.csv(TP5_heat_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_heat_DEG.csv")
+#write.csv(TP5_heat_v_7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_heat_DEG.csv")
 ```
 
 TP5 Amb v TP5 Heat
@@ -805,7 +805,7 @@ head(TP5_amb_v_TP5_heat)
 
 # Save results for all genes 
 TP5_amb_v_TP5_heat_df <- as.data.frame(TP5_amb_v_TP5_heat)
-write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat.csv")
+#write.csv(TP5_amb_v_TP5_heat_df, file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_amb_v_TP5_heat)
@@ -834,17 +834,17 @@ df <- df[order(df$Condition),]
 heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row", clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP5_heat_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP5_amb_v_TP5_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP5_amb_v_TP5_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP5_amb_v_TP5_heat_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP5_amb_v_TP5_heat.sig <- as.data.frame(TP5_amb_v_TP5_heat.sig)
 TP5_amb_v_TP5_heat.sig.list <- as.data.frame(counts(TP5_amb_v_TP5_heat.sig.list))
 TP5_amb_v_TP5_heat.sig.list.full <- cbind(TP5_amb_v_TP5_heat.sig, TP5_amb_v_TP5_heat.sig.list)
-write.csv(TP5_amb_v_TP5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
+#write.csv(TP5_amb_v_TP5_heat.sig.list.full, file = "../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
 ```
 
 TP7 Amb v TP7 Heat
@@ -855,7 +855,7 @@ head(TP7_amb_v_TP7_heat)
 
 # Save results for all genes 
 TP7_amb_v_TP7_heat_df <- as.data.frame(TP7_amb_v_TP7_heat)
-write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat.csv")
+#write.csv(TP7_amb_v_TP7_heat_df, file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat.csv")
 
 # Volcano plot for LFC
 plotMA(TP7_amb_v_TP7_heat)
@@ -886,17 +886,17 @@ pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
                          show_colnames =TRUE) #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP7_amb_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP7_amb_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP7_amb_v_TP7_heat_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP7_amb_v_TP7_heat_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP7_amb_v_TP7_heat_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP7_amb_v_TP7_heat_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP7_amb_v_TP7_heat.sig <- as.data.frame(TP7_amb_v_TP7_heat.sig)
 TP7_amb_v_TP7_heat.sig.list <- as.data.frame(counts(TP7_amb_v_TP7_heat.sig.list))
 TP7_amb_v_TP7_heat.sig.list.full <- cbind(TP7_amb_v_TP7_heat.sig, TP7_amb_v_TP7_heat.sig.list)
-write.csv(TP7_amb_v_TP7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")
+#write.csv(TP7_amb_v_TP7_heat.sig.list.full, file = "../output/Molecular/mRNA/TP7_amb_v_TP7_heat_DEG.csv")
 ```
 
 TP5 Heat v TP7 Amb
@@ -907,7 +907,7 @@ head(TP5_heat_v_TP7_amb)
 
 # Save results for all genes 
 TP5_heat_v_TP7_amb_df <- as.data.frame(TP5_heat_v_TP7_amb)
-write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb.csv")
+#write.csv(TP5_heat_v_TP7_amb_df, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP5_heat_v_TP7_amb)
@@ -938,17 +938,17 @@ heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale
                          show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
 
 ## Save plots 
-ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
-pdf("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_amb_DEG.pdf", width = 8, height = 10)
-print(heatmap)
-dev.off()
+# ggsave("../output/Molecular/mRNA/ma_plot_TP5_heat_v_TP7_amb_DEG.pdf", ma_plot, width = 10, height = 8)
+# ggsave("../output/Molecular/mRNA/pca_plot_TP5_heat_v_TP7_amb_DEG.pdf", pca_plot, width = 10, height = 8)
+# pdf("../output/Molecular/mRNA/heatmap_TP5_heat_v_TP7_amb_DEG.pdf", width = 8, height = 10)
+# print(heatmap)
+# dev.off()
 
 # Save info with pvalues and LFC
 TP5_heat_v_TP7_amb.sig <- as.data.frame(TP5_heat_v_TP7_amb.sig)
 TP5_heat_v_TP7_amb.sig.list <- as.data.frame(counts(TP5_heat_v_TP7_amb.sig.list))
 TP5_heat_v_TP7_amb.sig.list.full <- cbind(TP5_heat_v_TP7_amb.sig, TP5_heat_v_TP7_amb.sig.list)
-write.csv(TP5_heat_v_TP7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb_DEG.csv")
+#write.csv(TP5_heat_v_TP7_amb.sig.list.full, file = "../output/Molecular/mRNA/TP5_heat_v_TP7_amb_DEG.csv")
 ```
 
 Look at unique genes 
@@ -1000,7 +1000,7 @@ length(unique(DEGs.all$DEGs))
 
 Unique.sig.list <- data[which(rownames(data) %in% DEGs.all$DEGs),] #subset list of sig transcripts from original count data
 Unique.rsig <- rlog(Unique.sig.list, blind=FALSE) #apply a regularized log transformation to minimize effects of small counts and normalize wrt library size
-write.csv(counts(Unique.sig.list), file="../output/Molecular/mRNA/Unique_DEGs.csv")
+#write.csv(counts(Unique.sig.list), file="../output/Molecular/mRNA/Unique_DEGs.csv")
 ```
 
 Visualize DEGs. 
@@ -1055,11 +1055,26 @@ col.order <- c( "AST-1147", "AST-1567", "AST-1722", "AST-2398", # TP0, Ambient
               "AST-1560", "AST-2302", "AST-2523",  # TP7, Ambient
               "AST-1065", "AST-2007", "AST-2729", "AST-2755")  # TP7, Heat 
 mat <- mat[,col.order]
-df <- as.data.frame(colData(Unique.rsig)[,c("Treatment", "Timepoint", "Condition")]) #make dataframe
-df <- df[order(df$Condition),]
-heatmap <- pheatmap(mat, annotation_col=df, clustering_method = "average", scale="row",
-                         clustering_distance_rows="euclidean", show_rownames =TRUE,fontsize_row = 4, cluster_cols=FALSE, cluster_rows=TRUE, 
-                         show_colnames =TRUE); heatmap #plot heatmap of all DEG by group
+df <- as.data.frame(colData(Unique.rsig)[,c("Treatment", "Timepoint")]) #make dataframe
+df <- df[order(df$Treatment),]
+#df$Timepoint <- factor(df$Timepoint, levels = c("TP0", "TP5", "TP7"), labels = c("February", "June", "August"))
+treatment_colors <- c("Ambient" = "#1f78b4", "Heat" = "#e31a1c")  # blue vs red
+timepoint_colors <- c("TP0" = "#8a36b6", "TP5" = "#f19e21", "TP7" = "#5eca4a")
+ann_colors <- list(Treatment = treatment_colors, Timepoint = timepoint_colors)
+heatmap <- pheatmap(
+  mat,
+  annotation_col = df,
+  annotation_colors = ann_colors,
+  clustering_method = "average",
+  scale = "row",
+  clustering_distance_rows = "euclidean",
+  show_rownames = F,
+  fontsize_row = 2,
+  fontsize = 15,
+  cluster_cols = FALSE,
+  cluster_rows = T,
+  show_colnames = F
+); heatmap
 ```
 
 Also need to make this prettier 
@@ -1069,7 +1084,7 @@ Save DEG plots
 ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", pca_plot, width = 10, height = 8)
 ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", pca_plot, width = 10, height = 8)
 
-pdf("../output/Molecular/mRNA/heatmap_DEGs.pdf", width = 8, height = 10)
+pdf("../output/Molecular/mRNA/heatmap_DEGs.pdf", width = 10, height = 11)
 print(heatmap)
 dev.off()
 ```

@@ -5,7 +5,7 @@ date: "2024-03-06"
 output: html_document
 ---
 
-## Shortstack 
+## miRNA discovery 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -43,4 +43,375 @@ Save putative miRNAs
 ```{r}
 write.csv(mirna, "../output/Molecular/smRNA/shortstack/putative_miRNAs.csv")
 ```
+
+## miRNA counts
+
+Read in data and select only counts data 
+```{r}
+counts <- read.table("../output/Molecular/smRNA/shortstack/Counts.csv", header = T) 
+```
+
+Select only miRNAs with a Y in MIRNA column 
+```{r}
+counts <- counts %>%
+  dplyr::filter(MIRNA == "Y")
+```
+
+Should be 51 miRNAs.
+
+Combine Name and Coords columns for miRNA name. Remove MIRNA column 
+```{r}
+counts <- counts %>%
+  mutate(miRNA_name = paste(Name, Coords, sep = "_")) %>%
+  dplyr::select(-c(Name, Coords, MIRNA))
+```
+
+Make miRNA_name the row names and remove it as a column 
+```{r}
+rownames(counts) <- counts$miRNA_name
+counts <- counts %>%
+  dplyr::select(-miRNA_name)
+```
+
+Remove extra info from column names
+```{r}
+colnames(counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(counts))
+colnames(counts) <- gsub("AST.", "AST-", colnames(counts))
+```
+
+Read in metadata 
+```{r}
+meta <- read.csv("../data/Molecular/RNA_metadata.csv")
+meta <- dplyr::arrange(meta, ID) #%>% # rearrange metadata so IDs are sorted in descending order 
+  #mutate(Treatment = ifelse(Treatment == "Acclimation", "Ambient", Treatment))
+  
+# Set variables as factors 
+meta$Timepoint <- factor(meta$Timepoint, levels = c("TP0", "TP5", "TP7"))
+meta$Treatment <- factor(meta$Treatment, levels = c("Acclimation","Ambient", "Heat"))
+
+# Remove sample that did not sequence well 
+meta <- meta %>%
+  dplyr::filter(ID != "AST-1105")
+```
+
+Need to make upset plot to show which miRNAs were present when...
+
+```{r}
+library(UpSetR)
+library(dplyr)
+
+# Define expression threshold
+expr_thresh <- 5
+prop_samples <- 0.5  # ~50% of samples per TP
+
+# Unique timepoints
+timepoints <- unique(meta$Timepoint)
+
+# Get sample IDs for each timepoint
+timepoint_samples <- lapply(timepoints, function(tp) {
+  meta$ID[meta$Timepoint == tp]
+})
+names(timepoint_samples) <- timepoints
+
+# Function: expressed in >=50% samples at >=5 counts
+expr_mat <- sapply(names(timepoint_samples), function(tp) {
+  samples <- timepoint_samples[[tp]]
+  num_samples <- length(samples)
+  rowSums(counts[, samples, drop=FALSE] >= expr_thresh) >= (prop_samples * num_samples)
+})
+
+# Convert TRUE/FALSE to 1/0 for UpSet
+expr_df <- as.data.frame(expr_mat) * 1
+expr_df$miRNA <- rownames(expr_df)
+
+# Inspect
+head(expr_df)
+
+# Make UpSet plot
+upset(expr_df, sets = names(timepoint_samples),
+      keep.order = TRUE,
+      order.by = "freq")
+
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# 1) Make your counts a data frame with miRNA IDs
+counts_df <- counts %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("miRNA")
+
+# 2) Pivot longer: one row per (miRNA, sample)
+counts_long <- counts_df %>%
+  pivot_longer(-miRNA, names_to = "ID", values_to = "counts")
+
+# 3) Add metadata to get Timepoint
+counts_long <- counts_long %>%
+  left_join(meta, by = "ID")
+
+# 4) Calculate mean per miRNA per Timepoint
+miRNA_means <- counts_long %>%
+  group_by(miRNA, Timepoint) %>%
+  summarise(mean_count = mean(counts, na.rm = TRUE)) %>%
+  ungroup()
+
+# 5) OPTIONAL: pick top 10 variable miRNAs (if you don't want all)
+top_miRNAs <- miRNA_means %>%
+  group_by(miRNA) %>%
+  summarise(var = var(mean_count)) %>%
+  arrange(desc(var)) %>%
+  slice_head(n = 10) %>%
+  pull(miRNA)
+
+plot_df <- miRNA_means %>%
+  filter(miRNA %in% top_miRNAs)
+
+# 6) Plot
+ggplot(miRNA_means, aes(x = Timepoint, y = mean_count, group = miRNA, color = miRNA)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "miRNA Expression Trajectories",
+       x = "Timepoint",
+       y = "Mean Counts",
+       color = "miRNA Cluster") +
+  theme_minimal() + 
+  theme(legend.position = "none")
+
+```
+
+```{r}
+library(DESeq2)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# === 1) Make DESeqDataSet ===
+# counts must be integer matrix
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = meta,
+                              design = ~ 1) # no design needed for rlog
+
+# === 2) Compute rlog ===
+rld <- rlog(dds, blind = TRUE)
+
+# Extract rlog matrix
+rlog_mat <- assay(rld) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("miRNA")
+
+# === 3) Long format + meta ===
+rlog_long <- rlog_mat %>%
+  pivot_longer(-miRNA, names_to = "ID", values_to = "rlog") %>%
+  left_join(meta, by = "ID")
+
+# === 4) Calculate mean per miRNA per TP + Treatment ===
+rlog_summary <- rlog_long %>%
+  group_by(miRNA, Timepoint, Treatment) %>%
+  summarise(mean_rlog = mean(rlog, na.rm = TRUE),
+            sd_rlog = sd(rlog, na.rm = TRUE)) %>%
+  ungroup()
+
+# === 5) Select top 10 variable miRNAs ===
+top_miRNAs <- rlog_mean %>%
+  group_by(miRNA) %>%
+  summarise(var = var(mean_rlog)) %>%
+  arrange(desc(var)) %>%
+  slice_head(n = 10) %>%
+  pull(miRNA)
+
+plot_df <- rlog_summary %>%
+  filter(miRNA %in% top_miRNAs)
+
+# === 6) Plot ===
+ggplot(plot_df, aes(x = Timepoint, y = mean_rlog, group = miRNA, color = miRNA)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  facet_wrap(~ Treatment) +
+  labs(title = "rlog miRNA Expression",
+       x = "Timepoint",
+       y = "Mean rlog") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+# Load libraries
+library(DESeq2)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# === INPUT ===
+# counts: rows = miRNAs, cols = samples
+# meta: columns = ID, Timepoint, Treatment
+
+# 1) Create DESeqDataSet
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = meta,
+                              design = ~ 1)
+
+# 2) rlog transform
+rld <- rlog(dds, blind = TRUE)
+
+# 3) Tidy rlog matrix
+rlog_mat <- assay(rld) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("miRNA")
+
+rlog_long <- rlog_mat %>%
+  pivot_longer(-miRNA, names_to = "ID", values_to = "rlog") %>%
+  left_join(meta, by = "ID")
+
+# 4) Summarize: mean & SD per miRNA, Timepoint, Treatment
+rlog_summary <- rlog_long %>%
+  group_by(miRNA, Timepoint, Treatment) %>%
+  summarise(mean_rlog = mean(rlog, na.rm = TRUE),
+            sd_rlog = sd(rlog, na.rm = TRUE)) %>%
+  ungroup()
+
+# 5) Pick top 10 most variable miRNAs
+top_miRNAs <- rlog_summary %>%
+  group_by(miRNA) %>%
+  summarise(var = var(mean_rlog)) %>%
+  arrange(desc(var)) %>%
+  slice_head(n = 10) %>%
+  pull(miRNA)
+
+plot_df <- rlog_summary %>%
+  filter(miRNA %in% top_miRNAs)
+
+# Ensure timepoints are ordered
+plot_df$Timepoint <- factor(plot_df$Timepoint, levels = c("TP0", "TP5", "TP7"))
+
+# 6) Plot with error bars
+ggplot(plot_df, aes(x = Timepoint, y = mean_rlog,
+                    group = interaction(miRNA, Treatment),
+                    color = miRNA,
+                    linetype = Treatment)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_rlog - sd_rlog,
+                    ymax = mean_rlog + sd_rlog),
+                width = 0.2, size = 0.7) +
+  labs(title = "rlog miRNA Expression with SD Error Bars",
+       x = "Timepoint",
+       y = "Mean rlog",
+       color = "miRNA",
+       linetype = "Treatment") +
+  theme_minimal() +
+  theme(
+    legend.position = "none"  # Remove legend, or comment this out to keep it
+  )
+
+
+```
+
+```{r}
+# Load libraries
+library(DESeq2)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# === INPUT ===
+# counts: rows = miRNAs, cols = samples
+# meta: columns: ID, Timepoint, Treatment
+
+# 1) Make DESeqDataSet
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = meta,
+                              design = ~ 1)
+
+# 2) rlog transform
+rld <- rlog(dds, blind = TRUE)
+
+# 3) Tidy rlog matrix
+rlog_mat <- assay(rld) %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("miRNA")
+
+rlog_long <- rlog_mat %>%
+  pivot_longer(-miRNA, names_to = "ID", values_to = "rlog") %>%
+  left_join(meta, by = "ID")
+
+# 4) Summarize: mean & SD per miRNA, Timepoint, Treatment
+rlog_summary <- rlog_long %>%
+  group_by(miRNA, Timepoint, Treatment) %>%
+  summarise(mean_rlog = mean(rlog, na.rm = TRUE),
+            sd_rlog = sd(rlog, na.rm = TRUE)) %>%
+  ungroup()
+
+# 5) Pick top 10 variable miRNAs
+top_miRNAs <- rlog_summary %>%
+  group_by(miRNA) %>%
+  summarise(var = var(mean_rlog)) %>%
+  arrange(desc(var)) %>%
+  slice_head(n = 10) %>%
+  pull(miRNA)
+
+plot_df <- rlog_summary %>%
+  filter(miRNA %in% top_miRNAs)
+
+# Order timepoints if needed
+plot_df$Timepoint <- factor(plot_df$Timepoint, levels = c("TP0", "TP5", "TP7"))
+
+# 6) Final plot: just like yours + error bars + different shapes for Treatment
+ggplot(plot_df, aes(x = Timepoint,
+                    y = mean_rlog,
+                    group = miRNA,
+                    color = miRNA)) +
+  geom_line(size = 1) +
+  geom_point(aes(shape = Treatment), size = 3) +
+  geom_errorbar(aes(ymin = mean_rlog - sd_rlog,
+                    ymax = mean_rlog + sd_rlog),
+                width = 0.2, size = 0.7) +
+  labs(title = "rlog miRNA Expression Trajectories with SD",
+       x = "Timepoint",
+       y = "Mean rlog",
+       color = "miRNA Cluster",
+       shape = "Treatment") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+library(DESeq2)
+library(pheatmap)
+library(dplyr)
+
+# === rlog transform ===
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = meta,
+                              design = ~ 1)
+rld <- rlog(dds, blind = TRUE)
+
+rlog_mat <- assay(rld)
+
+# === Subset top 50 variable miRNAs ===
+# (Optional: or use your top 10 from before)
+top_vars <- apply(rlog_mat, 1, var)
+top_miRNAs <- names(sort(top_vars, decreasing = TRUE))[1:51]
+rlog_mat_sub <- rlog_mat[top_miRNAs, ]
+
+# === Add annotation ===
+annotation_col <- meta %>%
+  column_to_rownames("ID")
+
+# === Heatmap ===
+pheatmap(rlog_mat_sub,
+         scale = "row",          # row z-score scaling
+         annotation_col = annotation_col,
+         show_rownames = TRUE,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         color = colorRampPalette(c("navy", "white", "firebrick3"))(100))
+
+```
+
 

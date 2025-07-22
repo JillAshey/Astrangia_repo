@@ -9,6 +9,8 @@ Steps
 - Subset samples for one treatment 
 - Run PCC for those samples 
 - Build networks using the PCC and miranda data 
+- Examine intersection of two groups and calculate jaccard index - this will tell us how similar/different the groups are 
+- Look at the PCC signs - this will tell us if the correlation direction is changing 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -504,6 +506,18 @@ p
 
 ### 3'UTR
 
+Merge full miranda results with pcc data
+```{r}
+utr_pcc_tp5_amb <- results_tp5_amb_df %>%
+  inner_join(miranda_3utr, by = c("miRNA", "mRNA"))
+
+length(unique(utr_pcc_tp5_amb$miRNA))
+length(unique(utr_pcc_tp5_amb$mRNA))
+
+
+# Save as csv 
+write.csv(utr_pcc_tp5_amb, "../output/Molecular/interactions/jaccard/june_amb_pcc_miranda_3UTR_binding.csv")
+```
 
 
 
@@ -671,5 +685,221 @@ ggplot(highlights, aes(x = pair, y = 1, fill = PCC_feb)) +
   ) +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
+
+### 3UTR binding 
+
+Add pair ID to each df and then select the pairs and their associated PCC
+```{r}
+# Add pair ID to each df
+utr_pcc <- utr_pcc %>%
+  mutate(pair = paste(miRNA, mRNA, sep = "_"))
+
+utr_pcc_tp5_amb <- utr_pcc_tp5_amb %>%
+  mutate(pair = paste(miRNA, mRNA, sep = "_"))
+
+# Bring Feb PCC
+df_feb_3utr <- utr_pcc %>%
+  select(pair, PCC_feb = PCC)
+
+# Bring TP5 PCC
+df_tp5_amb_3utr <- utr_pcc_tp5_amb %>%
+  select(pair, PCC_tp5 = PCC)
+```
+
+Join dfs and calculate Jaccard index 
+```{r}
+# Combine dfs
+jaccard_df_3utr <- full_join(df_feb_3utr, df_tp5_amb_3utr, by = "pair")
+
+# Calculate jaccard index
+jaccard_df_3utr <- jaccard_df_3utr %>%
+  mutate(
+    abs_feb  = abs(PCC_feb),
+    abs_tp5  = abs(PCC_tp5),
+    weighted_jaccard = pmin(abs_feb, abs_tp5) / pmax(abs_feb, abs_tp5),
+    sign_change = sign(PCC_feb) != sign(PCC_tp5)
+  )
+
+# Assess what the correlation is doing based on sign change and jaccard
+jaccard_df_3utr <- jaccard_df_3utr %>%
+  mutate(
+    stability = case_when(
+      is.na(PCC_feb) | is.na(PCC_tp5) ~ "One missing",
+      sign_change ~ "Sign flip",
+      weighted_jaccard >= 0.8 ~ "Stable same sign",
+      weighted_jaccard < 0.8 ~ "Diverging same sign"
+    )
+  )
+
+jaccard_df_3utr <- unique(jaccard_df_3utr)
+
+# Show summary table
+table(jaccard_df_3utr$stability)
+```
+
+Subset by sign flip 
+```{r}
+jaccard_df_3utr_flip <- jaccard_df_3utr %>%
+  filter(stability == "Sign flip") %>%
+  separate(pair, into = c("miRNA", "mRNA"), sep = "_evm\\.", remove = FALSE)
+jaccard_df_3utr_flip$mRNA <- paste0("evm.", jaccard_df_3utr_flip$mRNA)
+```
+
+Join DE results with jaccard 
+```{r}
+test_3utr <- de_tp0_tp5_amb %>%
+  inner_join(jaccard_df_3utr_flip, by = c("X" = "mRNA"))
+test_3utr<- unique(test_3utr)
+
+# DEGs where the miRNA-mRNA correlation flips sign or changes greatly in magnitude.
+highlights_3utr <- test_3utr %>%
+  filter(sign_change == TRUE) %>%
+  filter(weighted_jaccard < 0.2) %>%
+  mutate(
+    seasonal_direction = case_when(
+      log2FoldChange > 0 ~ "Up in February",
+      log2FoldChange < 0 ~ "Up in June",
+      TRUE               ~ "No Change"
+    )
+  )
+```
+
+Join annot results 
+```{r}
+hello <- highlights_3utr %>%
+   inner_join(annot, by = c("X" = "Protein_ID"))
+```
+
+
+
+
+
+
+
+
+20250722
+
+Read in data
+```{r}
+june <- read.csv("../output/Molecular/interactions/jaccard/june_amb_pcc_miranda_3UTR_binding.csv")
+feb <- read.csv("../output/Molecular/interactions/jaccard/feb_pcc_miranda_3UTR_binding.csv")
+
+# Select only mRNA, miRNA and weight (ie PCC)
+june <- june %>%
+  select(miRNA, mRNA, PCC) %>%
+  unique()
+feb <- feb %>%
+  select(miRNA, mRNA, PCC) %>%
+  unique()
+```
+
+Create igraph network objects
+```{r}
+net_feb <- graph_from_data_frame(feb, directed=FALSE)
+net_june <- graph_from_data_frame(june, directed=FALSE)
+
+# Very important: edge order in graph matches edge list order to assign correct weights
+E(net_feb)$weight <- feb$PCC
+E(net_june)$weight <- june$PCC
+```
+
+Calculate network metrics 
+```{r}
+network_metrics <- function(net) {
+  data.frame(
+    nodes = vcount(net),
+    edges = ecount(net),
+    density = edge_density(net),
+    average_degree = mean(degree(net)),
+    weighted_average_strength = mean(strength(net, weights = E(net)$weight)),
+    weighted_clustering = transitivity(net, type = "weighted", weights = abs(E(net)$weight))
+  )
+}
+
+metrics_feb <- network_metrics(net_feb)
+metrics_june <- network_metrics(net_june)
+
+metrics_feb
+metrics_june
+
+```
+
+
+
+
+```{r}
+hmm <- strength(net_feb, vids = V(net_feb), weights = E(net_feb)$PCC)
+strength(net_jun, vids = V(net_jun), weights = E(net_jun)$PCC)
+
+
+summary(feb$PCC)
+summary(june$PCC)
+hist(feb$PCC, main="Feb PCC", xlab="PCC")
+hist(june$PCC, main="June PCC", xlab="PCC")
+```
+
+
+
+I want to summarize by miRNA to get avg PCC, number of mRNAs interacted with 
+```{r}
+library(dplyr)
+
+# For February
+feb_summary <- feb %>%
+  group_by(miRNA) %>%
+  summarise(n_mRNAs = n(),
+            avg_PCC = mean(PCC, na.rm = TRUE),
+            median_PCC = median(PCC, na.rm = TRUE))
+
+# For June
+june_summary <- june %>%
+  group_by(miRNA) %>%
+  summarise(n_mRNAs = n(),
+            avg_PCC = mean(PCC, na.rm = TRUE),
+            median_PCC = median(PCC, na.rm = TRUE))
+
+summary_merged <- full_join(
+  feb_summary %>% rename(n_mRNAs_feb = n_mRNAs, avg_PCC_feb = avg_PCC),
+  june_summary %>% rename(n_mRNAs_june = n_mRNAs, avg_PCC_june = avg_PCC),
+  by = "miRNA"
+)
+
+# For plotting:
+ggplot(summary_merged, aes(x=avg_PCC_feb, y=avg_PCC_june)) +
+  geom_point() +
+  xlab("Avg PCC Feb") + ylab("Avg PCC June") +
+  ggtitle("Average PCC per miRNA: Feb vs. June")
+
+```
+
+```{r}
+library(igraph)
+
+# We must ensure the 'PCC' is properly set as edge weights
+E(net_feb)$weight <- feb$PCC
+E(net_jun)$weight <- june$PCC
+
+# Weighted node strength (sum of PCCs for each node)
+feb_miRNA_strength <- strength(net_feb, vids=V(net_feb), weights=E(net_feb)$weight, mode="out")
+june_miRNA_strength <- strength(net_jun, vids=V(net_jun), weights=E(net_jun)$weight, mode="out")
+
+# Weighted clustering coefficient (uses abs(weight) to avoid negatives disrupting the sum)
+feb_cluster <- transitivity(net_feb, type="weighted", weights=abs(E(net_feb)$weight))
+june_cluster <- transitivity(net_jun, type="weighted", weights=abs(E(net_jun)$weight))
+
+```
+
+```{r}
+net_feb <- graph_from_data_frame(feb, directed=FALSE)
+E(net_feb)$weight <- feb$PCC
+
+# Example weighted degree (strength)
+strength_feb <- strength(net_feb, weights=E(net_feb)$weight)
+
+# Clustering coefficient
+transitivity(net_feb, type="weighted", weights=abs(E(net_feb)$weight))
+
+```
+
 
 
