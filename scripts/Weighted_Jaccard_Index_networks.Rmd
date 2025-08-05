@@ -793,6 +793,48 @@ feb <- feb %>%
   unique()
 ```
 
+```{r}
+merged_df <- merge(feb, june, by = c("miRNA", "mRNA"), suffixes = c("_feb", "_june"))
+head(merged_df)
+merged_df$sign_feb  <- sign(merged_df$PCC_feb)
+merged_df$sign_june <- sign(merged_df$PCC_june)
+merged_df$direction_changed <- merged_df$sign_feb != merged_df$sign_june
+merged_df$strength_change <- abs(merged_df$PCC_june - merged_df$PCC_feb)
+threshold <- 0.5
+merged_df$large_strength_change <- merged_df$strength_change > threshold
+which_changed <- merged_df[merged_df$direction_changed, ]
+
+# Filter top pairs for table/figure
+candidate_pairs <- merged_df[
+  merged_df$direction_changed | merged_df$large_strength_change, 
+]
+# Optionally further filter or rank by strength_change
+top_pairs <- candidate_pairs[order(-candidate_pairs$strength_change), ][1:20, ]
+```
+
+Read in mRNA DE results from Feb and June ambient 
+```{r}
+de_tp0_tp5_amb <- read.csv("../output/Molecular/mRNA/TP0_amb_v_TP5_amb_DEG.csv")[,1:7]
+```
+
+```{r}
+blah <- de_tp0_tp5_amb %>%
+  inner_join(candidate_pairs, by = c("X" = "mRNA")) %>%
+  filter(direction_changed == TRUE & large_strength_change == TRUE)
+blah<- unique(blah)
+```
+
+
+
+
+
+
+
+
+
+
+
+
 Create igraph network objects
 ```{r}
 net_feb <- graph_from_data_frame(feb, directed=FALSE)

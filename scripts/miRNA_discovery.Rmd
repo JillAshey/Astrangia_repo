@@ -96,6 +96,41 @@ meta <- meta %>%
 
 Need to make upset plot to show which miRNAs were present when...
 
+
+
+```{r}
+# Convert counts to long format
+counts_long <- counts %>%
+  rownames_to_column(var = "miRNA") %>%
+  pivot_longer(-miRNA, names_to = "ID", values_to = "counts")
+
+# Join with metadata
+counts_meta <- left_join(counts_long, meta, by = "ID")
+
+miRNA_means <- counts_meta %>%
+  group_by(miRNA, Timepoint) %>%
+  summarise(mean_count = mean(counts, na.rm = TRUE), .groups = "drop")
+
+ggplot(miRNA_means, aes(x = Timepoint, y = mean_count, group = miRNA, color = miRNA)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "miRNA Expression Trajectories",
+       x = "Timepoint",
+       y = "Mean Counts",
+       color = "miRNA Cluster") +
+  theme_minimal() +
+  theme(legend.position = "none")  # Hide legend if too many miRNAs
+```
+
+
+
+
+
+
+
+
+
+
 ```{r}
 library(UpSetR)
 library(dplyr)
@@ -407,9 +442,9 @@ annotation_col <- meta %>%
 pheatmap(rlog_mat_sub,
          scale = "row",          # row z-score scaling
          annotation_col = annotation_col,
-         show_rownames = TRUE,
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
+         show_rownames = F,
+         cluster_rows = T,
+         cluster_cols = F,
          color = colorRampPalette(c("navy", "white", "firebrick3"))(100))
 
 ```
