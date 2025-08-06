@@ -301,10 +301,6 @@ write.csv(prot, "../output/Physiology/SolubleProtein/SolubleProtein.csv")
 Load data 
 ```{r}
 prot <- read.csv("../output/Physiology/SolubleProtein/SolubleProtein.csv")
-
-prot <- prot %>%
-  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
-  mutate(Treatment = as.factor(Treatment))
 ```
 
 ## Check for outliers 
@@ -400,6 +396,12 @@ qqline(prot_exp_filtered$prot_mg.cm2_inv, col = "red")
 
 Inverse transformation produces normality. 
 
+Set TP0 to Ambient for stats purposes
+```{r}
+prot_exp_filtered <- prot_exp_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -425,7 +427,8 @@ Timepoint is significant but Treatment and interaction is not.
 
 Run post-hoc test for Timepoint
 ```{r}
-TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+tukey_result <- TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+print(tukey_result)
 
 plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
 ```
@@ -443,6 +446,11 @@ prot_exp_filtered <- prot_exp_filtered %>%
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP6" ~ "July", 
     Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+prot_exp_filtered <- prot_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
 ```
 
 Plot inverse 
@@ -538,9 +546,33 @@ prot_summary <- prot_exp_filtered %>%
     n = n(),  # Count observations per group
     mean_prot = mean(prot_mg.cm2, na.rm = TRUE),
     sd_prot = sd(prot_mg.cm2, na.rm = TRUE),
-    sem_prot = prot_mg.cm2 / sqrt(n),  # SEM formula
+    sem_prot = sd_prot / sqrt(n),  # SEM formula
     .groups = "drop"
   )
+```
+
+Obtain significance letters 
+```{r}
+# Extract the p.adjust values and names of comparisons
+pvals <- tukey_result$Timepoint[, "p adj"]
+
+# Set names for pvals as "TP1-TP0" etc. (they are already named like that in the TukeyHSD output)
+names(pvals) <- rownames(tukey_result$Timepoint)
+
+# Generate letters for significance groups
+sig_letters <- multcompLetters(pvals, threshold = 0.05)
+
+# View assigned letters for each timepoint
+print(sig_letters$Letters)
+```
+
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("a", "a", "a", "a", "a", "a", "b", "ab"),
+  y_position = c(3.20, 3.22, 2.34, 2.54, 3.83, 3, 0.89, 2.51) # 0.1 offset from highest sd 
+)
 ```
 
 Plot as dot and whisker plots
@@ -555,6 +587,11 @@ prot_dot_sem <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treat
                     ymax = mean_prot + sem_prot), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   xlab("") +
   ylab("Soluble Protein (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -579,6 +616,11 @@ prot_dot_sd <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatm
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
