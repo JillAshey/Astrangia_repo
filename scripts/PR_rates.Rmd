@@ -815,11 +815,26 @@ photo_summary <- photo_exp_filtered %>%
   )
 ```
 
+Obtain significance letters 
+```{r}
+# Extract the p.adjust values and names of comparisons
+pvals <- tukey_result$Timepoint[, "p adj"]
+
+# Set names for pvals as "TP1-TP0" etc. (they are already named like that in the TukeyHSD output)
+names(pvals) <- rownames(tukey_result$Timepoint)
+
+# Generate letters for significance groups
+sig_letters <- multcompLetters(pvals, threshold = 0.05)
+
+# View assigned letters for each timepoint
+print(sig_letters$Letters)
+```
+
 Add letters for plotting 
 ```{r}
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
-  Letters = c("abc", "ab", "a", "a", "bc", "c", "c", "c"),
+  Letters = c("abc", "ab", "a", "a", "bc", "c", "c", "bc"),
   y_position = c(6.77, 3.67, 3.44, 4.28, 8.51, 7.33, 8.71, 7.20) # 0.5 offset from highest sd 
 )
 ```
@@ -911,10 +926,6 @@ exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
 
 resp_exp <- exp %>%
   filter(Light_Value == 0)
-
-resp_exp <- resp_exp %>%
-  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
-  mutate(Treatment = as.factor(Treatment))
 ```
 
 Check for outliers
@@ -989,6 +1000,12 @@ resp_exp_filtered <- resp_exp_filtered %>%
     Date == "2021-08-19" ~ "TP7")) 
 ```
 
+Set TP0 to Ambient for stats purposes
+```{r}
+resp_exp_filtered <- resp_exp_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -1025,7 +1042,8 @@ pairwise_df <- as.data.frame(summary(pairwise_interaction))
 pairwise_df <- na.omit(pairwise_df)
 
 # Look at Tukey as well
-TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+tukey_result<- TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+print(tukey_result)
 TukeyHSD(anova_result, "Treatment", conf.level = 0.95)
 ```
 
@@ -1109,9 +1127,33 @@ resp_summary <- resp_exp_filtered %>%
     n = n(),  # Count observations per group
     mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
     sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
-    sem_resp = micromol.cm2.h / sqrt(n),  # SEM formula
+    sem_resp = sd_resp / sqrt(n),  # SEM formula
     .groups = "drop"
   )
+```
+
+Obtain significance letters 
+```{r}
+# Extract the p.adjust values and names of comparisons
+pvals <- tukey_result$Timepoint[, "p adj"]
+
+# Set names for pvals as "TP1-TP0" etc. (they are already named like that in the TukeyHSD output)
+names(pvals) <- rownames(tukey_result$Timepoint)
+
+# Generate letters for significance groups
+sig_letters <- multcompLetters(pvals, threshold = 0.05)
+
+# View assigned letters for each timepoint
+print(sig_letters$Letters)
+```
+
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("abcd", "a", "abc", "abcd", "ab", "bcd", "d", "cd"),
+  y_position = c(1.35, 1.38, 0.9, 0.78, 1.7, -0.28, -0.5, -0.31) # 0.1 offset from highest sd 
+)
 ```
 
 Plot as dot and whisker plots
@@ -1126,6 +1168,11 @@ resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treat
                     ymax = mean_resp + sem_resp), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   xlab("") +
   ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -1150,6 +1197,11 @@ resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatm
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
