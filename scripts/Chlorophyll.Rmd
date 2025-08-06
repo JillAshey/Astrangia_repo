@@ -450,7 +450,7 @@ chla_dot_sem <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treat
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",  # Blue
                                "Heat" = "#E41A1C")) +  # Red
@@ -477,7 +477,7 @@ chla_dot_sd <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatm
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +

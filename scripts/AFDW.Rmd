@@ -91,7 +91,7 @@ Read in data and subset host
 biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
 
 biomass_host <- biomass %>%
-  dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  #dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
   dplyr::mutate(Treatment = as.factor(Treatment)) %>%
   dplyr::filter(Fraction == "Host") %>%
   na.omit()
@@ -187,6 +187,12 @@ qqline(biomass_host_filtered$AFDW.mg.cm2_inv, col = "red")
 
 Both log and sqrt are normal. Going to stick with sqrt, as this has been the transformation that I have applied to other phys variables. 
 
+Set TP0 to Ambient for stats purposes
+```{r}
+biomass_host_filtered <- biomass_host_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -232,6 +238,11 @@ biomass_host_filtered <- biomass_host_filtered %>%
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP6" ~ "July", 
     Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+biomass_host_filtered <- biomass_host_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
 ```
 
 Plot untransformed data 
@@ -321,6 +332,15 @@ biomass_host_summary <- biomass_host_filtered %>%
   )
 ```
 
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("a", "a", "a", "a", "a", "a", "a", "a"),
+  y_position = c(9.24, 11.23, 10.81, 6.17, 11.19, 12.15, 9.88, 8.82) # 0.2 offset from highest sd 
+)
+```
+
 Plot as dot and whisker plots
 ```{r}
 # Set Month as factor 
@@ -333,6 +353,11 @@ host_dot_sem <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color
                     ymax = mean_host + sem_host), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 10) +
   xlab("") +
   ylab("Host Tissue Biomass (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -343,7 +368,7 @@ host_dot_sem <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color
                               "Heat" = "#E41A1C")) +
   theme_classic(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "right"); host_dot_sem
+        legend.position = "top"); host_dot_sem
 ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sem.pdf", host_dot_sem, width = 20, height = 15)
 ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sem.png", host_dot_sem, width = 20, height = 15)
 
@@ -356,6 +381,11 @@ host_dot_sd <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color 
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 10) +
   xlab("") +
   ylab("Host Tissue Biomass (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -373,6 +403,7 @@ host_dot_sd <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color 
     axis.ticks.length = unit(0.3, "cm"),
     legend.title = element_text(size = 35, face = "bold"),
     legend.text = element_text(size = 25),
+    legend.position = "top",
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );host_dot_sd

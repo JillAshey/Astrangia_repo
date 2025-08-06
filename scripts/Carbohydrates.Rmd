@@ -269,10 +269,6 @@ write.csv(all, "../output/Physiology/Carbohydrates/Carbohydrates.csv")
 Read in data
 ```{r}
 carb <- read.csv("../output/Physiology/Carbohydrates/Carbohydrates.csv")
-
-carb <- carb %>%
-  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
-  mutate(Treatment = as.factor(Treatment))
 ```
 
 Check for outliers 
@@ -369,6 +365,12 @@ carb_exp_filtered <- carb_exp_filtered %>%
   filter(Carb.mg.cm2_sqrt != "NaN")
 ```
 
+Set TP0 to Ambient for stats purposes
+```{r}
+carb_exp_filtered <- carb_exp_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -414,6 +416,11 @@ carb_exp_filtered <- carb_exp_filtered %>%
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP6" ~ "July", 
     Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+carb_exp_filtered <- carb_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
 ```
 
 Plot untransformed data 
@@ -466,6 +473,15 @@ carb_summary <- carb_exp_filtered %>%
   )
 ```
 
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("a", "a", "a", "a", "a", "a", "a", "a"),
+  y_position = c(4.03, 4.82, 5.96, 4.01, 5.17, 6.12, 3.53, 3.38) # 0.2 offset from highest sd 
+)
+```
+
 Plot as dot and whisker plots
 ```{r}
 # Set Month as factor 
@@ -478,6 +494,11 @@ carb_dot_sem <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treat
                     ymax = mean_carb + sem_carb), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 10) +
   xlab("") +
   ylab("Carbohydrates (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -501,6 +522,11 @@ carb_dot_sd <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatm
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 10) +
   xlab("") +
   ylab("Carbohydrates (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -518,6 +544,7 @@ carb_dot_sd <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatm
     axis.ticks.length = unit(0.3, "cm"),
     legend.title = element_text(size = 35, face = "bold"),
     legend.text = element_text(size = 25),
+    legend.position = "top",
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );carb_dot_sd

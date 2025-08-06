@@ -855,7 +855,7 @@ photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tr
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   #geom_text(aes(label = Letters, y = mean_photo + sem_photo + 0.8),
   #          size = 6,
   #          color = "black",
@@ -870,7 +870,7 @@ photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tr
                               "Heat" = "#E41A1C")) +
   theme_classic(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "right"); photo_dot_sem
+        legend.position = "top"); photo_dot_sem
 ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.pdf", photo_dot_sem, width = 20, height = 15)
 ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.png", photo_dot_sem, width = 20, height = 15)
 
@@ -892,7 +892,7 @@ photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tre
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
@@ -910,6 +910,7 @@ photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tre
     axis.ticks.length = unit(0.3, "cm"),
     legend.title = element_text(size = 35, face = "bold"),
     legend.text = element_text(size = 25),
+    legend.position = "top",
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );photo_dot_sd
@@ -1152,7 +1153,7 @@ Add letters for plotting
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
   Letters = c("abcd", "a", "abc", "abcd", "ab", "bcd", "d", "cd"),
-  y_position = c(1.35, 1.38, 0.9, 0.78, 1.7, -0.28, -0.5, -0.31) # 0.1 offset from highest sd 
+  y_position = c(1.45, 1.48, 1, 0.88, 1.8, -0.18, -0.4, -0.21) # 0.2 offset from highest sd 
 )
 ```
 
@@ -1172,7 +1173,7 @@ resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treat
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   xlab("") +
   ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -1183,7 +1184,7 @@ resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treat
                               "Heat" = "#E41A1C")) +
   theme_classic(base_size = 14) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "right"); resp_dot_sem
+        legend.position = "top"); resp_dot_sem
 ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.pdf", resp_dot_sem, width = 20, height = 15)
 ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.png", resp_dot_sem, width = 20, height = 15)
 
@@ -1201,7 +1202,7 @@ resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatm
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
@@ -1219,6 +1220,7 @@ resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatm
     axis.ticks.length = unit(0.3, "cm"),
     legend.title = element_text(size = 35, face = "bold"),
     legend.text = element_text(size = 25),
+    legend.position = "top",
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );resp_dot_sd

@@ -591,7 +591,7 @@ prot_dot_sem <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treat
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   xlab("") +
   ylab("Soluble Protein (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -620,7 +620,7 @@ prot_dot_sd <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatm
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
-            size = 8) +
+            size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
@@ -638,6 +638,7 @@ prot_dot_sd <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatm
     axis.ticks.length = unit(0.3, "cm"),
     legend.title = element_text(size = 35, face = "bold"),
     legend.text = element_text(size = 25),
+    legend.position = "top",
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );prot_dot_sd
