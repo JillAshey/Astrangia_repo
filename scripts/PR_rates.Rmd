@@ -50,6 +50,7 @@ library(cowplot)
 library(car)
 library(emmeans)
 library(lsmeans)
+library(multcompView)
 
 ## libraries for parallel processing
 library(future)
@@ -618,10 +619,6 @@ exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
 
 photo_exp <- exp %>%
   filter(Light_Value > 0)
-
-photo_exp <- photo_exp %>%
-  mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
-  mutate(Treatment = as.factor(Treatment))
 ```
 
 Check for outliers
@@ -696,6 +693,12 @@ photo_exp_filtered <- photo_exp_filtered %>%
     Date == "2021-08-19" ~ "TP7")) 
 ```
 
+Set TP0 to Ambient for stats purposes
+```{r}
+photo_exp_filtered <- photo_exp_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -721,7 +724,8 @@ Timepoint is significant but Treatment and interaction is not.
 
 Run post-hoc test for Timepoint
 ```{r}
-TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+tukey_result <- TukeyHSD(anova_result, "Timepoint", conf.level = 0.95)
+print(tukey_result)
 
 plot(TukeyHSD(anova_result, conf.level=.95), las = 2)
 ```
@@ -739,6 +743,11 @@ photo_exp_filtered <- photo_exp_filtered %>%
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP6" ~ "July", 
     Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+photo_exp_filtered <- photo_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
 ```
 
 Plot 
@@ -801,9 +810,18 @@ photo_summary <- photo_exp_filtered %>%
     n = n(),  # Count observations per group
     mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
     sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
-    sem_photo = micromol.cm2.h / sqrt(n),  # SEM formula
+    sem_photo = sd_photo / sqrt(n),  # Correct SEM formula
     .groups = "drop"
   )
+```
+
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("abc", "ab", "a", "a", "bc", "c", "c", "c"),
+  y_position = c(6.77, 3.67, 3.44, 4.28, 8.51, 7.33, 8.71, 7.20) # 0.5 offset from highest sd 
+)
 ```
 
 Plot as dot and whisker plots
@@ -818,6 +836,15 @@ photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tr
                     ymax = mean_photo + sem_photo), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
+  #geom_text(aes(label = Letters, y = mean_photo + sem_photo + 0.8),
+  #          size = 6,
+  #          color = "black",
+  #          position = position_dodge(width = 0.5)) +
   xlab("") +
   ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
@@ -842,6 +869,15 @@ photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tre
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  #geom_text(aes(label = Letters, y = mean_photo + sem_photo + 0.8),
+  #          size = 6,
+  #          color = "black",
+  #          position = position_dodge(width = 0.5)) +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
@@ -865,6 +901,7 @@ photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Tre
 ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd.pdf", photo_dot_sd, width = 22, height = 12)
 ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sd.png", photo_dot_sd, width = 22, height = 12)
 ```
+
 
 ## Respiration 
 

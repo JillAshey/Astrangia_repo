@@ -187,6 +187,11 @@ write.csv(chl, "../output/Physiology/Chlorophyll/Chlorophyll.csv")
 
 # Chlorophyll a
 
+## Read in chl data
+```{r}
+chl <- read.csv("../output/Physiology/Chlorophyll/Chlorophyll.csv")
+```
+
 ## Check for outliers 
 ```{r}
 # Remove field data for now 
@@ -261,6 +266,12 @@ qqline(chl_exp_filtered$chla_sqrt, col = "red")
 shapiro.test(chl_exp_filtered$chla_sqrt)
 ```
 
+Set TP0 to Ambient for stats purposes
+```{r}
+chl_exp_filtered <- chl_exp_filtered %>%
+  mutate(Treatment = ifelse(Timepoint == "TP0", "Ambient", as.character(Treatment)))
+```
+
 Run a two-way ANOVA
 ```{r}
 # Ensure factors are properly set
@@ -282,7 +293,7 @@ plot(anova_result, which = 1)
 plot(anova_result, which = 2)
 ```
 
-Timepoint is significant but Treatment and interaction is not. 
+Timepoint is slightly significant but Treatment and interaction is not. 
 
 Run post-hoc test for Timepoint
 ```{r}
@@ -305,7 +316,7 @@ chl_exp_filtered <- chl_exp_filtered %>%
     Timepoint == "TP6" ~ "July", 
     Timepoint == "TP7" ~ "August")) 
 
-# Update to Acclimation
+# Update to Acclimation for plotting purposes 
 chl_exp_filtered <- chl_exp_filtered %>%
   mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
   mutate(Treatment = as.factor(Treatment))
@@ -414,6 +425,15 @@ chla_summary <- chl_exp_filtered %>%
   )
 ```
 
+Add letters for plotting 
+```{r}
+month_letters_manual <- tibble::tibble(
+  Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
+  Letters = c("a", "a", "a", "a", "a", "a", "a", "a"),
+  y_position = c(1.77, 1.65, 2.12, 2.29, 2.39, 2.01, 1.78, 2.76) # 0.2 offset from highest sd 
+)
+```
+
 Plot as dot and whisker plots
 ```{r}
 # Set Month as factor 
@@ -426,6 +446,11 @@ chla_dot_sem <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treat
                     ymax = mean_chla + sem_chla), 
                 width = 0.2) +
   geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",  # Blue
                                "Heat" = "#E41A1C")) +  # Red
@@ -448,6 +473,11 @@ chla_dot_sd <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatm
                 width = 0.5) +
   geom_point(size = 10, aes(fill = Treatment), 
              shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  geom_text(data = month_letters_manual,
+            aes(x = Month, y = y_position, label = Letters),
+            inherit.aes = FALSE,
+            position = position_dodge(width = 0.5),
+            size = 8) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
                                "Ambient" = "#377EB8",
                                "Heat" = "#E41A1C")) +
