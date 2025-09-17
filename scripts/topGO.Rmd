@@ -38,9 +38,9 @@ write_tsv(go_ast, file = "../data/Molecular/Ast_gene2go.tab")
 
 ## Functional enrichment of all targets, regardless of differential expression status 
 
-Read in miranda data
+Read in miranda data - entire mRNA binding
 ```{r}
-miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+miranda_data <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
 colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
 
 # Format miranda df 
@@ -48,8 +48,26 @@ miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
 miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
 miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
 miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_data$mRNA <- sub("model", "TU", miranda_data$mRNA)  # Remove everything from "::" onwards
 
 dim(miranda_data)
+length(unique(miranda_data$miRNA))
+length(unique(miranda_data$mRNA))
+```
+
+Read in expressed genes file 
+```{r}
+filt_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+```
+
+Join miranda and filtered gene counts df 
+```{r}
+joined_df <- miranda_data %>%
+  left_join(filt_counts, by = c("mRNA" = "X")) %>%
+  filter(if_all(starts_with("AST"), ~ !is.na(.)))
+
+length(unique(joined_df$miRNA))
+length(unique(joined_df$mRNA))
 ```
 
 Read in gene2go information (generated above)
@@ -60,7 +78,7 @@ ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
 Make list of genes for input to topGO
 ```{r}
 # Genes of interest - ie those targeted by miRNAs
-ast_target_genes <- as.character(unique(miranda_data$mRNA))
+ast_target_genes <- as.character(unique(joined_df$mRNA))
 
 # All genes 
 ast_all_genes <- as.character(ast_gene2go$mRNA)
@@ -122,149 +140,15 @@ GO_ast_BP_En_sig_gene <- ast_gene2go %>%
   left_join(GO_ast_BP_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
-# Add ontology column 
-GO_ast_BP_En_sig_gene$ontology <- "Biological Processes"
-```
-
-
-
-
-
-
-
-
-
-## Functional enrichment of differentially expressed targets by differentially expressed miRNAs (regardless of correlation significance)
-
-Read in data - this data is the DE miRNAs and DE target mRNAs but not filtered by significant correlation values
-```{r}
-pcc_de <- read.csv("../output/Molecular/interactions/interactions_annot_pcc_de.csv")
-```
-
-Read in gene2go information (generated above)
-```{r}
-ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
-```
-
-Make list of genes for input to topGO
-```{r}
-# Genes of interest - ie those targeted by miRNAs
-ast_target_genes <- as.character(unique(pcc_de$mRNA))
-
-# All genes 
-ast_all_genes <- as.character(ast_gene2go$mRNA)
-
-# Apply 1 or 0 if gene is gene of interest 
-ast_GeneList <- factor(as.integer(ast_all_genes %in% ast_target_genes))
-names(ast_GeneList) <- ast_all_genes
-```
-
-The following code will perform GO enrichment using the weighted Fisher's exact test to assess whether specific GO terms are overrepresented in the DE genes targeted by DE miRNAs, regardless of correlation significance. 
-
-Read in gene-to-go-mappings
-```{r}
-ast_gene2go_topgo<-readMappings("../data/Molecular/Ast_gene2go.tab", IDsep=";", sep="\t")
-```
-
-Set function to select genes of interest (ie those that have pvalue < 0.05)
-```{r}
-topDiffGenes <- function(allScore) {
-return(allScore < 0.05)}
-```
-
-### Biological Processes
-
-Create `topGOdata` object, which is required for topGO analysis
-```{r}
-GO_ast_BP <-new("topGOdata", ontology="BP", gene2GO=ast_gene2go_topgo, allGenes=ast_GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
-```
-
-Run GO enrichment test 
-```{r}
-GO_ast_BP_FE <- runTest(GO_ast_BP, algorithm="weight01", statistic="fisher")
-```
-
-Generate results table 
-```{r}
-GO_ast_BP_En <- GenTable(GO_ast_BP, Fisher = GO_ast_BP_FE, orderBy = "Fisher",  topNodes = 100, numChar = 51)
-```
-Only taking the top 100 GO terms 
-
-Filter by significant results
-```{r}
-GO_ast_BP_En$Fisher<-as.numeric(GO_ast_BP_En$Fisher)
-GO_ast_BP_En_sig<-GO_ast_BP_En[GO_ast_BP_En$Fisher<0.05,]
-```
-
-Merge `GO_ast_BP_En_sig` with GO and gene info. 
-```{r}
-# Separate GO terms 
-ast_gene2go <- ast_gene2go %>%
-  separate_rows(GO, sep = ";")
-
-# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
-ast_gene2go$GO <- trimws(ast_gene2go$GO)
-GO_ast_BP_En_sig$GO.ID <- trimws(GO_ast_BP_En_sig$GO.ID)
-
-# Join the datasets based on GO term
-GO_ast_BP_En_sig_gene <- ast_gene2go %>%
-  left_join(GO_ast_BP_En_sig, by = c("GO" = "GO.ID")) %>%
-  na.omit()
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_ast_BP_En_sig_gene <- GO_ast_BP_En_sig_gene %>%
+  filter(mRNA %in% ast_target_genes)
 
 # Add ontology column 
 GO_ast_BP_En_sig_gene$ontology <- "Biological Processes"
-
-# Keep only unique rows 
-GO_ast_BP_En_sig_gene <- unique(GO_ast_BP_En_sig_gene)
 ```
 
-### Cellular Components 
-
-Create `topGOdata` object, which is required for topGO analysis
-```{r}
-GO_ast_CC <-new("topGOdata", ontology="CC", gene2GO=ast_gene2go_topgo, allGenes=ast_GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
-```
-
-Run GO enrichment test 
-```{r}
-GO_ast_CC_FE <- runTest(GO_ast_CC, algorithm="weight01", statistic="fisher")
-```
-
-Generate results table 
-```{r}
-GO_ast_CC_En <- GenTable(GO_ast_CC, Fisher = GO_ast_CC_FE, orderBy = "Fisher",  topNodes = 100, numChar = 51)
-```
-Only taking the top 100 GO terms 
-
-Filter by significant results
-```{r}
-GO_ast_CC_En$Fisher<-as.numeric(GO_ast_CC_En$Fisher)
-GO_ast_CC_En_sig<-GO_ast_CC_En[GO_ast_CC_En$Fisher<0.05,]
-```
-
-Merge `GO_ast_CC_En_sig` with GO and gene info. 
-```{r}
-# Separate GO terms 
-ast_gene2go <- ast_gene2go %>%
-  separate_rows(GO, sep = ";")
-
-# Ensure GO terms in both datasets are formatted similarly (trim whitespaces)
-ast_gene2go$GO <- trimws(ast_gene2go$GO)
-GO_ast_CC_En_sig$GO.ID <- trimws(GO_ast_CC_En_sig$GO.ID)
-
-# Join the datasets based on GO term
-GO_ast_CC_En_sig_gene <- ast_gene2go %>%
-  left_join(GO_ast_CC_En_sig, by = c("GO" = "GO.ID")) %>%
-  na.omit()
-
-# Add ontology column 
-GO_ast_CC_En_sig_gene$ontology <- "Cellular Components"
-
-# Keep only unique rows 
-GO_ast_CC_En_sig_gene <- unique(GO_ast_CC_En_sig_gene)
-```
-
-### Molecular Functions 
+### Molecular Function
 
 Create `topGOdata` object, which is required for topGO analysis
 ```{r}
@@ -303,135 +187,125 @@ GO_ast_MF_En_sig_gene <- ast_gene2go %>%
   left_join(GO_ast_MF_En_sig, by = c("GO" = "GO.ID")) %>%
   na.omit()
 
+# Join the datasets based on genes upregulated in Feb (ie those used for the functional enrichment)
+GO_ast_MF_En_sig_gene <- GO_ast_MF_En_sig_gene %>%
+  filter(mRNA %in% ast_target_genes)
+
 # Add ontology column 
 GO_ast_MF_En_sig_gene$ontology <- "Molecular Functions"
-
-# Keep only unique rows 
-GO_ast_MF_En_sig_gene <- unique(GO_ast_MF_En_sig_gene)
 ```
 
-### Join intologies 
+### Join ontologies 
 
 Bind so there is a df that has significantly enriched GO terms for all ontologies 
 ```{r}
-GO_ast_de <- rbind(GO_ast_BP_En_sig_gene, GO_ast_CC_En_sig_gene, GO_ast_MF_En_sig_gene)
-```
+GO_En_sig_gene <- rbind(GO_ast_BP_En_sig_gene, GO_ast_MF_En_sig_gene)
 
-Merge with `pcc_de`
-```{r}
-test <- GO_ast_de %>%
-  inner_join(pcc_de, by = "mRNA") %>%
-  mutate(direction = ifelse(PCC.cor > 0, "Positive", "Negative")) %>%
-  filter(ontology != "Cellular Components") #%>%
-  #filter(p_value < 0.1)
+# Calculate proportion of significant v annotated genes 
+GO_En_sig_gene <- GO_En_sig_gene %>%
+  mutate(sig.prop = Significant/Annotated) %>%
+  na.omit()
+length(unique(GO_En_sig_gene$Term))
+length(unique(GO_En_sig_gene$mRNA))
 
 # Save as csv 
-write.csv(test, "../output/Molecular/interactions/topGO_pcc_de_target_enrichment.csv")
+write.csv(GO_En_sig_gene, "../output/Molecular/interactions/enrichment/GO_en_sig_miRNA_target_genes.csv")
 ```
 
-Plot!
+Plot by number of genes that have enriched terms
 ```{r}
-plot<-ggplot(test, aes(x = Term, y = p_value, size = Fisher, fill = direction)) +
-  #ylim(0, 1) +
-  #geom_hline(yintercept = 0.05, linetype = "solid", color = "black", linewidth = 1)+
-  geom_hline(yintercept = 0.05, color = "black", linetype = "solid", linewidth = 0.5) +  # Add line at 0.05 
-  geom_point(shape = 21) + 
-  scale_size(range = c(2, 20)) + 
-  xlab('') + 
-  ylab("PCC p-value") +
-  theme_bw(base_size = 24) +
-  facet_grid(vars(ontology), scales = "free", space = "free_y") +
-  coord_flip(); plot
+plot_data <- GO_En_sig_gene %>%
+  #filter(ontology != "Cellular Components") %>%
+  filter(ontology != "Molecular Functions") %>%
+  group_by(Term, ontology) %>%
+  summarise(gene_count = n_distinct(mRNA),
+            Fisher = mean(Fisher), .groups = 'drop') %>%
+  group_by(ontology) %>%
+  slice_max(order_by = gene_count, n = 15)
 
-# Save plot 
-ggsave("../output/Molecular/interactions/topGO_pcc_de_target_enrichment.pdf", plot, width = 20, height = 25, dpi = 300)
-ggsave("../output/Molecular/interactions/topGO_pcc_de_target_enrichment.png", plot, width = 20, height = 25, dpi = 300)
+ggplot(plot_data, aes(x = reorder(Term, gene_count), y = gene_count, fill = Fisher)) +
+  geom_bar(stat = "identity") +
+  #geom_text(aes(label = gene_count), vjust = -0.5, color = "black", size = 3) +
+  coord_flip() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  #facet_grid(vars(ontology), scales = "free", space = "free_y") + 
+  labs(x = "",
+       y = "Number of Genes",
+       fill = "Fisher Value") +
+  theme_bw() +
+  guides(fill = guide_colorbar(barwidth = 1.5, barheight = 30)) +
+  theme(
+    legend.title = element_text(size = 38, face = "bold"),
+    legend.text = element_text(size = 36),
+    legend.key.height = unit(2, "cm"),
+    legend.key.width  = unit(1, "cm"),
+    legend.margin = margin(0, 20, 0, 0)
+  ) +
+  theme(
+    axis.title = element_text(size = 70, face = "bold"),   # slightly larger axis titles
+    axis.text = element_text(size = 68, colour = "black"), # slightly larger axis text
+    legend.title = element_text(size = 68, face = "bold"), # larger legend title
+    legend.text = element_text(size = 66),                 # larger legend text
+    strip.text = element_text(size = 68, face = "bold"),
+    strip.background = element_rect(fill = "lightgray", color = "black", size = 1.5),
+    axis.line = element_line(size = 1, colour = "black"),
+    axis.ticks = element_line(size = 1),
+    panel.border = element_rect(color = "black", size = 1.2),
+    panel.grid.major = element_line(size = 0.5, color = "gray"),
+    panel.spacing = unit(1, "lines"),
+    strip.placement = "outside",
+    legend.position = "right",           # move legend outside plot on right
+    #legend.justification = c(0, 1),      # align legend top left
+    legend.margin = margin(0, 20, 0, 0)  # add right margin so legend is separate
+  )
+
+ggsave(filename = "../output/Molecular/interactions/enrichment/GO_en_sig_miRNA_target_genes_top10.pdf", last_plot(), width = 49, height = 40)
+ggsave(filename = "../output/Molecular/interactions/enrichment/GO_en_sig_miRNA_target_genes_top10.png", last_plot(), width = 49, height = 40)
 ```
 
-Plot! But leave out PCC information
+Other ways to plot 
 ```{r}
-test <- test %>%
-  arrange(desc(Fisher)) %>%
-  mutate(Term = factor(Term, levels = unique(Term)))
+ggplot(plot_data, aes(x = ontology, y = reorder(Term, gene_count), fill = Fisher)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Ontology", y = "Term", fill = "-log10(Fisher)") +
+  theme_minimal()
 
-plot<-ggplot(test, aes(x = Term, y = Fisher)) +
-  #ylim(0, 1) +
-  #geom_hline(yintercept = 0.05, linetype = "solid", color = "black", linewidth = 1)+
-  #geom_hline(yintercept = 0.05, color = "black", linetype = "solid", linewidth = 0.5) +  # Add line at 0.05 
-  geom_point(size = 10, color = "black") + 
-  scale_size(range = c(2, 20)) + 
-  xlab('') + 
-  ylab("Fisher p-value") +
-  theme_bw(base_size = 35) +
-  facet_grid(vars(ontology), scales = "free", space = "free_y") +
-  coord_flip(); plot
+ggplot(plot_data, aes(x = ontology, 
+                      y = reorder(Term, gene_count),
+                      size = gene_count, 
+                      color = -log10(Fisher))) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Ontology", y = "Term", 
+       size = "Gene Count", 
+       color = "-log10(Fisher)") +
+  theme_bw()
 
-# Save plot 
-ggsave("../output/Molecular/interactions/topGO_de_target_enrichment.pdf", plot, width = 20, height = 40, dpi = 300)
-ggsave("../output/Molecular/interactions/topGO_de_target_enrichment.png", plot, width = 20, height = 40, dpi = 300)
+ggplot(plot_data, aes(x = gene_count, y = reorder(Term, gene_count), color = -log10(Fisher))) +
+  geom_segment(aes(x = 0, xend = gene_count, yend = Term), linewidth = 1.2) +
+  geom_point(size = 5) +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(x = "Number of Genes", y = "", color = "-log10(Fisher)") +
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 40, face = "bold"),   # slightly larger axis titles
+    axis.text = element_text(size = 38, colour = "black"), # slightly larger axis text
+    legend.title = element_text(size = 38, face = "bold"), # larger legend title
+    legend.text = element_text(size = 36),                 # larger legend text
+    strip.text = element_text(size = 38, face = "bold"),
+    strip.background = element_rect(fill = "lightgray", color = "black", size = 1.5),
+    axis.line = element_line(size = 1, colour = "black"),
+    axis.ticks = element_line(size = 1),
+    panel.border = element_rect(color = "black", size = 1.2),
+    panel.grid.major = element_line(size = 0.5, color = "gray"),
+    panel.spacing = unit(1, "lines"),
+    strip.placement = "outside",
+    legend.position = "right",           # move legend outside plot on right
+    #legend.justification = c(0, 1),      # align legend top left
+    legend.margin = margin(0, 20, 0, 0)  # add right margin so legend is separate
+  )
+ggsave(filename = "../output/Molecular/interactions/enrichment/GO_en_sig_miRNA_target_genes_top10_lollipop.pdf", last_plot(), width = 30, height = 40)
+ggsave(filename = "../output/Molecular/interactions/enrichment/GO_en_sig_miRNA_target_genes_top10_lollipop.png", last_plot(), width = 30, height = 40)
 ```
-
-Assess data
-```{r}
-length(unique(test$mRNA)) # Count number of DEGs
-length(unique(test$miRNA)) # Count number of DEMs
-sum(test$ontology == "Biological Processes", na.rm = TRUE) # Count number of BP GO terms that are significantly enriched
-
-# Function to get top unique terms
-get_top_unique <- function(data, ontology_type) {
-  data %>%
-    filter(ontology == ontology_type) %>%
-    arrange(Fisher) %>%
-    distinct(Term, .keep_all = TRUE) 
-}
-top_BP <- get_top_unique(test, "Biological Processes")
-top_MF <- get_top_unique(test, "Molecular Functions")
-```
-
-Examine the top 10 most significant GO terms for BP and MF
-```{r}
-# Function to get top 5 unique terms
-get_top_10_unique <- function(data, ontology_type) {
-  data %>%
-    filter(ontology == ontology_type) %>%
-    arrange(Fisher) %>%
-    distinct(Term, .keep_all = TRUE) %>%
-    slice_head(n = 10)
-}
-
-# Get top 5 unique Biological Processes
-top_10_BP <- get_top_10_unique(test, "Biological Processes")
-
-# Get top 5 unique Molecular Functions
-top_10_MF <- get_top_10_unique(test, "Molecular Functions")
-
-# Combine results
-top_10_combined <- bind_rows(top_10_BP, top_10_MF)
-unique(top_5_combined$Term)
-
-# Plot 
-top_10_combined <- top_10_combined %>%
-  arrange(desc(Fisher)) %>%
-  mutate(Term = factor(Term, levels = unique(Term)))
-
-plot<-ggplot(top_10_combined, aes(x = Term, y = Fisher)) +
-  #ylim(0, 1) +
-  #geom_hline(yintercept = 0.05, linetype = "solid", color = "black", linewidth = 1)+
-  #geom_hline(yintercept = 0.05, color = "black", linetype = "solid", linewidth = 0.5) +  # Add line at 0.05 
-  geom_point(size = 10, color = "black") + 
-  scale_size(range = c(2, 20)) + 
-  xlab('') + 
-  ylab("Fisher p-value") +
-  theme_bw(base_size = 35) +
-  facet_grid(vars(ontology), scales = "free", space = "free_y") +
-  coord_flip(); plot
-
-# Save plot 
-ggsave("../output/Molecular/interactions/top10GO_de_target_enrichment.pdf", plot, width = 20, height = 25, dpi = 300)
-ggsave("../output/Molecular/interactions/top10GO_de_target_enrichment.png", plot, width = 20, height = 25, dpi = 300)
-```
-
-
-
-
 

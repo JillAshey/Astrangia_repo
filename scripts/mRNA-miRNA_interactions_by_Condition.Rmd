@@ -501,6 +501,9 @@ tp5_amb$treatment <- "tp5_amb"
 tp5_heat$treatment <- "tp5_heat"
 tp7_amb$treatment <- "tp7_amb"
 tp7_heat$treatment <- "tp7_heat"
+
+length(unique(tp5_amb$miRNA))
+length(unique(tp5_amb$mRNA))
 ```
 
 ### Subset by negative PCC and sig pvalues
@@ -1926,9 +1929,6 @@ summary_df <- comparison_df_true_pcc_degs_annot_inf %>%
   dplyr::count(miRNA_repression_inferred)
 print(summary_df)
 
-blah <- comparison_df_true_pcc_degs_annot_inf %>%
-  filter(miRNA_repression_inferred == "miRNA repression of mRNA at TP0")
-
 # Save as csv 
 write.csv(comparison_df_true_pcc_degs_annot_inf, "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_lfc_annot.csv")
 ```
@@ -2042,6 +2042,115 @@ ggplot(plot_data, aes(x = Timepoint, y = PCC.cor, group = interaction(miRNA, mRN
 
 ggsave(filename = "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_change.pdf", last_plot(), width = 15, height = 15)
 ggsave(filename = "../output/Molecular/interactions/miRNA_mRNA_TP0_v_TP7_amb_pcc_change.png", last_plot(), width = 15, height = 15)
+```
+
+Making network plots 
+```{r}
+## TP0
+# Prepare nodes with type for coloring
+miRNA_nodes <- tibble(name = unique(comparison_df_true_pcc_degs_annot_inf$miRNA), type = "miRNA")
+mRNA_nodes <- tibble(name = unique(comparison_df_true_pcc_degs_annot_inf$mRNA), type = "mRNA")
+nodes <- bind_rows(miRNA_nodes, mRNA_nodes)
+
+# Prepare edges for TP0, with color and width based on PCC
+edges_tp0 <- comparison_df_true_pcc_degs_annot_inf %>%
+  select(miRNA, mRNA, PCC.cor_tp0) %>%
+  rename(from = miRNA, to = mRNA) %>%
+  mutate(
+    edge_color = ifelse(PCC.cor_tp0 > 0, "red", "blue"),
+    edge_width = abs(PCC.cor_tp0)  # scale factor for thickness
+  )
+
+# Build igraph object
+graph_tp0 <- graph_from_data_frame(d = edges_tp0, vertices = nodes, directed = FALSE)
+
+# Create layout to get node positions
+layout_tp0 <- create_layout(graph_tp0, layout = "kk")
+
+# Find max x and min/max y coordinates of nodes
+x_max <- max(layout_tp0$x)
+y_min <- min(layout_tp0$y)
+y_max <- max(layout_tp0$y)
+
+# Adjust position: move line further right by increasing x coordinate offset
+x_line <- x_max + 1  # move more to right (increase number)
+
+# Extend line beyond node vertical span by using larger/smaller y values
+y_line_min <- y_min - 1  # extend below min node y
+y_line_max <- y_max + 1  # extend above max node y
+
+# Plot with extended vertical dotted line at new x coordinate
+p_tp0 <- ggraph(graph_tp0, layout = "kk") +
+  geom_edge_link(aes(color = edge_color, width = edge_width), alpha = 0.7) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_segment(aes(x = x_line, xend = x_line, y = y_line_min, yend = y_line_max),
+  #             linetype = "solid", color = "black", size = 1) +
+  scale_edge_color_manual(
+    name = "Correlation Sign",
+    values = c("red" = "red", "blue" = "blue"),
+    labels = c("Negative", "Positive")
+  ) +
+  scale_edge_width(
+    name = "Correlation Strength",
+    range = c(0.2, 2)
+  ) +
+  scale_color_manual(
+    name = "Node Type",
+    values = c(miRNA = "forestgreen", mRNA = "purple"),
+    labels = c("miRNA", "mRNA")
+  ) +
+  theme_void() +
+  theme(legend.position = "none"); p_tp0
+
+## TP7
+# Prepare nodes with type for coloring
+miRNA_nodes <- tibble(name = unique(comparison_df_true_pcc_degs_annot_inf$miRNA), type = "miRNA")
+mRNA_nodes <- tibble(name = unique(comparison_df_true_pcc_degs_annot_inf$mRNA), type = "mRNA")
+nodes <- bind_rows(miRNA_nodes, mRNA_nodes)
+
+# Prepare edges for TP7, with color and width based on PCC
+edges_tp7 <- comparison_df_true_pcc_degs_annot_inf %>%
+  select(miRNA, mRNA, PCC.cor_tp7_amb) %>%
+  rename(from = miRNA, to = mRNA) %>%
+  mutate(
+    edge_color = ifelse(PCC.cor_tp7_amb > 0, "red", "blue"),
+    edge_width = abs(PCC.cor_tp7_amb)  # scale factor for thickness
+  )
+
+# Build igraph object
+graph_tp7 <- graph_from_data_frame(d = edges_tp7, vertices = nodes, directed = FALSE)
+
+# Plot the network with node color and edge width/color
+p_tp7 <- ggraph(graph_tp7, layout = "kk") +
+  geom_edge_link(aes(color = edge_color, width = edge_width), alpha = 0.7) +
+  geom_node_point(aes(color = type), size = 5) +
+  #geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_color_manual(
+    name = "Correlation Sign",
+    values = c("red" = "red", "blue" = "blue"),
+    labels = c("Negative", "Positive")
+  ) +
+  scale_edge_width(
+    name = "Correlation Strength",
+    range = c(0.2, 2)
+  ) +
+  scale_color_manual(
+    name = "Node Type",
+    values = c(miRNA = "forestgreen", mRNA = "purple"),
+    labels = c("miRNA", "mRNA")
+  ) +
+  theme_void() +
+ # theme(panel.border = element_rect(color = "black", size = 1, fill = NA),
+ #       plot.margin = margin(5, 5, 5, 5),
+ #       plot.background = element_blank()) +
+  #labs(title = "miRNA–mRNA Interaction Network at TP5") +
+  theme(legend.position = "right"); p_tp7
+
+# Plot togerher and save
+combined_plot <- p_tp0 + p_tp7
+combined_plot <- combined_plot + plot_layout(guides = "collect") 
+#+ plot_annotation(tag_levels = "A")
+combined_plot
 ```
 
 ### TP0 v TP7 heat

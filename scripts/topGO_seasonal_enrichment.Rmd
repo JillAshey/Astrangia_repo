@@ -20,6 +20,7 @@ library(scales)
 library(igraph)
 library(tidygraph)
 library(ggraph)
+library(UpSetR)
 ```
 
 ## Feb DEGs
@@ -777,6 +778,30 @@ june_unique_terms <- setdiff(june_terms, union(aug_terms, feb_terms))
 aug_unique_terms <- setdiff(aug_terms, union(june_terms, feb_terms))
 ```
 
+Make an upset plot
+```{r}
+sets_list <- list(
+  February = feb_terms,
+  June     = june_terms,
+  August   = aug_terms
+)
+
+pset_data <- fromList(sets_list)
+
+png("../output/Molecular/mRNA/enrichment/seasonal_upset_plot.png", width = 8, height = 6, units = "in", res = 600)
+upset(upset_data,
+      sets = c("February", "June", "August"),
+      order.by = "freq",
+      sets.bar.color = c("#8a36b6", "#f19e21", "#5eca4a"),  # <-- custom colors
+      main.bar.color = "grey40",
+      matrix.color = "black",
+      mb.ratio = c(0.7, 0.3),      # ratio between main barplot and set size barplot
+      show.numbers = "yes",        # show counts on bars
+      text.scale = 1.6,            # scale up all text
+      point.size = 4,              # size of matrix points
+      line.size = 1)               # thickness of connecting lines
+dev.off()
+```
 
 
 

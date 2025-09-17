@@ -1,9 +1,0 @@
-"","mirna_FC","mrna_FC","mirna","mrna","value","score","energy","subj_identity","query_identity","pvalue"
-"Cluster_2003_chromosome_7",-2.08402257311384,-1.2656328875518,"Cluster_2003_chromosome_7","evm.TU.chromosome_13.1876",0.81838968556204,151,-22.39,"65.00%","75.00%",0.60584
-"Cluster_1453_chromosome_6",-2.11084246984522,-3.12537719739897,"Cluster_1453_chromosome_6","evm.TU.chromosome_13.4161",1.01453472755375,154,-20.97,"78.95%","78.95%",0.55436
-"Cluster_2003_chromosome_7.1",-2.08402257311384,-4.30634282168019,"Cluster_2003_chromosome_7","evm.TU.chromosome_4.211",2.22232024856635,148,-20.75,"57.89%","73.68%",0.40171
-"Cluster_1453_chromosome_6.1",-2.11084246984522,3.6313642460356,"Cluster_1453_chromosome_6","evm.TU.chromosome_4.1968",5.74220671588082,151,-20.37,"70.00%","70.00%",0.08999
-"Cluster_1453_chromosome_6.2",-2.11084246984522,-1.24248737557417,"Cluster_1453_chromosome_6","evm.TU.chromosome_6.2772",0.86835509427105,158,-25.73,"65.22%","78.26%",0.59177
-"Cluster_2003_chromosome_7.2",-2.08402257311384,-1.86745558410546,"Cluster_2003_chromosome_7","evm.TU.chromosome_4.266",0.21656698900838,144,-22.1,"76.47%","82.35%",0.87766
-"Cluster_2003_chromosome_7.3",-2.08402257311384,4.20484116124393,"Cluster_2003_chromosome_7","evm.TU.chromosome_2.324",6.28886373435777,154,-20.73,"84.62%","84.62%",0.0718
-"Cluster_1453_chromosome_6.3",-2.11084246984522,3.93619447228358,"Cluster_1453_chromosome_6","evm.TU.chromosome_4.1956",6.0470369421288,151,-20.37,"70.00%","70.00%",0.07429
