@@ -30,15 +30,100 @@ length(unique(miranda_full$miRNA))
 length(unique(miranda_full$mRNA))
 ```
 
+
+Read in expressed genes file 
+```{r}
+filt_counts <- read.csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+```
+
+Join miranda and filtered gene counts df 
+```{r}
+miranda_full_exp <- miranda_full %>%
+  left_join(filt_counts, by = c("mRNA" = "X")) %>%
+  filter(if_all(starts_with("AST"), ~ !is.na(.)))
+
+length(unique(miranda_full_exp$miRNA))
+length(unique(miranda_full_exp$mRNA))
+```
+
+Count number of mRNA targets per miRNA
+```{r}
+# count unique mRNAs per miRNA
+df_counts <- miranda_full_exp %>%
+  group_by(miRNA) %>%
+  summarise(num_targets = n_distinct(mRNA), .groups = "drop")
+mean(df_counts$num_targets)
+max(df_counts$num_targets)
+min(df_counts$num_targets)
+
+# bar plot
+ggplot(df_counts, aes(x = reorder(miRNA, -num_targets), y = num_targets)) +
+  geom_col(fill = "steelblue", width = 0.8) +  # width can be adjusted
+  labs(
+    x = "miRNA",
+    y = "Number of mRNA targets"
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 1100, by = 200),  # y-axis ticks every 250
+    limits = c(0, 1100),              # y-axis goes from 0 to 1400
+    expand = c(0, 0)                  # bars sit on x-axis
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1, size = 8),
+    axis.title = element_text(size = 14, face = "bold"))
+```
+
+
 Plot total bp shared distribution
 ```{r}
-ggplot(miranda_full, aes(x = total_bp_shared)) +
-  geom_histogram(binwidth = 1, fill = "steelblue", color = "black") +
+miranda_full_exp_filt <- miranda_full_exp %>%
+  filter(total_bp_shared < 23) %>%
+  filter(total_bp_shared > 5)
+mean(miranda_full_exp_filt$total_bp_shared)
+max(miranda_full_exp_filt$total_bp_shared)
+min(miranda_full_exp_filt$total_bp_shared)
+
+ggplot(miranda_full_exp_filt, aes(x = total_bp_shared)) +
+  geom_histogram(
+    aes(y = after_stat(count / sum(count))),
+    binwidth = 1, fill = "steelblue", color = "black"
+  ) +
   labs(
     x = "Total bp shared",
-    y = "Count"
+    y = "Frequency"
   ) +
-  theme_minimal()
+  theme_classic2()
+
+# calculate percentages per bin
+df_freq <- miranda_full_exp_filt %>%
+  count(total_bp_shared) %>%
+  mutate(perc = n / sum(n) * 100)
+
+ggplot(df_freq, aes(x = total_bp_shared, y = perc)) +
+  # filled frequency curve
+  geom_area(fill = "steelblue", alpha = 0.6) +
+  geom_line(color = "steelblue", size = 1.2) +
+  
+  # axis labels & title
+  labs(
+    x = "Total bp shared",
+    y = "Frequency (%)"
+  ) +
+  
+  # axis breaks
+  scale_x_continuous(breaks = seq(min(df_freq$total_bp_shared),
+                                  max(df_freq$total_bp_shared), by = 2)) +
+  scale_y_continuous(breaks = seq(0, max(df_freq$perc), by = 5)) +
+  
+  # clean minimal theme
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 13, color = "black"),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
 ```
 
 Read in miranda data - 3'UTR binding 

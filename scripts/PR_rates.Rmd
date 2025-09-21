@@ -811,6 +811,18 @@ photo_summary <- photo_exp_filtered %>%
     mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
     sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
     sem_photo = sd_photo / sqrt(n),  # Correct SEM formula
+    sem_photo_offset = mean_photo + sem_photo + 0.5,
+    .groups = "drop"
+  )
+
+photo_time_summary <- photo_exp_filtered %>%
+  group_by(Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_photo = sd_photo / sqrt(n),  # Correct SEM formula
+    sem_photo_offset = mean_photo + sem_photo + 0.5,
     .groups = "drop"
   )
 ```
@@ -835,7 +847,7 @@ Add letters for plotting
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
   Letters = c("abc", "ab", "a", "a", "bc", "c", "c", "bc"),
-  y_position = c(6.77, 3.67, 3.44, 4.28, 8.51, 7.33, 8.71, 7.20) # 0.5 offset from highest sd 
+  y_position = c(4.59, 2.85, 2.11, 3.15, 5.95, 6.15, 7.48, 5.54) # 0.5 offset from highest sem
 )
 ```
 
@@ -846,33 +858,42 @@ photo_summary$Month <- factor(photo_summary$Month, levels = c("February", "March
 
 # sem
 photo_dot_sem <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
-  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
   geom_errorbar(aes(ymin = mean_photo - sem_photo, 
-                    ymax = mean_photo + sem_photo), 
-                width = 0.2) +
-  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+                    ymax = mean_photo + sem_photo),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
   geom_text(data = month_letters_manual,
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
             size = 10) +
-  #geom_text(aes(label = Letters, y = mean_photo + sem_photo + 0.8),
-  #          size = 6,
-  #          color = "black",
-  #          position = position_dodge(width = 0.5)) +
-  xlab("") +
-  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
-                               "Ambient" = "#377EB8",  # Blue
-                               "Heat" = "#E41A1C")) +  # Red
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
   scale_fill_manual(values = c("Acclimation" = "grey80", 
                               "Ambient" = "#377EB8", 
                               "Heat" = "#E41A1C")) +
-  theme_classic(base_size = 14) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "top"); photo_dot_sem
-ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.pdf", photo_dot_sem, width = 20, height = 15)
-ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.png", photo_dot_sem, width = 20, height = 15)
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );photo_dot_sem
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.pdf", photo_dot_sem, width = 22, height = 12)
+ggsave("../output/Physiology/PR/NetPhoto_Treatment_Timepoin_dotwhisker_sem.png", photo_dot_sem, width = 22, height = 12)
 
 # sd
 photo_dot_sd <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
@@ -1128,7 +1149,19 @@ resp_summary <- resp_exp_filtered %>%
     n = n(),  # Count observations per group
     mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
     sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
-    sem_resp = sd_resp / sqrt(n),  # SEM formula
+    sem_resp = sd_resp / sqrt(n),  # Correct SEM formula
+    sem_resp_offset = mean_resp + sem_resp + 0.5,
+    .groups = "drop"
+  )
+
+resp_time_summary <- resp_exp_filtered %>%
+  group_by(Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
+    sem_resp = sd_resp / sqrt(n),  # Correct SEM formula
+    sem_resp_offset = mean_resp + sem_resp + 0.5,
     .groups = "drop"
   )
 ```
@@ -1164,27 +1197,40 @@ resp_summary$Month <- factor(resp_summary$Month, levels = c("February", "March",
 
 # sem
 resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
-  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
   geom_errorbar(aes(ymin = mean_resp - sem_resp, 
-                    ymax = mean_resp + sem_resp), 
-                width = 0.2) +
-  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+                    ymax = mean_resp + sem_resp),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
   geom_text(data = month_letters_manual,
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
             size = 10) +
-  xlab("") +
-  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
-                               "Ambient" = "#377EB8",  # Blue
-                               "Heat" = "#E41A1C")) +  # Red
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
   scale_fill_manual(values = c("Acclimation" = "grey80", 
                               "Ambient" = "#377EB8", 
                               "Heat" = "#E41A1C")) +
-  theme_classic(base_size = 14) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "top"); resp_dot_sem
+  xlab("") +
+  ylab(expression(bold('Respiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );resp_dot_sem
 ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.pdf", resp_dot_sem, width = 20, height = 15)
 ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.png", resp_dot_sem, width = 20, height = 15)
 
