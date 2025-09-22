@@ -469,6 +469,7 @@ carb_summary <- carb_exp_filtered %>%
     mean_carb = mean(Carb.mg.cm2, na.rm = TRUE),
     sd_carb = sd(Carb.mg.cm2, na.rm = TRUE),
     sem_carb = sd_carb / sqrt(n),  # SEM formula
+    sem_carb_offset = mean_carb + sem_carb + 0.2,
     .groups = "drop"
   )
 ```
@@ -478,8 +479,7 @@ Add letters for plotting
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
   Letters = c("a", "a", "a", "a", "a", "a", "a", "a"),
-  y_position = c(4.03, 4.82, 5.96, 4.01, 5.17, 6.12, 3.53, 3.38) # 0.2 offset from highest sd 
-)
+  y_position = c(2.83, 3.80, 4.66, 3.22, 3.73, 4.60, 2.83, 2.39))# 0.2 offset from highest sd 
 ```
 
 Plot as dot and whisker plots
@@ -489,29 +489,42 @@ carb_summary$Month <- factor(carb_summary$Month, levels = c("February", "March",
 
 # sem
 carb_dot_sem <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatment)) +
-  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
   geom_errorbar(aes(ymin = mean_carb - sem_carb, 
-                    ymax = mean_carb + sem_carb), 
-                width = 0.2) +
-  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+                    ymax = mean_carb + sem_carb),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
   geom_text(data = month_letters_manual,
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
             size = 10) +
-  xlab("") +
-  ylab("Carbohydrates (mg/cm²)") +
   scale_color_manual(values = c("Acclimation" = "grey60", 
-                               "Ambient" = "#377EB8",  # Blue
-                               "Heat" = "#E41A1C")) +  # Red
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
   scale_fill_manual(values = c("Acclimation" = "grey80", 
                               "Ambient" = "#377EB8", 
                               "Heat" = "#E41A1C")) +
-  theme_classic(base_size = 14) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "right"); carb_dot_sem
-ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.pdf", carb_dot_sem, width = 20, height = 15)
-ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.png", carb_dot_sem, width = 20, height = 15)
+  xlab("") +
+  ylab("Carbohydrates (mg/cm²)") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, face = "bold", margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  ); carb_dot_sem
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.pdf", carb_dot_sem, width = 22, height = 12)
+ggsave("../output/Physiology/Carbohydrates/Carbohydrates_Treatment_Timepoint_dotwhisker_sem.png", carb_dot_sem, width = 22, height = 12)
 
 # sd
 carb_dot_sd <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatment)) +

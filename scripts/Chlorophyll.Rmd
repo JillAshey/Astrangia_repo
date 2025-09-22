@@ -418,9 +418,21 @@ chla_summary <- chl_exp_filtered %>%
     mean_chla = mean(chla.ug.cm2, na.rm = TRUE),
     sd_chla = sd(chla.ug.cm2, na.rm = TRUE),
     sem_chla = sd_chla / sqrt(n),  # SEM formula
-    mean_chlasqrt = mean(chla_sqrt, na.rm = TRUE),
-    sd_chlasqrt = sd(chla_sqrt, na.rm = TRUE),
-    sem_chlasqrt = sd_chlasqrt / sqrt(n),
+    #mean_chlasqrt = mean(chla_sqrt, na.rm = TRUE),
+    #sd_chlasqrt = sd(chla_sqrt, na.rm = TRUE),
+    #sem_chlasqrt = sd_chlasqrt / sqrt(n),
+    sem_chla_offset = mean_chla + sem_chla + 0.2,
+    .groups = "drop"
+  )
+
+chl_time_summary <- chl_exp_filtered %>%
+  group_by(Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_chla = mean(chla.ug.cm2, na.rm = TRUE),
+    sd_chla = sd(chla.ug.cm2, na.rm = TRUE),
+    sem_chla = sd_chla / sqrt(n),  # Correct SEM formula
+    sem_chla_offset = mean_chla + sem_chla + 0.2,
     .groups = "drop"
   )
 ```
@@ -430,8 +442,7 @@ Add letters for plotting
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
   Letters = c("a", "a", "a", "a", "a", "a", "a", "a"),
-  y_position = c(1.77, 1.65, 2.12, 2.29, 2.39, 2.01, 1.78, 2.76) # 0.2 offset from highest sd 
-)
+  y_position = c(1.31, 1.39, 1.79, 1.96, 1.96, 1.63, 1.37, 2.29)) # 0.2 offset from highest sem
 ```
 
 Plot as dot and whisker plots
@@ -441,28 +452,42 @@ chla_summary$Month <- factor(chla_summary$Month, levels = c("February", "March",
 
 # sem
 chla_dot_sem <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
-  geom_line(aes(group = Treatment), linewidth = 1.5) +  # Connection lines
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
   geom_errorbar(aes(ymin = mean_chla - sem_chla, 
-                    ymax = mean_chla + sem_chla), 
-                width = 0.2) +
-  geom_point(size = 5, aes(fill = Treatment), shape = 21, color = "black") +
+                    ymax = mean_chla + sem_chla),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
   geom_text(data = month_letters_manual,
             aes(x = Month, y = y_position, label = Letters),
             inherit.aes = FALSE,
             position = position_dodge(width = 0.5),
             size = 10) +
   scale_color_manual(values = c("Acclimation" = "grey60", 
-                               "Ambient" = "#377EB8",  # Blue
-                               "Heat" = "#E41A1C")) +  # Red
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
   scale_fill_manual(values = c("Acclimation" = "grey80", 
                               "Ambient" = "#377EB8", 
                               "Heat" = "#E41A1C")) +
-  labs(y = expression(Chlorophyll-a~(µg~cm^{-2})), x = "") +
-  theme_classic(base_size = 14) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "right"); chla_dot_sem
-ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.pdf", chla_dot_sem, width = 20, height = 15)
-ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.png", chla_dot_sem, width = 20, height = 15)
+  xlab("") +
+  labs(y = expression(bold(Chlorophyll-a~(µg~cm^{-2})), x = "")) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, face = "bold", color = "black"),
+    axis.title.y = element_text(size = 40, margin = margin(r = 15)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 25),
+    legend.position = "top",
+    legend.key.size = unit(1.5, "cm"),
+    legend.spacing.y = unit(0.5, "cm")
+  );chla_dot_sem
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.pdf", chla_dot_sem, width = 22, height = 12)
+ggsave("../output/Physiology/Chlorophyll/Chla_Treatment_Timepoint_dotwhisker_sem.png", chla_dot_sem, width = 22, height = 12)
 
 # sd
 chla_dot_sd <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +

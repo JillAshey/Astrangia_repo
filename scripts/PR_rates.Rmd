@@ -846,7 +846,7 @@ Add letters for plotting
 ```{r}
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
-  Letters = c("abc", "ab", "a", "a", "bc", "c", "c", "bc"),
+  Letters = c("bc", "ab", "a", "a", "bc", "c", "c", "bc"),
   y_position = c(4.59, 2.85, 2.11, 3.15, 5.95, 6.15, 7.48, 5.54) # 0.5 offset from highest sem
 )
 ```
@@ -1150,7 +1150,7 @@ resp_summary <- resp_exp_filtered %>%
     mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
     sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
     sem_resp = sd_resp / sqrt(n),  # Correct SEM formula
-    sem_resp_offset = mean_resp + sem_resp + 0.5,
+    sem_resp_offset = mean_resp + sem_resp + 0.2,
     .groups = "drop"
   )
 
@@ -1185,9 +1185,8 @@ Add letters for plotting
 ```{r}
 month_letters_manual <- tibble::tibble(
   Month = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"),
-  Letters = c("abcd", "a", "abc", "abcd", "ab", "bcd", "d", "cd"),
-  y_position = c(1.45, 1.48, 1, 0.88, 1.8, -0.18, -0.4, -0.21) # 0.2 offset from highest sd 
-)
+  Letters = c("a", "a", "abc", "abcd", "ab", "bcd", "d", "cd"),
+  y_position = c(0.614, 0.740, 0.620, 0.351, 1.26, -0.382, -0.701, -0.675)) # 0.2 offset from highest sd
 ```
 
 Plot as dot and whisker plots
@@ -1231,8 +1230,8 @@ resp_dot_sem <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treat
     legend.key.size = unit(1.5, "cm"),
     legend.spacing.y = unit(0.5, "cm")
   );resp_dot_sem
-ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.pdf", resp_dot_sem, width = 20, height = 15)
-ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.png", resp_dot_sem, width = 20, height = 15)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.pdf", resp_dot_sem, width = 22, height = 12)
+ggsave("../output/Physiology/PR/Respiration_Treatment_Timepoin_dotwhisker_sem.png", resp_dot_sem, width = 22, height = 12)
 
 # sd
 resp_dot_sd <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
