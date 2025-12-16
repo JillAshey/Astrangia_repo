@@ -1,0 +1,234 @@
+---
+title: "mRNA-miRNA network analysis"
+author: "Jill Ashey"
+date: "2025-12-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(igraph)
+library(ggraph)
+library(tidygraph)
+library(ggrepel)
+```
+
+### Compare networks 
+
+```{r}
+tp0_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
+tp5_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
+```
+
+Edges and collapse functions 
+```{r}
+collapse_fixed <- function(df) {
+  df |>
+    group_by(miRNA, mRNA) |>
+    slice_max(order_by = abs(PCC.cor), n = 1) |>
+    ungroup() |>
+    mutate(
+      weight = ifelse(PCC.cor < 0, PCC.cor, 0)
+    ) |>
+    select(miRNA, mRNA, PCC.cor, weight, score, energy)
+}
+```
+
+```{r}
+tp0_edges <- collapse_fixed(tp0_amb)
+tp5_edges <- collapse_fixed(tp5_amb)
+
+# Sanity check 
+nrow(tp0_edges)
+nrow(tp5_edges)
+
+all(tp0_edges$miRNA == tp5_edges$miRNA &
+    tp0_edges$mRNA  == tp5_edges$mRNA)
+```
+
+Build networks with identical topology 
+```{r}
+make_network <- function(edges) {
+
+  edges_nonzero <- edges |>
+    dplyr::filter(weight != 0)
+
+  graph_from_data_frame(
+    edges_nonzero,
+    directed = TRUE
+  )
+}
+
+
+g_tp0 <- make_network(tp0_edges)
+g_tp5 <- make_network(tp5_edges)
+
+# Add node types
+all_nodes <- unique(c(tp0_edges$miRNA, tp0_edges$mRNA))
+
+node_types <- ifelse(grepl("^Cluster_", all_nodes),
+                     "miRNA", "mRNA")
+
+V(g_tp0)$type <- node_types[match(V(g_tp0)$name, all_nodes)]
+V(g_tp5)$type <- node_types[match(V(g_tp5)$name, all_nodes)]
+
+### Sanity check
+g_tp0
+g_tp5
+
+summary(E(g_tp0)$weight)
+summary(E(g_tp5)$weight)
+
+edge_density(g_tp0)
+edge_density(g_tp5)
+
+# Plot
+# Convert igraph to tidygraph
+tg_tp0 <- as_tbl_graph(g_tp0)
+tg_tp5 <- as_tbl_graph(g_tp5)
+
+# Example: tp0 ambient network
+E(tg_tp0)$weight_pos <- abs(E(tg_tp0)$weight) + 0.01  # add small constant to avoid 0
+ggraph(tg_tp0, layout = "fr", weights = E(tg_tp0)$weight_pos) +
+  geom_edge_link(aes(width = abs(weight)), alpha = 0.6, color = "steelblue") +
+  geom_node_point(aes(color = type, size = strength(g_tp0, mode="out"))) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_color_manual(values = c("miRNA" = "red", "mRNA" = "lightblue")) +
+  scale_edge_width(range = c(0.2, 2)) +
+  theme_void() +
+  ggtitle("Feb ambient: miRNA-mRNA network")
+
+```
+
+Edge level dynamics 
+```{r}
+edge_compare <- tp0_edges |>
+  rename(weight_tp0 = weight) |>
+  left_join(
+    tp5_edges |> rename(weight_tp5 = weight),
+    by = c("miRNA", "mRNA")
+  ) |>
+  mutate(
+    delta_weight = weight_tp5 - weight_tp0,
+    gained = weight_tp0 == 0 & weight_tp5 != 0,
+    lost   = weight_tp0 != 0 & weight_tp5 == 0,
+    changed = weight_tp0 != weight_tp5
+  )
+
+edge_summary <- edge_compare %>%
+  summarise(
+    n_gained     = sum(gained,  na.rm = TRUE),
+    n_lost       = sum(lost,    na.rm = TRUE),
+    n_changed    = sum(changed, na.rm = TRUE),
+    mean_delta_w = mean(delta_weight, na.rm = TRUE)
+  )
+
+# Plot
+edge_compare |>
+  filter(abs(delta_weight) > 0.1) |>  # top rewired edges
+  ggplot(aes(x = weight_tp0, y = weight_tp5)) +
+  geom_point(alpha=0.6) +
+  geom_abline(slope=1, intercept=0, linetype="dashed") +
+  geom_text_repel(aes(label = paste(miRNA, mRNA, sep="-")), max.overlaps = 10) +
+  theme_bw() +
+  labs(x = "TP0 weight", y = "TP5 weight") +
+  ggtitle("Edge-level weight changes (Feb → June ambient)")
+
+hist(edge_compare$delta_weight)
+```
+
+Node level changes
+```{r}
+node_tp0 <- tibble(
+  node = V(g_tp0)$name,
+  strength_tp0 = strength(g_tp0)
+)
+
+node_tp5 <- tibble(
+  node = V(g_tp5)$name,
+  strength_tp5 = strength(g_tp5)
+)
+
+node_compare <- node_tp0 |>
+  left_join(node_tp5, by = "node") |>
+  mutate(
+    delta_strength = strength_tp5 - strength_tp0,
+    type = ifelse(grepl("^Cluster_", node), "miRNA", "mRNA")
+  )
+
+mirna_node <- node_compare |>
+  filter(type == "miRNA") |>
+  arrange(desc(abs(delta_strength)))
+
+# Plot
+node_compare |>
+  filter(type == "miRNA") |>
+  ggplot(aes(x = strength_tp0, y = strength_tp5)) +
+  geom_point(alpha=0.6) +
+  geom_abline(slope=1, intercept=0, linetype="dashed") +
+  geom_text_repel(aes(label=node), max.overlaps = 10) +
+  theme_bw() +
+  labs(x = "TP0 out-strength", y = "TP5 out-strength") +
+  ggtitle("miRNA regulatory influence changes")
+
+```
+
+Network topology comparisons
+```{r}
+network_stats <- function(g, label) {
+
+  miRNA_nodes <- V(g)$name[V(g)$type == "miRNA"]
+
+  # undirected graph with preserved weights
+  g_u <- as.undirected(
+    g,
+    mode = "collapse",
+    edge.attr.comb = list(weight = function(x) sum(abs(x)))
+  )
+
+  tibble(
+    timepoint = label,
+
+    n_nodes = vcount(g),
+    n_edges = ecount(g),
+
+    density = edge_density(g),
+
+    mean_miRNA_out_degree =
+      mean(degree(g, mode = "out")[miRNA_nodes]),
+
+    mean_miRNA_out_strength =
+      mean(strength(g, mode = "out")[miRNA_nodes]),
+
+    modularity =
+      modularity(cluster_louvain(g_u))
+  )
+}
+
+stats_tp0 <- network_stats(g_tp0, "tp0_ambient")
+stats_tp5 <- network_stats(g_tp5, "tp5_ambient")
+network_stats_df <- bind_rows(stats_tp0, stats_tp5)
+```
+
+```{r}
+# Example: combine stats for plotting
+network_stats_df_long <- network_stats_df |>
+  pivot_longer(cols = c(density, mean_miRNA_out_degree, mean_miRNA_out_strength, modularity),
+               names_to = "metric", values_to = "value")
+
+ggplot(network_stats_df_long, aes(x = timepoint, y = value, color = metric, group = metric)) +
+  geom_point(size = 3) +
+  geom_line(size = 1) +
+  facet_wrap(~metric, scales = "free_y") +
+  theme_bw(base_size = 14) +
+  labs(x = "Timepoint", y = "Value", color = "Metric") +
+  ggtitle("Network topology metrics across time")
+
+```
+
+
+
+
+
