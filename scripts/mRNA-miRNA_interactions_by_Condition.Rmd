@@ -96,7 +96,7 @@ tp7_heat_list <- c("AST-1065", "AST-2007", "AST-2729", "AST-2755")
 
 Read in miranda data - 1kb 3'UTR binding 
 ```{r}
-# miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
 # colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
 # 
 # # Format miranda df 
@@ -130,9 +130,19 @@ length(unique(miranda_data$mRNA))
 Subset counts matrices by `tp0_acc_list`
 ```{r}
 mrna_subset <- mrna_counts %>% 
-  select(all_of(tp0_acc_list))
+  dplyr::select(all_of(tp0_acc_list))
 mirna_subset <- mirna_counts %>% 
-  select(all_of(tp0_acc_list))
+  dplyr::select(all_of(tp0_acc_list))
+```
+
+Filter mRNAs 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters
+filt_outrm_poa <- genefilter((mrna_subset), ffun) #apply filter
+
+mrna_subset_filt <- mrna_subset[filt_outrm_poa,] #keep only rows that passed filter
+dim(mrna_subset)
+dim(mrna_subset_filt)
 ```
 
 Normalize counts using RPM normalization 
@@ -147,7 +157,7 @@ normalize_counts <- function(counts) {
 miRNA_norm <- normalize_counts(mirna_subset)
 #mirna_norm <- as.matrix(miRNA_counts_filt)
 
-mRNA_norm <- normalize_counts(mrna_subset)
+mRNA_norm <- normalize_counts(mrna_subset_filt)
 #mRNA_norm <- as.matrix(mRNA_counts_filt)
 ```
 
@@ -185,7 +195,21 @@ combined_data_pcc <- pcc_results %>%
 dim(combined_data_pcc)
 ```
 
-Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Save as csv
 ```{r}
