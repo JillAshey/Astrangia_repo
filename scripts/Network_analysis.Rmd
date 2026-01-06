@@ -1141,7 +1141,7 @@ Format correlation dfs
 # Function to format a single correlation dataframe
 format_correlation_data <- function(df, condition_name) {
   formatted <- df %>%
-    select(mirna = miRNA, mrna = mRNA, correlation = PCC.cor) %>%
+    dplyr::select(mirna = miRNA, mrna = mRNA, correlation = PCC.cor) %>%
     mutate(condition = condition_name) %>%
     # Remove any duplicates (keep first occurrence)
     distinct(mirna, mrna, .keep_all = TRUE)
@@ -1463,7 +1463,7 @@ print(turnover_df)
 
 # Visualize turnover
 turnover_long <- turnover_df %>%
-  select(from, to, conserved, lost, gained) %>%
+  dplyr::select(from, to, conserved, lost, gained) %>%
   pivot_longer(cols = c(conserved, lost, gained), 
                names_to = "edge_type", values_to = "count")
 
@@ -1478,6 +1478,671 @@ ggplot(turnover_long, aes(x = paste(from, "→", to), y = count, fill = edge_typ
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
+Correlation based turnover analysis
+```{r}
+#Function to analyze correlation changes between conditions
+analyze_correlation_dynamics <- function(data, cond1, cond2, cor_threshold = 0.3) {
+  
+  cat("\n--- Analyzing", cond1, "→", cond2, "---\n")
+  
+  # Get interactions for both conditions
+  df1 <- data %>%
+    dplyr::filter(condition == cond1, abs(correlation) >= cor_threshold) %>%
+    dplyr::select(mirna, mrna, correlation) %>%
+    dplyr::rename(cor1 = correlation)
+  
+  df2 <- data %>%
+    dplyr::filter(condition == cond2, abs(correlation) >= cor_threshold) %>%
+    dplyr::select(mirna, mrna, correlation) %>%
+    dplyr::rename(cor2 = correlation)
+  
+  # Full join to get all possible pairs
+  merged <- full_join(df1, df2, by = c("mirna", "mrna"))
+  
+  # Classify each pair
+  merged <- merged %>%
+    mutate(
+      # Determine edge status
+      edge_status = case_when(
+        !is.na(cor1) & !is.na(cor2) ~ "conserved",
+        !is.na(cor1) & is.na(cor2) ~ "lost",
+        is.na(cor1) & !is.na(cor2) ~ "gained",
+        TRUE ~ "none"
+      ),
+      
+      # For conserved edges, determine correlation dynamics
+      cor_dynamics = case_when(
+        edge_status != "conserved" ~ edge_status,
+        
+        # Sign changes
+        cor1 > 0 & cor2 < 0 ~ "pos_to_neg",
+        cor1 < 0 & cor2 > 0 ~ "neg_to_pos",
+        
+        # Same sign but magnitude changes
+        cor1 > 0 & cor2 > 0 & abs(cor2 - cor1) > 0.2 ~ 
+          ifelse(cor2 > cor1, "pos_strengthened", "pos_weakened"),
+        cor1 < 0 & cor2 < 0 & abs(cor2 - cor1) > 0.2 ~ 
+          ifelse(cor2 < cor1, "neg_strengthened", "neg_weakened"),
+        
+        # Stable
+        TRUE ~ "stable"
+      ),
+      
+      # Calculate correlation change
+      cor_change = cor2 - cor1,
+      abs_cor_change = abs(cor_change)
+    )
+  
+  # Summary statistics
+  summary_stats <- merged %>%
+    group_by(cor_dynamics) %>%
+    summarise(
+      n_edges = n(),
+      mean_cor1 = mean(cor1, na.rm = TRUE),
+      mean_cor2 = mean(cor2, na.rm = TRUE),
+      mean_cor_change = mean(cor_change, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    arrange(desc(n_edges))
+  
+  cat("\nCorrelation Dynamics Summary:\n")
+  print(summary_stats)
+  
+  # Count sign changes specifically
+  sign_changes <- merged %>%
+    filter(cor_dynamics %in% c("pos_to_neg", "neg_to_pos"))
+  
+  cat("\nSign Changes:\n")
+  cat("  Positive → Negative:", 
+      sum(merged$cor_dynamics == "pos_to_neg", na.rm = TRUE), "\n")
+  cat("  Negative → Positive:", 
+      sum(merged$cor_dynamics == "neg_to_pos", na.rm = TRUE), "\n")
+  cat("  Total sign flips:", nrow(sign_changes), 
+      sprintf("(%.1f%% of conserved edges)\n", 
+              100 * nrow(sign_changes) / sum(merged$edge_status == "conserved")))
+  
+  # Return detailed results
+  list(
+    comparison = paste(cond1, "to", cond2),
+    detailed_edges = merged,
+    summary = summary_stats,
+    sign_changes = sign_changes
+  )
+}
+
+# Analyze correlation dynamics for all key comparisons
+cor_dynamics_results <- list(
+  feb_to_jun = analyze_correlation_dynamics(interaction_data, 
+                                             "Feb_ambient", "Jun_ambient", 0.25),
+  jun_to_aug = analyze_correlation_dynamics(interaction_data, 
+                                             "Jun_ambient", "Aug_ambient", 0.25),
+  feb_to_aug = analyze_correlation_dynamics(interaction_data, 
+                                             "Feb_ambient", "Aug_ambient", 0.25),
+  jun_heat = analyze_correlation_dynamics(interaction_data, 
+                                           "Jun_ambient", "Jun_heat", 0.25),
+  aug_heat = analyze_correlation_dynamics(interaction_data, 
+                                           "Aug_ambient", "Aug_heat", 0.25)
+)
+```
+
+Correlation visualization
+```{r}
+# Function to create correlation change scatterplot
+plot_correlation_changes <- function(cor_result, title) {
+  
+  data <- cor_result$detailed_edges %>%
+    filter(edge_status == "conserved")
+  
+  p <- ggplot(data, aes(x = cor1, y = cor2)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+                color = "gray50", size = 0.8) +
+    geom_hline(yintercept = 0, linetype = "solid", color = "black", alpha = 0.3) +
+    geom_vline(xintercept = 0, linetype = "solid", color = "black", alpha = 0.3) +
+    geom_point(aes(color = cor_dynamics), alpha = 0.6, size = 2) +
+    scale_color_manual(
+      values = c(
+        "stable" = "gray60",
+        "pos_to_neg" = "#E41A1C",
+        "neg_to_pos" = "#377EB8",
+        "pos_strengthened" = "#FF7F00",
+        "pos_weakened" = "#FFEDA0",
+        "neg_strengthened" = "#4DAF4A",
+        "neg_weakened" = "#A6D96A"
+      ),
+      name = "Correlation Change"
+    ) +
+    labs(
+      title = title,
+      x = "Correlation (Condition 1)",
+      y = "Correlation (Condition 2)",
+      caption = "Dashed line = no change; Points above line = strengthened"
+    ) +
+    coord_fixed() +
+    theme_minimal() +
+    theme(legend.position = "right")
+  
+  return(p)
+}
+
+# Create plots for key comparisons
+p_feb_jun <- plot_correlation_changes(
+  cor_dynamics_results$feb_to_jun, 
+  "Feb → Jun: Correlation Dynamics"
+)
+print(p_feb_jun)
+
+p_jun_aug <- plot_correlation_changes(
+  cor_dynamics_results$jun_to_aug, 
+  "Jun → Aug: Correlation Dynamics"
+)
+print(p_jun_aug)
+
+p_jun_heat <- plot_correlation_changes(
+  cor_dynamics_results$jun_heat, 
+  "Jun Ambient → Heat: Correlation Dynamics"
+)
+print(p_jun_heat)
+
+# Summary bar plot of correlation dynamics across all comparisons
+all_dynamics <- bind_rows(lapply(names(cor_dynamics_results), function(name) {
+  cor_dynamics_results[[name]]$summary %>%
+    mutate(comparison = cor_dynamics_results[[name]]$comparison)
+}))
+
+p_summary <- ggplot(all_dynamics %>% 
+                     filter(cor_dynamics != "lost" & cor_dynamics != "gained"),
+                   aes(x = comparison, y = n_edges, fill = cor_dynamics)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(
+    values = c(
+      "stable" = "gray60",
+      "pos_to_neg" = "#E41A1C",
+      "neg_to_pos" = "#377EB8",
+      "pos_strengthened" = "#FF7F00",
+      "pos_weakened" = "#FFEDA0",
+      "neg_strengthened" = "#4DAF4A",
+      "neg_weakened" = "#A6D96A"
+    ),
+    name = "Correlation Dynamics"
+  ) +
+  labs(
+    title = "Correlation Dynamics of Conserved Edges",
+    x = "Comparison",
+    y = "Number of Edges"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p_summary)
+```
+
+Find genes that flip correlation
+```{r}
+# Extract all sign-flipping edges
+sign_flip_edges <- bind_rows(lapply(names(cor_dynamics_results), function(name) {
+  cor_dynamics_results[[name]]$sign_changes %>%
+    mutate(comparison = cor_dynamics_results[[name]]$comparison)
+}))
+
+cat("\nTotal sign-flipping edges across all comparisons:", nrow(sign_flip_edges), "\n")
+
+if(nrow(sign_flip_edges) > 0) {
+  cat("\nTop 20 sign-flipping edges by absolute correlation change:\n")
+  top_flips <- sign_flip_edges %>%
+    arrange(desc(abs_cor_change)) %>%
+    dplyr::select(comparison, mirna, mrna, cor1, cor2, cor_change, cor_dynamics) %>%
+    head(20)
+  print(top_flips)
+  
+  # Find miRNAs with most sign flips
+  mirna_flip_counts <- sign_flip_edges %>%
+    group_by(mirna) %>%
+    summarise(
+      n_sign_flips = n(),
+      mean_cor_change = mean(abs_cor_change),
+      .groups = "drop"
+    ) %>%
+    arrange(desc(n_sign_flips))
+  
+  cat("\nmiRNAs with most sign-flipping edges:\n")
+  print(head(mirna_flip_counts, 10))
+  
+  # Find genes with most sign flips
+  gene_flip_counts <- sign_flip_edges %>%
+    group_by(mrna) %>%
+    summarise(
+      n_sign_flips = n(),
+      mean_cor_change = mean(abs_cor_change),
+      .groups = "drop"
+    ) %>%
+    arrange(desc(n_sign_flips))
+  
+  cat("\nGenes with most sign-flipping regulation:\n")
+  print(head(gene_flip_counts, 10))
+}
+
+# Export sign-flipping edges
+# Uncomment to save:
+# write.csv(sign_flip_edges, "sign_flipping_edges.csv", row.names = FALSE)
+
+# Visualize turnover
+turnover_long <- turnover_df %>%
+  dplyr::select(from, to, conserved, lost, gained) %>%
+  pivot_longer(cols = c(conserved, lost, gained), 
+               names_to = "edge_type", values_to = "count")
+
+ggplot(turnover_long, aes(x = paste(from, "→", to), y = count, fill = edge_type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values = c("conserved" = "#4DAF4A", 
+                                "lost" = "#E41A1C", 
+                                "gained" = "#377EB8")) +
+  labs(title = "Network Edge Turnover",
+       x = "Comparison", y = "Number of Edges", fill = "Edge Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Turnover plot with sign flips
+```{r}
+# Function to get detailed turnover including sign flips
+get_detailed_turnover <- function(cor_result) {
+  
+  detailed <- cor_result$detailed_edges
+  
+  # Count each category
+  n_conserved_stable <- sum(detailed$cor_dynamics == "stable", na.rm = TRUE)
+  n_conserved_changed <- sum(detailed$cor_dynamics %in% 
+                               c("pos_strengthened", "pos_weakened", 
+                                 "neg_strengthened", "neg_weakened"), 
+                             na.rm = TRUE)
+  n_sign_flips <- sum(detailed$cor_dynamics %in% c("pos_to_neg", "neg_to_pos"), 
+                      na.rm = TRUE)
+  n_lost <- sum(detailed$edge_status == "lost", na.rm = TRUE)
+  n_gained <- sum(detailed$edge_status == "gained", na.rm = TRUE)
+  
+  data.frame(
+    comparison = cor_result$comparison,
+    conserved_stable = n_conserved_stable,
+    conserved_magnitude_change = n_conserved_changed,
+    conserved_sign_flip = n_sign_flips,
+    lost = n_lost,
+    gained = n_gained
+  )
+}
+
+# Get detailed turnover for all comparisons
+detailed_turnover <- bind_rows(lapply(cor_dynamics_results, get_detailed_turnover))
+
+print("\nDetailed Turnover with Sign Flips:")
+print(detailed_turnover)
+
+# Reshape for plotting
+detailed_turnover_long <- detailed_turnover %>%
+  pivot_longer(
+    cols = c(conserved_stable, conserved_magnitude_change, 
+             conserved_sign_flip, lost, gained),
+    names_to = "edge_category",
+    values_to = "count"
+  ) %>%
+  mutate(
+    edge_category = factor(edge_category, 
+                          levels = c("lost", "conserved_stable", 
+                                    "conserved_magnitude_change",
+                                    "conserved_sign_flip", "gained"),
+                          labels = c("Lost", "Conserved (Stable)", 
+                                    "Conserved (Magnitude Change)",
+                                    "Conserved (Sign Flip)", "Gained"))
+  )
+
+# Create enhanced turnover plot
+p_enhanced_turnover <- ggplot(detailed_turnover_long, 
+                               aes(x = comparison, y = count, fill = edge_category)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(
+    values = c(
+      "Lost" = "#E41A1C",
+      "Conserved (Stable)" = "#4DAF4A",
+      "Conserved (Magnitude Change)" = "#FFD92F",
+      "Conserved (Sign Flip)" = "#E78AC3",
+      "Gained" = "#377EB8"
+    ),
+    name = "Edge Category"
+  ) +
+  labs(
+    title = "Network Edge Dynamics with Sign Flip Detail",
+    subtitle = "Conserved edges split by stability, magnitude change, and sign flip",
+    x = "Comparison",
+    y = "Number of Edges"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right"
+  )
+
+print(p_enhanced_turnover)
+
+# Calculate percentages for each comparison
+detailed_turnover_pct <- detailed_turnover %>%
+  mutate(
+    total_edges = conserved_stable + conserved_magnitude_change + 
+                  conserved_sign_flip + lost + gained,
+    pct_conserved_stable = 100 * conserved_stable / total_edges,
+    pct_conserved_magnitude = 100 * conserved_magnitude_change / total_edges,
+    pct_sign_flip = 100 * conserved_sign_flip / total_edges,
+    pct_lost = 100 * lost / total_edges,
+    pct_gained = 100 * gained / total_edges
+  )
+
+cat("\nPercentage Breakdown:\n")
+print(detailed_turnover_pct %>% 
+        dplyr::select(comparison, pct_conserved_stable, pct_conserved_magnitude, 
+               pct_sign_flip, pct_lost, pct_gained))
+
+# Create percentage version of plot
+p_enhanced_turnover_pct <- ggplot(detailed_turnover_long, 
+                                   aes(x = comparison, y = count, fill = edge_category)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(
+    values = c(
+      "Lost" = "#E41A1C",
+      "Conserved (Stable)" = "#4DAF4A",
+      "Conserved (Magnitude Change)" = "#FFD92F",
+      "Conserved (Sign Flip)" = "#E78AC3",
+      "Gained" = "#377EB8"
+    ),
+    name = "Edge Category"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Network Edge Dynamics (Proportional)",
+    subtitle = "Showing relative proportions of each edge category",
+    x = "Comparison",
+    y = "Proportion of Edges"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right"
+  )
+
+print(p_enhanced_turnover_pct)
+
+# Summary statistics about sign flips
+cat("\n=== Sign Flip Statistics ===\n")
+sign_flip_summary <- detailed_turnover %>%
+  mutate(
+    total_conserved = conserved_stable + conserved_magnitude_change + conserved_sign_flip,
+    pct_flips_of_conserved = 100 * conserved_sign_flip / total_conserved
+  ) %>%
+  dplyr::select(comparison, conserved_sign_flip, total_conserved, pct_flips_of_conserved)
+
+print(sign_flip_summary)
+
+cat("\nInterpretation:\n")
+cat("- High % sign flips = regulatory logic is changing even for 'conserved' edges\n")
+cat("- Low % sign flips = edges maintain direction, only magnitude changes\n")
+cat("- Compare temporal vs treatment to see where logic rewiring occurs\n")
+```
+
+Subsetting genes based on sign flip, lost, gained, etc
+```{r}
+# Gene Extraction Functions for miRNA-mRNA Network Analysis
+# Use these functions to extract gene lists for functional analysis
+
+# ============================================================================
+# MAIN FUNCTION: Extract genes by category from a comparison
+# ============================================================================
+
+extract_genes_by_category <- function(cor_result, category = "all") {
+  
+  detailed <- cor_result$detailed_edges
+  comparison_name <- cor_result$comparison
+  
+  if(category == "sign_flip") {
+    # Genes with sign-flipping regulation (pos→neg OR neg→pos)
+    genes <- detailed %>%
+      filter(cor_dynamics %in% c("pos_to_neg", "neg_to_pos")) %>%
+      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
+      distinct()
+    
+  } else if(category == "pos_to_neg") {
+    # Specifically positive to negative
+    genes <- detailed %>%
+      filter(cor_dynamics == "pos_to_neg") %>%
+      dplyr::select(mrna, mirna, cor1, cor2, cor_change) %>%
+      distinct()
+    
+  } else if(category == "neg_to_pos") {
+    # Specifically negative to positive
+    genes <- detailed %>%
+      filter(cor_dynamics == "neg_to_pos") %>%
+      dplyr::select(mrna, mirna, cor1, cor2, cor_change) %>%
+      distinct()
+    
+  } else if(category == "lost") {
+    # Genes that lost miRNA regulation
+    genes <- detailed %>%
+      filter(edge_status == "lost") %>%
+      dplyr::select(mrna, mirna, cor1) %>%
+      distinct()
+    
+  } else if(category == "gained") {
+    # Genes that gained miRNA regulation
+    genes <- detailed %>%
+      filter(edge_status == "gained") %>%
+      dplyr::select(mrna, mirna, cor2) %>%
+      distinct()
+    
+  } else if(category == "conserved_stable") {
+    # Genes with stable miRNA regulation
+    genes <- detailed %>%
+      filter(cor_dynamics == "stable") %>%
+      dplyr::select(mrna, mirna, cor1, cor2) %>%
+      distinct()
+    
+  } else if(category == "strengthened") {
+    # Genes with strengthened regulation (more negative or more positive)
+    genes <- detailed %>%
+      filter(cor_dynamics %in% c("neg_strengthened", "pos_strengthened")) %>%
+      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
+      distinct()
+    
+  } else if(category == "weakened") {
+    # Genes with weakened regulation
+    genes <- detailed %>%
+      filter(cor_dynamics %in% c("neg_weakened", "pos_weakened")) %>%
+      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
+      distinct()
+    
+  } else if(category == "all") {
+    # All genes in this comparison
+    genes <- detailed %>%
+      dplyr::select(mrna, mirna, cor1, cor2, edge_status, cor_dynamics) %>%
+      distinct()
+    
+  } else {
+    stop("Invalid category. Choose from: sign_flip, pos_to_neg, neg_to_pos, 
+         lost, gained, conserved_stable, strengthened, weakened, all")
+  }
+  
+  cat("\nExtracted", nrow(genes), "miRNA-gene pairs\n")
+  cat("Unique genes:", length(unique(genes$mrna)), "\n")
+  cat("Unique miRNAs:", length(unique(genes$mirna)), "\n")
+  
+  return(genes)
+}
+
+# ============================================================================
+# EXPORT FUNCTION: Save gene lists for GO/pathway analysis
+# ============================================================================
+
+export_gene_lists <- function(cor_result, output_prefix) {
+  
+  categories <- c("sign_flip", "pos_to_neg", "neg_to_pos", 
+                  "lost", "gained", "conserved_stable", 
+                  "strengthened", "weakened")
+  
+  cat("\n=== Exporting gene lists for", cor_result$comparison, "===\n")
+  
+  for(cat in categories) {
+    genes <- extract_genes_by_category(cor_result, category = cat)
+    
+    if(nrow(genes) > 0) {
+      # Save full details (includes miRNA, correlations, etc.)
+      filename_detailed <- paste0(output_prefix, "_", cat, "_detailed.csv")
+      write.csv(genes, filename_detailed, row.names = FALSE)
+      
+      # Save just unique gene IDs (for GO analysis)
+      gene_ids <- unique(genes$mrna)
+      filename_genes <- paste0(output_prefix, "_", cat, "_genes.txt")
+      write.table(gene_ids, filename_genes,
+                  row.names = FALSE, col.names = FALSE, quote = FALSE)
+      
+      cat("  ", cat, ":", length(gene_ids), "genes →", 
+          filename_detailed, "&", filename_genes, "\n")
+    } else {
+      cat("  ", cat, ": No genes in this category\n")
+    }
+  }
+  
+  cat("\nExport complete!\n")
+}
+
+# ============================================================================
+# HELPER FUNCTION: Compare gene lists across categories
+# ============================================================================
+
+compare_gene_categories <- function(cor_result) {
+  
+  categories <- c("sign_flip", "pos_to_neg", "neg_to_pos", 
+                  "lost", "gained", "conserved_stable", 
+                  "strengthened", "weakened")
+  
+  results <- data.frame()
+  
+  for(cat in categories) {
+    genes <- extract_genes_by_category(cor_result, category = cat)
+    
+    results <- rbind(results, data.frame(
+      comparison = cor_result$comparison,
+      category = cat,
+      n_genes = length(unique(genes$mrna)),
+      n_mirnas = length(unique(genes$mirna)),
+      n_interactions = nrow(genes)
+    ))
+  }
+  
+  return(results)
+}
+
+# ============================================================================
+# HELPER FUNCTION: Find overlap between gene lists
+# ============================================================================
+
+find_gene_overlap <- function(cor_result1, cor_result2, category = "sign_flip") {
+  
+  genes1 <- extract_genes_by_category(cor_result1, category)
+  genes2 <- extract_genes_by_category(cor_result2, category)
+  
+  genes1_ids <- unique(genes1$mrna)
+  genes2_ids <- unique(genes2$mrna)
+  
+  overlap <- intersect(genes1_ids, genes2_ids)
+  unique1 <- setdiff(genes1_ids, genes2_ids)
+  unique2 <- setdiff(genes2_ids, genes1_ids)
+  
+  cat("\n=== Gene Overlap Analysis ===\n")
+  cat("Comparison 1:", cor_result1$comparison, "-", length(genes1_ids), "genes\n")
+  cat("Comparison 2:", cor_result2$comparison, "-", length(genes2_ids), "genes\n")
+  cat("\nShared genes:", length(overlap), "\n")
+  cat("Unique to comparison 1:", length(unique1), "\n")
+  cat("Unique to comparison 2:", length(unique2), "\n")
+  
+  return(list(
+    shared = overlap,
+    unique_to_1 = unique1,
+    unique_to_2 = unique2
+  ))
+}
+
+# ============================================================================
+# EXAMPLES
+# ============================================================================
+
+cat("=== Gene Extraction Functions Loaded ===\n\n")
+
+cat("USAGE EXAMPLES:\n\n")
+
+cat("1. Extract genes from a specific comparison and category:\n")
+cat("   genes <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'sign_flip')\n\n")
+
+cat("2. Get just the unique gene IDs:\n")
+cat("   gene_ids <- unique(genes$mrna)\n\n")
+
+cat("3. Export all categories for a comparison:\n")
+cat("   export_gene_lists(cor_dynamics_results$jun_heat, 'June_heat_effect')\n\n")
+
+cat("4. Compare gene counts across categories:\n")
+cat("   summary <- compare_gene_categories(cor_dynamics_results$feb_to_jun)\n\n")
+
+cat("5. Find overlap between two comparisons:\n")
+cat("   overlap <- find_gene_overlap(cor_dynamics_results$jun_heat, \n")
+cat("                                cor_dynamics_results$aug_heat, \n")
+cat("                                'sign_flip')\n\n")
+
+cat("AVAILABLE COMPARISONS:\n")
+cat("  - cor_dynamics_results$feb_to_jun\n")
+cat("  - cor_dynamics_results$jun_to_aug\n")
+cat("  - cor_dynamics_results$feb_to_aug\n")
+cat("  - cor_dynamics_results$jun_heat\n")
+cat("  - cor_dynamics_results$aug_heat\n\n")
+
+cat("AVAILABLE CATEGORIES:\n")
+cat("  - sign_flip       : All sign-flipping genes\n")
+cat("  - pos_to_neg      : Positive → Negative only\n")
+cat("  - neg_to_pos      : Negative → Positive only\n")
+cat("  - lost            : Lost miRNA regulation\n")
+cat("  - gained          : Gained miRNA regulation\n")
+cat("  - conserved_stable: Stable regulation\n")
+cat("  - strengthened    : Stronger regulation\n")
+cat("  - weakened        : Weaker regulation\n")
+cat("  - all             : All genes\n\n")
+
+# ============================================================================
+# QUICK START EXAMPLE WITH YOUR DATA
+# ============================================================================
+
+cat("=== QUICK START ===\n\n")
+cat("After running the main network analysis, try:\n\n")
+
+cat("# Example 1: Get sign-flipping genes from June heat treatment\n")
+cat("jun_heat_flips <- extract_genes_by_category(cor_dynamics_results$jun_heat, 'sign_flip')\n")
+cat("head(jun_heat_flips)\n\n")
+
+cat("# Example 2: Export all gene categories for Feb→Jun transition\n")
+cat("export_gene_lists(cor_dynamics_results$feb_to_jun, 'Feb_to_Jun')\n\n")
+
+cat("# Example 3: Compare sign-flipping genes between timepoints\n")
+cat("temporal_overlap <- find_gene_overlap(\n")
+cat("  cor_dynamics_results$feb_to_jun,\n")
+cat("  cor_dynamics_results$jun_to_aug,\n")
+cat("  'sign_flip'\n")
+cat(")\n\n")
+
+cat("# Example 4: Look at genes with strongest correlation changes\n")
+cat("jun_heat_flips %>%\n")
+cat("  arrange(desc(abs(cor_change))) %>%\n")
+cat("  head(20)\n\n")
+
+genes <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'sign_flip')
+
+```
+
+Are the genes that are lost, gained, and conserved (ie stable, sign flip, magnitude change) across the comparisons the same for all comparisons or different?
+
 
 Hub conservation 
 ```{r}
@@ -1513,7 +2178,7 @@ print(hubs_df)
 
 # Visualize hub conservation
 hub_matrix <- hubs_df %>%
-  select(mirna, condition, degree) %>%
+  dplyr::select(mirna, condition, degree) %>%
   pivot_wider(names_from = condition, values_from = degree, values_fill = 0)
 
 print("\n=== Hub Degree Matrix ===")

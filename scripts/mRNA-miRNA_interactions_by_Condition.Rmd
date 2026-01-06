@@ -96,33 +96,57 @@ tp7_heat_list <- c("AST-1065", "AST-2007", "AST-2729", "AST-2755")
 
 Read in miranda data - 1kb 3'UTR binding 
 ```{r}
-miranda_data <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
-# colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
-# 
-# # Format miranda df 
-# miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
-# miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
-# miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-# miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-# 
-# dim(miranda_data)
+miranda_3utr <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_3utr) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df
+miranda_3utr$miRNA <- sub("^>", "", miranda_3utr$miRNA)  # Remove leading ">"
+miranda_3utr$miRNA <- sub("\\..*", "", miranda_3utr$miRNA)  # Remove everything from the first period onwards
+miranda_3utr$mRNA <- sub(";.*", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("ID=", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_3utr)
+length(unique(miranda_3utr$miRNA))
+length(unique(miranda_3utr$mRNA))
+
+# Calculate length of binding 
+miranda_3utr <- miranda_3utr %>%
+  separate(query_start_end, into = c("start", "end"), sep = " ", convert = TRUE) %>%
+  mutate(interaction_length = end - start)
+miranda_3utr$binding_type <- "3'UTR"
 ```
 
 Read in miranda data - entire mRNA binding
 ```{r}
-miranda_data <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
-colnames(miranda_data) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+miranda_mrna <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_mrna) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
 
 # Format miranda df 
-miranda_data$miRNA <- sub("^>", "", miranda_data$miRNA)  # Remove leading ">"
-miranda_data$miRNA <- sub("\\..*", "", miranda_data$miRNA)  # Remove everything from the first period onwards
-miranda_data$mRNA <- sub(";.*", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-miranda_data$mRNA <- sub("ID=", "", miranda_data$mRNA)  # Remove everything from "::" onwards
-miranda_data$mRNA <- sub("model", "TU", miranda_data$mRNA)  # Remove everything from "::" onwards
+miranda_mrna$miRNA <- sub("^>", "", miranda_mrna$miRNA)  # Remove leading ">"
+miranda_mrna$miRNA <- sub("\\..*", "", miranda_mrna$miRNA)  # Remove everything from the first period onwards
+miranda_mrna$mRNA <- sub(";.*", "", miranda_mrna$mRNA)  # Remove everything from "::" onwards
+miranda_mrna$mRNA <- sub("ID=", "", miranda_mrna$mRNA)  # Remove everything from "::" onwards
+miranda_mrna$mRNA <- sub("model", "TU", miranda_mrna$mRNA)  # Remove everything from "::" onwards
 
-dim(miranda_data)
-length(unique(miranda_data$miRNA))
-length(unique(miranda_data$mRNA))
+dim(miranda_mrna)
+length(unique(miranda_mrna$miRNA))
+length(unique(miranda_mrna$mRNA))
+
+# Calculate length of binding 
+miranda_mrna <- miranda_mrna %>%
+  separate(query_start_end, into = c("start", "end"), sep = " ", convert = TRUE) %>%
+  mutate(interaction_length = end - start) 
+miranda_mrna$binding_type <- "CDS"
+```
+
+Bind miranda dfs and filter so that interaction length must be at least 13 bp
+```{r}
+miranda_data <- rbind(miranda_3utr, miranda_mrna)
+
+# Filter interaction length 
+miranda_data <- miranda_data %>%
+  filter(interaction_length >= 13) 
+miranda_data <- unique(miranda_data)
 ```
 
 ## TP0 acclimation 
@@ -193,23 +217,9 @@ Merge with miranda data data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Save as csv
 ```{r}
@@ -225,9 +235,19 @@ write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_mi
 Subset counts matrices by `tp5_amb_list`
 ```{r}
 mrna_subset <- mrna_counts %>% 
-  select(all_of(tp5_amb_list))
+  dplyr::select(all_of(tp5_amb_list))
 mirna_subset <- mirna_counts %>% 
-  select(all_of(tp5_amb_list))
+  dplyr::select(all_of(tp5_amb_list))
+```
+
+Filter mRNAs 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters
+filt_outrm_poa <- genefilter((mrna_subset), ffun) #apply filter
+
+mrna_subset_filt <- mrna_subset[filt_outrm_poa,] #keep only rows that passed filter
+dim(mrna_subset)
+dim(mrna_subset_filt)
 ```
 
 Normalize counts using RPM normalization 
@@ -242,7 +262,7 @@ normalize_counts <- function(counts) {
 miRNA_norm <- normalize_counts(mirna_subset)
 #mirna_norm <- as.matrix(miRNA_counts_filt)
 
-mRNA_norm <- normalize_counts(mrna_subset)
+mRNA_norm <- normalize_counts(mrna_subset_filt)
 #mRNA_norm <- as.matrix(mRNA_counts_filt)
 ```
 
@@ -278,6 +298,8 @@ Merge with miranda data data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
 ```
 
 Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
@@ -296,9 +318,19 @@ write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_mi
 Subset counts matrices by `tp5_heat_list`
 ```{r}
 mrna_subset <- mrna_counts %>% 
-  select(all_of(tp5_heat_list))
+  dplyr::select(all_of(tp5_heat_list))
 mirna_subset <- mirna_counts %>% 
-  select(all_of(tp5_heat_list))
+  dplyr::select(all_of(tp5_heat_list))
+```
+
+Filter mRNAs 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters
+filt_outrm_poa <- genefilter((mrna_subset), ffun) #apply filter
+
+mrna_subset_filt <- mrna_subset[filt_outrm_poa,] #keep only rows that passed filter
+dim(mrna_subset)
+dim(mrna_subset_filt)
 ```
 
 Normalize counts using RPM normalization 
@@ -313,7 +345,7 @@ normalize_counts <- function(counts) {
 miRNA_norm <- normalize_counts(mirna_subset)
 #mirna_norm <- as.matrix(miRNA_counts_filt)
 
-mRNA_norm <- normalize_counts(mrna_subset)
+mRNA_norm <- normalize_counts(mrna_subset_filt)
 #mRNA_norm <- as.matrix(mRNA_counts_filt)
 ```
 
@@ -349,6 +381,8 @@ Merge with miranda data data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
 ```
 
 Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
@@ -367,9 +401,19 @@ write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_mi
 Subset counts matrices by `tp7_amb_list`
 ```{r}
 mrna_subset <- mrna_counts %>% 
-  select(all_of(tp7_amb_list))
+  dplyr::select(all_of(tp7_amb_list))
 mirna_subset <- mirna_counts %>% 
-  select(all_of(tp7_amb_list))
+  dplyr::select(all_of(tp7_amb_list))
+```
+
+Filter mRNAs 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters
+filt_outrm_poa <- genefilter((mrna_subset), ffun) #apply filter
+
+mrna_subset_filt <- mrna_subset[filt_outrm_poa,] #keep only rows that passed filter
+dim(mrna_subset)
+dim(mrna_subset_filt)
 ```
 
 Normalize counts using RPM normalization 
@@ -384,7 +428,7 @@ normalize_counts <- function(counts) {
 miRNA_norm <- normalize_counts(mirna_subset)
 #mirna_norm <- as.matrix(miRNA_counts_filt)
 
-mRNA_norm <- normalize_counts(mrna_subset)
+mRNA_norm <- normalize_counts(mrna_subset_filt)
 #mRNA_norm <- as.matrix(mRNA_counts_filt)
 ```
 
@@ -420,6 +464,8 @@ Merge with miranda data data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
 ```
 
 Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
@@ -438,9 +484,19 @@ write.csv(combined_data_pcc, "../output/Molecular/interactions/miRNA_mRNA_pcc_mi
 Subset counts matrices by `tp7_heat_list`
 ```{r}
 mrna_subset <- mrna_counts %>% 
-  select(all_of(tp7_heat_list))
+  dplyr::select(all_of(tp7_heat_list))
 mirna_subset <- mirna_counts %>% 
-  select(all_of(tp7_heat_list))
+  dplyr::select(all_of(tp7_heat_list))
+```
+
+Filter mRNAs 
+```{r}
+ffun<-filterfun(pOverA(0.25,10))  #set up filtering parameters
+filt_outrm_poa <- genefilter((mrna_subset), ffun) #apply filter
+
+mrna_subset_filt <- mrna_subset[filt_outrm_poa,] #keep only rows that passed filter
+dim(mrna_subset)
+dim(mrna_subset_filt)
 ```
 
 Normalize counts using RPM normalization 
@@ -455,7 +511,7 @@ normalize_counts <- function(counts) {
 miRNA_norm <- normalize_counts(mirna_subset)
 #mirna_norm <- as.matrix(miRNA_counts_filt)
 
-mRNA_norm <- normalize_counts(mrna_subset)
+mRNA_norm <- normalize_counts(mrna_subset_filt)
 #mRNA_norm <- as.matrix(mRNA_counts_filt)
 ```
 
@@ -491,6 +547,8 @@ Merge with miranda data data
 combined_data_pcc <- pcc_results %>%
   inner_join(miranda_data, by = c("miRNA", "mRNA"))
 dim(combined_data_pcc)
+length(unique(combined_data_pcc$miRNA))
+length(unique(combined_data_pcc$mRNA))
 ```
 
 Create scatter plot for each mRNA-miRNA pair. Still troubleshooting, use this: https://github.com/urol-e5/deep-dive-expression/blob/main/D-Apul/code/09-Apul-mRNA-miRNA-interactions.Rmd as ref 
