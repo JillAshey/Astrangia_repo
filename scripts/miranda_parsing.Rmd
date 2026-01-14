@@ -64,3 +64,253 @@ write.csv(miranda_gene, file = "~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/
 
 
 
+## 20260108 
+
+Using tab file to determine interactions with a 13-mer seed match with <= 2 mismatches and exact pairing between 10-11bp. 
+```{r}
+#!/usr/bin/env Rscript
+
+# Diagnostic script to explore miranda results and test filtering criteria
+
+# Function to parse miranda output
+parse_miranda_output <- function(input_file) {
+  lines <- readLines(input_file)
+  
+  results <- list()
+  
+  i <- 1
+  while (i <= length(lines)) {
+    # Look for alignment blocks
+    if (grepl("^   Forward:", lines[i])) {
+      forward_line <- lines[i]
+      query_line <- lines[i + 1]
+      alignment_line <- lines[i + 2]
+      ref_line <- lines[i + 3]
+      energy_line <- lines[i + 4]
+      
+      # Find the score line (starts with >)
+      score_line_idx <- NA
+      for (j in (i+5):min(i+15, length(lines))) {
+        if (grepl("^>", lines[j])) {
+          score_line_idx <- j
+          break
+        }
+      }
+      
+      if (!is.na(score_line_idx)) {
+        score_line <- lines[score_line_idx]
+        
+        # Extract sequences
+        query_seq <- gsub(".*[35]'\\s+([ATGCUatgcu]+)\\s+[35]'.*", "\\1", query_line)
+        ref_seq <- gsub(".*[35]'\\s+([ATGCUatgcu]+)\\s+[35]'.*", "\\1", ref_line)
+        alignment <- gsub(".*\\s{3,}(.+)\\s*$", "\\1", alignment_line)
+        
+        # Extract energy
+        energy <- as.numeric(gsub(".*Energy:\\s+([0-9.-]+).*", "\\1", energy_line))
+        
+        # Parse score line
+        score_parts <- strsplit(gsub("^>", "", score_line), "\t")[[1]]
+        
+        if (length(score_parts) >= 9) {
+          results[[length(results) + 1]] <- list(
+            miRNA = score_parts[1],
+            target = score_parts[2],
+            score = as.numeric(score_parts[3]),
+            energy = as.numeric(score_parts[4]),
+            miRNA_pos = score_parts[5],
+            target_pos = score_parts[6],
+            align_len = as.numeric(score_parts[7]),
+            identity = score_parts[8],
+            similarity = score_parts[9],
+            query_seq = query_seq,
+            ref_seq = ref_seq,
+            alignment = alignment
+          )
+        }
+      }
+    }
+    i <- i + 1
+  }
+  
+  return(results)
+}
+
+# Function to analyze complementarity
+analyze_pairing <- function(query_seq, ref_seq) {
+  query_clean <- toupper(gsub("[^ATGCUatgcu]", "", query_seq))
+  ref_clean <- toupper(gsub("[^ATGCUatgcu]", "", ref_seq))
+  
+  len <- min(nchar(query_clean), nchar(ref_clean))
+  
+  matches <- 0
+  wobbles <- 0  # G:U wobble pairs
+  
+  pairing_pattern <- character(len)
+  
+  for (i in 1:len) {
+    q <- substr(query_clean, i, i)
+    r <- substr(ref_clean, i, i)
+    
+    # Watson-Crick pairs (miRNA is 3'->5', target is 5'->3')
+    if ((q == "A" && (r == "T" || r == "U")) ||
+        ((q == "T" || q == "U") && r == "A") ||
+        (q == "G" && r == "C") ||
+        (q == "C" && r == "G")) {
+      matches <- matches + 1
+      pairing_pattern[i] <- "|"
+    } else if ((q == "G" && (r == "T" || r == "U")) ||
+               ((q == "T" || q == "U") && r == "G")) {
+      wobbles <- wobbles + 1
+      pairing_pattern[i] <- ":"
+    } else {
+      pairing_pattern[i] <- " "
+    }
+  }
+  
+  return(list(
+    matches = matches,
+    wobbles = wobbles,
+    mismatches = len - matches - wobbles,
+    length = len,
+    pairing_pattern = paste(pairing_pattern, collapse = "")
+  ))
+}
+
+# Function to analyze seed regions with different criteria
+analyze_seed_regions <- function(results) {
+  seed_analysis <- data.frame()
+  
+  for (i in 1:length(results)) {
+    r <- results[[i]]
+    
+    # Analyze different seed region lengths
+    for (seed_len in c(6, 7, 8, 9, 10, 11, 12, 13, 14)) {
+      if (nchar(r$query_seq) >= seed_len) {
+        # Extract seed region (first N bases of alignment)
+        seed_query <- substr(r$query_seq, 1, seed_len)
+        seed_ref <- substr(r$ref_seq, 1, seed_len)
+        
+        pairing <- analyze_pairing(seed_query, seed_ref)
+        
+        seed_analysis <- rbind(seed_analysis, data.frame(
+          target_num = i,
+          miRNA = r$miRNA,
+          target = r$target,
+          energy = r$energy,
+          score = r$score,
+          seed_length = seed_len,
+          matches = pairing$matches,
+          wobbles = pairing$wobbles,
+          mismatches = pairing$mismatches,
+          match_percent = round(100 * pairing$matches / seed_len, 1),
+          stringsAsFactors = FALSE
+        ))
+      }
+    }
+  }
+  
+  return(seed_analysis)
+}
+
+# Main execution
+cat("=== Miranda Output Diagnostic Tool ===\n\n")
+
+input_file <- "~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_strict_all_1kb_apoc_shortstack.tab"  # Change to your input file name
+
+# Parse all results
+cat("Parsing miranda output...\n")
+all_results <- parse_miranda_output(input_file)
+cat("Found", length(all_results), "total predictions\n\n")
+
+if (length(all_results) == 0) {
+  cat("No results found. Check your input file format.\n")
+  quit()
+}
+
+# Display first few examples
+cat("=== First 3 Examples ===\n")
+for (i in 1:min(3, length(all_results))) {
+  r <- all_results[[i]]
+  cat("\nTarget", i, ":\n")
+  cat("miRNA:  ", r$miRNA, "\n")
+  cat("Target: ", r$target, "\n")
+  cat("Score:  ", r$score, "  Energy: ", r$energy, "\n")
+  cat("Query (3'->5'): ", r$query_seq, "\n")
+  cat("Alignment:      ", r$alignment, "\n")
+  cat("Ref (5'->3'):   ", r$ref_seq, "\n")
+  
+  pairing <- analyze_pairing(r$query_seq, r$ref_seq)
+  cat("Pairing:        ", pairing$pairing_pattern, "\n")
+  cat("Matches:", pairing$matches, "Wobbles:", pairing$wobbles, "Mismatches:", pairing$mismatches, "\n")
+}
+
+# Analyze seed regions
+cat("\n=== Seed Region Analysis ===\n")
+seed_data <- analyze_seed_regions(all_results)
+
+# Summary statistics by seed length
+cat("\nTargets passing different seed matching criteria:\n")
+cat("(Seed length | Max mismatches allowed | Targets passing)\n")
+for (seed_len in c(7, 8, 9, 10, 11, 12, 13)) {
+  for (max_mm in 0:3) {
+    passing <- sum(seed_data$seed_length == seed_len & seed_data$mismatches <= max_mm)
+    cat(sprintf("  %2d bases  |  ≤%d mismatches         | %4d targets\n", 
+                seed_len, max_mm, passing))
+  }
+}
+
+# Distribution of energy scores
+cat("\n=== Energy Distribution ===\n")
+energies <- sapply(all_results, function(x) x$energy)
+cat("Min energy:", min(energies), "\n")
+cat("Mean energy:", round(mean(energies), 2), "\n")
+cat("Median energy:", round(median(energies), 2), "\n")
+cat("Energies < -20:", sum(energies < -20), "targets\n")
+cat("Energies < -25:", sum(energies < -25), "targets\n")
+
+# Save detailed results for exploration
+write.csv(seed_data, "seed_analysis.csv", row.names = FALSE)
+cat("\nDetailed seed analysis saved to: seed_analysis.csv\n")
+
+# Save all alignments for manual inspection
+alignment_details <- data.frame()
+for (i in 1:length(all_results)) {
+  r <- all_results[[i]]
+  pairing <- analyze_pairing(r$query_seq, r$ref_seq)
+  
+  alignment_details <- rbind(alignment_details, data.frame(
+    miRNA = r$miRNA,
+    target = r$target,
+    score = r$score,
+    energy = r$energy,
+    align_length = r$align_len,
+    query_seq = r$query_seq,
+    alignment = r$alignment,
+    ref_seq = r$ref_seq,
+    pairing_pattern = pairing$pairing_pattern,
+    matches = pairing$matches,
+    mismatches = pairing$mismatches,
+    stringsAsFactors = FALSE
+  ))
+}
+
+write.csv(alignment_details, "all_alignments.csv", row.names = FALSE)
+cat("All alignment details saved to: all_alignments.csv\n")
+
+cat("\n=== Recommendations ===\n")
+cat("1. Open 'all_alignments.csv' to manually inspect alignments\n")
+cat("2. Open 'seed_analysis.csv' to explore seed matching patterns\n")
+cat("3. Look for conserved pairing patterns in positions 2-8 or 2-7\n")
+cat("4. Consider combining seed match + energy threshold (e.g., <-20 kcal/mol)\n")
+cat("5. Check literature for cnidarian/coral-specific miRNA:target rules\n")
+```
+
+
+input_file <- "~/Desktop/PutnamLab/Astrangia/2020-2021/miranda/miranda_strict_all_1kb_apoc_shortstack.tab"  # Change to your input file name
+
+
+
+
+
+
+

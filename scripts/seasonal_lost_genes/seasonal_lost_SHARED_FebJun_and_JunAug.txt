@@ -1,0 +1,15 @@
+evm.TU.chromosome_13.3481
+evm.TU.chromosome_2.839
+evm.TU.chromosome_13.2548
+evm.TU.chromosome_6.94
+evm.TU.chromosome_13.733
+evm.TU.chromosome_6.1105
+evm.TU.chromosome_2.496
+evm.TU.chromosome_12.241
+evm.TU.chromosome_14.6588
+evm.TU.chromosome_4.1934
+evm.TU.chromosome_7.1688
+evm.TU.chromosome_9.119
+evm.TU.chromosome_12.2678
+evm.TU.chromosome_10.1269
+evm.TU.chromosome_12.1419

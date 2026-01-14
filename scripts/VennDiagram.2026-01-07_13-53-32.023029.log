@@ -1,0 +1,34 @@
+INFO [2026-01-07 13:53:32] $x
+INFO [2026-01-07 13:53:32] list(`Feb→Jun` = seasonal_result$feb_jun_genes, `Jun→Aug` = seasonal_result$jun_aug_genes, 
+INFO [2026-01-07 13:53:32]     `Feb→Aug` = seasonal_result$feb_aug_genes)
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $category.names
+INFO [2026-01-07 13:53:32] c("Feb→Jun", "Jun→Aug", "Feb→Aug")
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $filename
+INFO [2026-01-07 13:53:32] NULL
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $output
+INFO [2026-01-07 13:53:32] [1] TRUE
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $fill
+INFO [2026-01-07 13:53:32] c("#E41A1C", "#377EB8", "#4DAF4A")
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $alpha
+INFO [2026-01-07 13:53:32] [1] 0.5
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $cex
+INFO [2026-01-07 13:53:32] [1] 1.5
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $cat.cex
+INFO [2026-01-07 13:53:32] [1] 1.5
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $cat.fontface
+INFO [2026-01-07 13:53:32] [1] "bold"
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $main
+INFO [2026-01-07 13:53:32] paste(toupper(category), "Genes: Seasonal Overlap")
+INFO [2026-01-07 13:53:32] 
+INFO [2026-01-07 13:53:32] $main.cex
+INFO [2026-01-07 13:53:32] [1] 1.8
+INFO [2026-01-07 13:53:32] 

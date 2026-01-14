@@ -13,6 +13,7 @@ library(igraph)
 library(ggraph)
 library(tidygraph)
 library(ggrepel)
+library(VennDiagram)
 ```
 
 ### Compare networks 
@@ -1259,7 +1260,7 @@ Build network
 # Create all combinations (Feb only has ambient)
 conditions <- c("Feb_ambient", "Jun_ambient", "Jun_heat", "Aug_ambient", "Aug_heat")
 
-build_network <- function(data, cond, cor_threshold = 0.5) {
+build_network <- function(data, cond, cor_threshold = 0.9) {
   df <- data %>%
     filter(condition == cond, abs(correlation) >= cor_threshold)
   
@@ -1520,10 +1521,10 @@ analyze_correlation_dynamics <- function(data, cond1, cond2, cor_threshold = 0.3
         cor1 < 0 & cor2 > 0 ~ "neg_to_pos",
         
         # Same sign but magnitude changes
-        cor1 > 0 & cor2 > 0 & abs(cor2 - cor1) > 0.2 ~ 
-          ifelse(cor2 > cor1, "pos_strengthened", "pos_weakened"),
-        cor1 < 0 & cor2 < 0 & abs(cor2 - cor1) > 0.2 ~ 
-          ifelse(cor2 < cor1, "neg_strengthened", "neg_weakened"),
+        #cor1 > 0 & cor2 > 0 & abs(cor2 - cor1) > 0.2 ~ 
+        #  ifelse(cor2 > cor1, "pos_strengthened", "pos_weakened"),
+        #cor1 < 0 & cor2 < 0 & abs(cor2 - cor1) > 0.2 ~ 
+        #  ifelse(cor2 < cor1, "neg_strengthened", "neg_weakened"),
         
         # Stable
         TRUE ~ "stable"
@@ -1765,7 +1766,7 @@ get_detailed_turnover <- function(cor_result) {
   data.frame(
     comparison = cor_result$comparison,
     conserved_stable = n_conserved_stable,
-    conserved_magnitude_change = n_conserved_changed,
+    #conserved_magnitude_change = n_conserved_changed,
     conserved_sign_flip = n_sign_flips,
     lost = n_lost,
     gained = n_gained
@@ -1781,7 +1782,7 @@ print(detailed_turnover)
 # Reshape for plotting
 detailed_turnover_long <- detailed_turnover %>%
   pivot_longer(
-    cols = c(conserved_stable, conserved_magnitude_change, 
+    cols = c(conserved_stable, 
              conserved_sign_flip, lost, gained),
     names_to = "edge_category",
     values_to = "count"
@@ -1789,10 +1790,10 @@ detailed_turnover_long <- detailed_turnover %>%
   mutate(
     edge_category = factor(edge_category, 
                           levels = c("lost", "conserved_stable", 
-                                    "conserved_magnitude_change",
+                                    #"conserved_magnitude_change",
                                     "conserved_sign_flip", "gained"),
                           labels = c("Lost", "Conserved (Stable)", 
-                                    "Conserved (Magnitude Change)",
+                                    #"Conserved (Magnitude Change)",
                                     "Conserved (Sign Flip)", "Gained"))
   )
 
@@ -1804,7 +1805,7 @@ p_enhanced_turnover <- ggplot(detailed_turnover_long,
     values = c(
       "Lost" = "#E41A1C",
       "Conserved (Stable)" = "#4DAF4A",
-      "Conserved (Magnitude Change)" = "#FFD92F",
+      #"Conserved (Magnitude Change)" = "#FFD92F",
       "Conserved (Sign Flip)" = "#E78AC3",
       "Gained" = "#377EB8"
     ),
@@ -1812,7 +1813,7 @@ p_enhanced_turnover <- ggplot(detailed_turnover_long,
   ) +
   labs(
     title = "Network Edge Dynamics with Sign Flip Detail",
-    subtitle = "Conserved edges split by stability, magnitude change, and sign flip",
+    subtitle = "Conserved edges split by stability and sign flip",
     x = "Comparison",
     y = "Number of Edges"
   ) +
@@ -1827,10 +1828,11 @@ print(p_enhanced_turnover)
 # Calculate percentages for each comparison
 detailed_turnover_pct <- detailed_turnover %>%
   mutate(
-    total_edges = conserved_stable + conserved_magnitude_change + 
+    total_edges = conserved_stable + 
+                  #conserved_magnitude_change + 
                   conserved_sign_flip + lost + gained,
     pct_conserved_stable = 100 * conserved_stable / total_edges,
-    pct_conserved_magnitude = 100 * conserved_magnitude_change / total_edges,
+    #pct_conserved_magnitude = 100 * conserved_magnitude_change / total_edges,
     pct_sign_flip = 100 * conserved_sign_flip / total_edges,
     pct_lost = 100 * lost / total_edges,
     pct_gained = 100 * gained / total_edges
@@ -1838,7 +1840,7 @@ detailed_turnover_pct <- detailed_turnover %>%
 
 cat("\nPercentage Breakdown:\n")
 print(detailed_turnover_pct %>% 
-        dplyr::select(comparison, pct_conserved_stable, pct_conserved_magnitude, 
+        dplyr::select(comparison, pct_conserved_stable, 
                pct_sign_flip, pct_lost, pct_gained))
 
 # Create percentage version of plot
@@ -1849,7 +1851,7 @@ p_enhanced_turnover_pct <- ggplot(detailed_turnover_long,
     values = c(
       "Lost" = "#E41A1C",
       "Conserved (Stable)" = "#4DAF4A",
-      "Conserved (Magnitude Change)" = "#FFD92F",
+      #"Conserved (Magnitude Change)" = "#FFD92F",
       "Conserved (Sign Flip)" = "#E78AC3",
       "Gained" = "#377EB8"
     ),
@@ -1874,7 +1876,7 @@ print(p_enhanced_turnover_pct)
 cat("\n=== Sign Flip Statistics ===\n")
 sign_flip_summary <- detailed_turnover %>%
   mutate(
-    total_conserved = conserved_stable + conserved_magnitude_change + conserved_sign_flip,
+    total_conserved = conserved_stable + conserved_sign_flip,
     pct_flips_of_conserved = 100 * conserved_sign_flip / total_conserved
   ) %>%
   dplyr::select(comparison, conserved_sign_flip, total_conserved, pct_flips_of_conserved)
@@ -2464,5 +2466,669 @@ cat("\n--- Genes with Most Stable miRNA Regulation ---\n")
 print(stable_genes)
 ```
 
+Look at overlap between transitions 
+```{r}
+# Function to create overlap matrix for a specific category across all comparisons
+create_gene_overlap_matrix <- function(cor_dynamics_list, category = "sign_flip") {
+  
+  cat("\n--- Analyzing", category, "genes across all comparisons ---\n\n")
+  
+  # Extract gene lists from all comparisons
+  comparison_names <- names(cor_dynamics_list)
+  gene_lists <- list()
+  
+  for(comp in comparison_names) {
+    genes <- extract_genes_by_category(cor_dynamics_list[[comp]], category)
+    gene_lists[[comp]] <- unique(genes$mrna)
+  }
+  
+  # Create overlap matrix
+  n_comp <- length(comparison_names)
+  overlap_matrix <- matrix(0, n_comp, n_comp, 
+                           dimnames = list(comparison_names, comparison_names))
+  
+  for(i in 1:n_comp) {
+    for(j in 1:n_comp) {
+      if(i == j) {
+        overlap_matrix[i,j] <- length(gene_lists[[i]])
+      } else {
+        overlap_matrix[i,j] <- length(intersect(gene_lists[[i]], gene_lists[[j]]))
+      }
+    }
+  }
+  
+  cat("Gene counts per comparison:\n")
+  for(comp in comparison_names) {
+    cat(sprintf("  %s: %d genes\n", comp, length(gene_lists[[comp]])))
+  }
+  
+  cat("\nOverlap matrix (number of shared genes):\n")
+  print(overlap_matrix)
+  
+  # Calculate Jaccard similarity for overlaps
+  jaccard_matrix <- matrix(0, n_comp, n_comp,
+                           dimnames = list(comparison_names, comparison_names))
+  
+  for(i in 1:n_comp) {
+    for(j in 1:n_comp) {
+      if(i == j) {
+        jaccard_matrix[i,j] <- 1.0
+      } else {
+        intersection <- length(intersect(gene_lists[[i]], gene_lists[[j]]))
+        union <- length(union(gene_lists[[i]], gene_lists[[j]]))
+        jaccard_matrix[i,j] <- ifelse(union > 0, intersection / union, 0)
+      }
+    }
+  }
+  
+  cat("\nJaccard similarity (proportion of shared genes):\n")
+  print(round(jaccard_matrix, 3))
+  
+  return(list(
+    gene_lists = gene_lists,
+    overlap_matrix = overlap_matrix,
+    jaccard_matrix = jaccard_matrix
+  ))
+}
 
+# Function to visualize gene overlap across comparisons
+visualize_gene_overlap <- function(overlap_result, category_name) {
+  
+  library(ggplot2)
+  library(reshape2)
+  library(pheatmap)
+  
+  # Heatmap of overlap counts
+  overlap_long <- melt(overlap_result$overlap_matrix)
+  
+  p1 <- ggplot(overlap_long, aes(x = Var1, y = Var2, fill = value)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = value), color = "black", size = 3) +
+    scale_fill_gradient(low = "white", high = "darkblue") +
+    labs(title = paste("Gene Overlap:", category_name),
+         x = "", y = "", fill = "Shared Genes") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p1)
+  
+  # Heatmap of Jaccard similarity
+  jaccard_long <- melt(overlap_result$jaccard_matrix)
+  
+  p2 <- ggplot(jaccard_long, aes(x = Var1, y = Var2, fill = value)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = round(value, 2)), color = "black", size = 3) +
+    scale_fill_gradient(low = "white", high = "darkred") +
+    labs(title = paste("Gene Overlap (Jaccard):", category_name),
+         x = "", y = "", fill = "Jaccard Index") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p2)
+  
+  # UpSet-style analysis of unique/shared genes
+  gene_lists <- overlap_result$gene_lists
+  all_genes <- unique(unlist(gene_lists))
+  
+  # Create presence/absence matrix
+  presence_matrix <- matrix(0, length(all_genes), length(gene_lists),
+                           dimnames = list(all_genes, names(gene_lists)))
+  
+  for(comp in names(gene_lists)) {
+    presence_matrix[gene_lists[[comp]], comp] <- 1
+  }
+  
+  # Count intersection patterns
+  pattern_counts <- as.data.frame(presence_matrix) %>%
+    group_by(across(everything())) %>%
+    summarise(n_genes = n(), .groups = "drop") %>%
+    arrange(desc(n_genes))
+  
+  cat("\nTop 10 intersection patterns:\n")
+  cat("(1 = present in comparison, 0 = absent)\n")
+  print(head(pattern_counts, 10))
+  
+  return(list(p1 = p1, p2 = p2, patterns = pattern_counts))
+}
+
+# Function to identify genes unique to specific comparisons or shared across all
+analyze_gene_sharing_patterns <- function(overlap_result, category_name) {
+  
+  gene_lists <- overlap_result$gene_lists
+  comparison_names <- names(gene_lists)
+  
+  cat("\n=== Gene Sharing Patterns for", category_name, "===\n\n")
+  
+  # Genes unique to each comparison
+  cat("Genes UNIQUE to each comparison:\n")
+  for(comp in comparison_names) {
+    others <- setdiff(comparison_names, comp)
+    other_genes <- unique(unlist(gene_lists[others]))
+    unique_genes <- setdiff(gene_lists[[comp]], other_genes)
+    cat(sprintf("  %s: %d unique genes (%.1f%%)\n", 
+                comp, length(unique_genes), 
+                100 * length(unique_genes) / length(gene_lists[[comp]])))
+  }
+  
+  # Genes shared across ALL comparisons
+  shared_all <- Reduce(intersect, gene_lists)
+  cat(sprintf("\nGenes shared across ALL comparisons: %d\n", length(shared_all)))
+  if(length(shared_all) > 0) {
+    cat("These genes:\n")
+    print(head(shared_all, 20))
+  }
+  
+  # Genes shared between temporal transitions only
+  temporal_comps <- c("feb_to_jun", "jun_to_aug", "feb_to_aug")
+  temporal_available <- temporal_comps[temporal_comps %in% comparison_names]
+  
+  if(length(temporal_available) > 1) {
+    temporal_genes <- Reduce(intersect, gene_lists[temporal_available])
+    cat(sprintf("\nGenes shared across temporal transitions: %d\n", 
+                length(temporal_genes)))
+  }
+  
+  # Genes shared between treatment effects only
+  treatment_comps <- c("jun_heat", "aug_heat")
+  treatment_available <- treatment_comps[treatment_comps %in% comparison_names]
+  
+  if(length(treatment_available) > 1) {
+    treatment_genes <- Reduce(intersect, gene_lists[treatment_available])
+    cat(sprintf("\nGenes shared across heat treatments: %d\n", 
+                length(treatment_genes)))
+    
+    # Genes specific to heat (not in temporal)
+    if(length(temporal_available) > 0) {
+      temporal_union <- unique(unlist(gene_lists[temporal_available]))
+      heat_specific <- setdiff(treatment_genes, temporal_union)
+      cat(sprintf("  Heat-specific (not in temporal): %d\n", length(heat_specific)))
+    }
+  }
+  
+  return(list(
+    shared_all = shared_all,
+    unique_per_comparison = lapply(comparison_names, function(comp) {
+      others <- setdiff(comparison_names, comp)
+      other_genes <- unique(unlist(gene_lists[others]))
+      setdiff(gene_lists[[comp]], other_genes)
+    })
+  ))
+}
+
+# Comprehensive comparison function for all categories
+compare_all_categories <- function(cor_dynamics_list) {
+  
+  categories <- c("sign_flip", "lost", "gained", "conserved_stable", 
+                  "strengthened", "weakened")
+  
+  results_summary <- data.frame()
+  
+  for(cat in categories) {
+    cat("\n", rep("=", 70), "\n", sep = "")
+    cat("CATEGORY:", toupper(cat), "\n")
+    cat(rep("=", 70), "\n")
+    
+    overlap_result <- create_gene_overlap_matrix(cor_dynamics_list, cat)
+    
+    # Calculate some summary stats
+    gene_lists <- overlap_result$gene_lists
+    n_genes_per_comp <- sapply(gene_lists, length)
+    shared_all <- Reduce(intersect, gene_lists)
+    
+    mean_jaccard <- mean(overlap_result$jaccard_matrix[
+      lower.tri(overlap_result$jaccard_matrix)])
+    
+    results_summary <- rbind(results_summary, data.frame(
+      category = cat,
+      mean_genes_per_comparison = mean(n_genes_per_comp),
+      sd_genes_per_comparison = sd(n_genes_per_comp),
+      genes_shared_all = length(shared_all),
+      mean_jaccard = mean_jaccard
+    ))
+    
+    # Visualize
+    vis <- visualize_gene_overlap(overlap_result, cat)
+    
+    # Analyze patterns
+    patterns <- analyze_gene_sharing_patterns(overlap_result, cat)
+  }
+  
+  cat("\n", rep("=", 70), "\n")
+  cat("SUMMARY ACROSS ALL CATEGORIES\n")
+  cat(rep("=", 70), "\n\n")
+  print(results_summary)
+  
+  return(results_summary)
+}
+
+# ============================================================================
+# EXAMPLE USAGE
+# ============================================================================
+
+cat("\n=== CROSS-COMPARISON ANALYSIS FUNCTIONS LOADED ===\n\n")
+
+cat("USAGE:\n\n")
+
+cat("1. Analyze overlap for a specific category:\n")
+cat("   overlap_result <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')\n\n")
+overlap_result <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')
+
+cat("2. Visualize the overlap:\n")
+cat("   visualize_gene_overlap(overlap_result, 'Sign-Flipping Genes')\n\n")
+visualize_gene_overlap(overlap_result, 'Sign-Flipping Genes')
+
+cat("3. Identify sharing patterns:\n")
+cat("   patterns <- analyze_gene_sharing_patterns(overlap_result, 'sign_flip')\n\n")
+patterns <- analyze_gene_sharing_patterns(overlap_result, 'sign_flip')
+
+cat("4. Run complete analysis for all categories:\n")
+cat("   summary <- compare_all_categories(cor_dynamics_results)\n\n")
+summary <- compare_all_categories(cor_dynamics_results)
+
+cat("EXAMPLE: Are Feb→Jun gained genes the same as Feb→Aug gained genes?\n\n")
+cat("# Method 1: Quick overlap check\n")
+cat("feb_jun_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'gained')\n")
+feb_jun_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'gained')
+cat("feb_aug_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, 'gained')\n")
+feb_aug_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, 'gained')
+cat("feb_jun_ids <- unique(feb_jun_gained$mrna)\n")
+feb_jun_ids <- unique(feb_jun_gained$mrna)
+cat("feb_aug_ids <- unique(feb_aug_gained$mrna)\n")
+feb_aug_ids <- unique(feb_aug_gained$mrna)
+cat("shared <- intersect(feb_jun_ids, feb_aug_ids)\n")
+shared <- intersect(feb_jun_ids, feb_aug_ids)
+cat("cat('Shared genes:', length(shared), '/', length(feb_jun_ids), '\\n')\n\n")
+cat('Shared genes:', length(shared), '/', length(feb_jun_ids), '\n')
+
+cat("# Method 2: Complete overlap analysis\n")
+cat("gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'gained')\n")
+gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'gained')
+cat("# This shows overlap across ALL comparisons\n\n")
+
+cat("Ready to analyze cross-comparison gene overlap!\n")
+```
+
+Are Feb-->June gained genes the same as Feb-->Aug gained genes 
+```{r}
+# Analyze all gained genes across all comparisons
+gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')
+
+# Visualize it
+visualize_gene_overlap(gained_overlap, 'Gained Genes')
+
+# Get specific patterns
+gained_patterns <- analyze_gene_sharing_patterns(gained_overlap, 'sign_flip')
+
+# See which genes are unique to Feb→Jun vs shared with Feb→Aug
+```
+
+Seasonal genes
+```{r}
+# FUNCTION: Analyze seasonal gene overlap for a specific category
+# ============================================================================
+
+analyze_seasonal_genes <- function(cor_dynamics_results, category = "gained") {
+  
+  cat("\n", rep("=", 80), "\n", sep = "")
+  cat("SEASONAL ANALYSIS:", toupper(category), "GENES\n")
+  cat(rep("=", 80), "\n\n")
+  
+  # Extract gene lists from the three temporal transitions
+  feb_jun <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, category)
+  jun_aug <- extract_genes_by_category(cor_dynamics_results$jun_to_aug, category)
+  feb_aug <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, category)
+  
+  # Get unique gene IDs
+  feb_jun_genes <- unique(feb_jun$mrna)
+  jun_aug_genes <- unique(jun_aug$mrna)
+  feb_aug_genes <- unique(feb_aug$mrna)
+  
+  cat("Gene counts per transition:\n")
+  cat(sprintf("  Feb → Jun: %d genes\n", length(feb_jun_genes)))
+  cat(sprintf("  Jun → Aug: %d genes\n", length(jun_aug_genes)))
+  cat(sprintf("  Feb → Aug: %d genes\n", length(feb_aug_genes)))
+  
+  # Calculate overlaps
+  all_three <- Reduce(intersect, list(feb_jun_genes, jun_aug_genes, feb_aug_genes))
+  feb_jun_only <- setdiff(feb_jun_genes, union(jun_aug_genes, feb_aug_genes))
+  jun_aug_only <- setdiff(jun_aug_genes, union(feb_jun_genes, feb_aug_genes))
+  feb_aug_only <- setdiff(feb_aug_genes, union(feb_jun_genes, jun_aug_genes))
+  
+  feb_jun_and_feb_aug <- setdiff(intersect(feb_jun_genes, feb_aug_genes), jun_aug_genes)
+  feb_jun_and_jun_aug <- setdiff(intersect(feb_jun_genes, jun_aug_genes), feb_aug_genes)
+  jun_aug_and_feb_aug <- setdiff(intersect(jun_aug_genes, feb_aug_genes), feb_jun_genes)
+  
+  cat("\n=== OVERLAP PATTERNS ===\n\n")
+  cat(sprintf("Shared across ALL three transitions: %d genes\n", length(all_three)))
+  cat(sprintf("  → These are 'core seasonal %s' genes\n\n", category))
+  
+  cat(sprintf("Unique to Feb → Jun: %d genes\n", length(feb_jun_only)))
+  cat(sprintf("Unique to Jun → Aug: %d genes\n", length(jun_aug_only)))
+  cat(sprintf("Unique to Feb → Aug: %d genes\n", length(feb_aug_only)))
+  cat("\n")
+  
+  cat(sprintf("Shared between Feb→Jun & Feb→Aug only: %d genes\n", length(feb_jun_and_feb_aug)))
+  cat(sprintf("Shared between Feb→Jun & Jun→Aug only: %d genes\n", length(feb_jun_and_jun_aug)))
+  cat(sprintf("Shared between Jun→Aug & Feb→Aug only: %d genes\n", length(jun_aug_and_feb_aug)))
+  
+  # Calculate percentages
+  cat("\n=== PERCENTAGES ===\n\n")
+  total_unique <- length(unique(c(feb_jun_genes, jun_aug_genes, feb_aug_genes)))
+  cat(sprintf("Total unique genes across all transitions: %d\n\n", total_unique))
+  
+  cat(sprintf("Core seasonal (all three): %.1f%%\n", 100 * length(all_three) / total_unique))
+  cat(sprintf("Feb→Jun specific: %.1f%%\n", 100 * length(feb_jun_only) / total_unique))
+  cat(sprintf("Jun→Aug specific: %.1f%%\n", 100 * length(jun_aug_only) / total_unique))
+  cat(sprintf("Feb→Aug specific: %.1f%%\n", 100 * length(feb_aug_only) / total_unique))
+  
+  # Create result object
+  result <- list(
+    category = category,
+    feb_jun_genes = feb_jun_genes,
+    jun_aug_genes = jun_aug_genes,
+    feb_aug_genes = feb_aug_genes,
+    shared_all_three = all_three,
+    feb_jun_only = feb_jun_only,
+    jun_aug_only = jun_aug_only,
+    feb_aug_only = feb_aug_only,
+    feb_jun_and_feb_aug = feb_jun_and_feb_aug,
+    feb_jun_and_jun_aug = feb_jun_and_jun_aug,
+    jun_aug_and_feb_aug = jun_aug_and_feb_aug
+  )
+  
+  return(result)
+}
+
+# ============================================================================
+# FUNCTION: Visualize seasonal overlap with Venn diagram
+# ============================================================================
+
+plot_seasonal_venn <- function(seasonal_result) {
+  
+  category <- seasonal_result$category
+  
+  # Create Venn diagram
+  venn_plot <- venn.diagram(
+    x = list(
+      "Feb→Jun" = seasonal_result$feb_jun_genes,
+      "Jun→Aug" = seasonal_result$jun_aug_genes,
+      "Feb→Aug" = seasonal_result$feb_aug_genes
+    ),
+    category.names = c("Feb→Jun", "Jun→Aug", "Feb→Aug"),
+    filename = NULL,
+    output = TRUE,
+    
+    # Appearance
+    fill = c("#E41A1C", "#377EB8", "#4DAF4A"),
+    alpha = 0.5,
+    cex = 1.5,
+    cat.cex = 1.5,
+    cat.fontface = "bold",
+    
+    main = paste(toupper(category), "Genes: Seasonal Overlap"),
+    main.cex = 1.8
+  )
+  
+  grid::grid.newpage()
+  grid::grid.draw(venn_plot)
+  
+  return(venn_plot)
+}
+
+# ============================================================================
+# FUNCTION: Create summary bar plot
+# ============================================================================
+
+plot_seasonal_summary <- function(seasonal_result) {
+  
+  summary_data <- data.frame(
+    pattern = c("All three", "Feb→Jun only", "Jun→Aug only", "Feb→Aug only",
+                "Feb→Jun & Feb→Aug", "Feb→Jun & Jun→Aug", "Jun→Aug & Feb→Aug"),
+    n_genes = c(
+      length(seasonal_result$shared_all_three),
+      length(seasonal_result$feb_jun_only),
+      length(seasonal_result$jun_aug_only),
+      length(seasonal_result$feb_aug_only),
+      length(seasonal_result$feb_jun_and_feb_aug),
+      length(seasonal_result$feb_jun_and_jun_aug),
+      length(seasonal_result$jun_aug_and_feb_aug)
+    ),
+    type = c("Core", "Unique", "Unique", "Unique", "Pairwise", "Pairwise", "Pairwise")
+  )
+  
+  summary_data$pattern <- factor(summary_data$pattern, 
+                                  levels = summary_data$pattern)
+  
+  p <- ggplot(summary_data, aes(x = pattern, y = n_genes, fill = type)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = n_genes), vjust = -0.5, size = 4) +
+    scale_fill_manual(values = c("Core" = "#4DAF4A", 
+                                  "Unique" = "#E41A1C", 
+                                  "Pairwise" = "#377EB8")) +
+    labs(
+      title = paste("Seasonal Overlap Pattern:", toupper(seasonal_result$category)),
+      x = "Overlap Pattern",
+      y = "Number of Genes",
+      fill = "Pattern Type"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 11),
+      plot.title = element_text(size = 14, face = "bold")
+    )
+  
+  print(p)
+  return(p)
+}
+
+# ============================================================================
+# FUNCTION: Export seasonal gene lists
+# ============================================================================
+
+export_seasonal_gene_lists <- function(seasonal_result, output_dir = ".") {
+  
+  category <- seasonal_result$category
+  
+  cat("\n=== EXPORTING GENE LISTS ===\n")
+  cat("Output directory:", output_dir, "\n\n")
+  
+  # Create output directory if it doesn't exist
+  if(!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+  
+  # Helper function to write gene list
+  write_gene_list <- function(genes, filename, description) {
+    if(length(genes) > 0) {
+      filepath <- file.path(output_dir, filename)
+      write.table(genes, filepath, 
+                  row.names = FALSE, col.names = FALSE, quote = FALSE)
+      cat(sprintf("  ✓ %s: %d genes → %s\n", description, length(genes), filename))
+    } else {
+      cat(sprintf("  ✗ %s: No genes to export\n", description))
+    }
+  }
+  
+  # Export all gene sets
+  prefix <- paste0("seasonal_", category)
+  
+  write_gene_list(seasonal_result$shared_all_three, 
+                  paste0(prefix, "_CORE_all_three.txt"),
+                  "Core seasonal (all 3 transitions)")
+  
+  write_gene_list(seasonal_result$feb_jun_only,
+                  paste0(prefix, "_UNIQUE_Feb_to_Jun.txt"),
+                  "Unique to Feb→Jun")
+  
+  write_gene_list(seasonal_result$jun_aug_only,
+                  paste0(prefix, "_UNIQUE_Jun_to_Aug.txt"),
+                  "Unique to Jun→Aug")
+  
+  write_gene_list(seasonal_result$feb_aug_only,
+                  paste0(prefix, "_UNIQUE_Feb_to_Aug.txt"),
+                  "Unique to Feb→Aug")
+  
+  write_gene_list(seasonal_result$feb_jun_and_feb_aug,
+                  paste0(prefix, "_SHARED_FebJun_and_FebAug.txt"),
+                  "Shared: Feb→Jun & Feb→Aug")
+  
+  write_gene_list(seasonal_result$feb_jun_and_jun_aug,
+                  paste0(prefix, "_SHARED_FebJun_and_JunAug.txt"),
+                  "Shared: Feb→Jun & Jun→Aug")
+  
+  write_gene_list(seasonal_result$jun_aug_and_feb_aug,
+                  paste0(prefix, "_SHARED_JunAug_and_FebAug.txt"),
+                  "Shared: Jun→Aug & Feb→Aug")
+  
+  # Also export full gene lists per transition
+  write_gene_list(seasonal_result$feb_jun_genes,
+                  paste0(prefix, "_ALL_Feb_to_Jun.txt"),
+                  "All Feb→Jun genes")
+  
+  write_gene_list(seasonal_result$jun_aug_genes,
+                  paste0(prefix, "_ALL_Jun_to_Aug.txt"),
+                  "All Jun→Aug genes")
+  
+  write_gene_list(seasonal_result$feb_aug_genes,
+                  paste0(prefix, "_ALL_Feb_to_Aug.txt"),
+                  "All Feb→Aug genes")
+  
+  cat("\nExport complete!\n")
+}
+
+# ============================================================================
+# FUNCTION: Run complete seasonal analysis for all categories
+# ============================================================================
+
+run_complete_seasonal_analysis <- function(cor_dynamics_results, 
+                                          categories = c("gained", "lost", "sign_flip",
+                                                        "conserved_stable", "strengthened", 
+                                                        "weakened"),
+                                          export = TRUE,
+                                          output_dir = "seasonal_gene_lists") {
+  
+  results_list <- list()
+  summary_table <- data.frame()
+  
+  for(cat in categories) {
+    cat("\n\n")
+    cat(rep("#", 80), "\n", sep = "")
+    cat("ANALYZING:", toupper(cat), "\n")
+    cat(rep("#", 80), "\n")
+    
+    # Analyze
+    result <- analyze_seasonal_genes(cor_dynamics_results, cat)
+    results_list[[cat]] <- result
+    
+    # Visualize
+    plot_seasonal_venn(result)
+    plot_seasonal_summary(result)
+    
+    # Export
+    if(export) {
+      export_seasonal_gene_lists(result, output_dir)
+    }
+    
+    # Add to summary table
+    total_unique <- length(unique(c(result$feb_jun_genes, 
+                                    result$jun_aug_genes, 
+                                    result$feb_aug_genes)))
+    
+    summary_table <- rbind(summary_table, data.frame(
+      category = cat,
+      total_unique_genes = total_unique,
+      core_all_three = length(result$shared_all_three),
+      pct_core = 100 * length(result$shared_all_three) / total_unique,
+      feb_jun_only = length(result$feb_jun_only),
+      jun_aug_only = length(result$jun_aug_only),
+      feb_aug_only = length(result$feb_aug_only)
+    ))
+  }
+  
+  cat("\n\n")
+  cat(rep("=", 80), "\n", sep = "")
+  cat("SUMMARY ACROSS ALL CATEGORIES\n")
+  cat(rep("=", 80), "\n\n")
+  print(summary_table)
+  
+  return(list(
+    results = results_list,
+    summary = summary_table
+  ))
+}
+
+# 1. Analyze the key categories for your seasonal story
+gained_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'gained')
+lost_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'lost')
+signflip_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'sign_flip')
+
+# 2. Export for GO analysis
+#export_seasonal_gene_lists(gained_seasonal, 'GO_analysis/gained')
+#export_seasonal_gene_lists(lost_seasonal, 'GO_analysis/lost')
+#export_seasonal_gene_lists(signflip_seasonal, 'GO_analysis/signflip')
+
+# 3. Look at the core seasonal genes
+core_gained <- gained_seasonal$shared_all_three
+core_lost <- lost_seasonal$shared_all_three
+core_signflip <- signflip_seasonal$shared_all_three
+
+# 4. Look at transition-specific genes
+jun_aug_specific_gained <- gained_seasonal$jun_aug_only
+```
+
+
+Look at categories
+```{r}
+## GAINED
+# Analyze gained genes across the three seasonal transitions
+gained_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'gained')
+
+# Visualize with Venn diagram
+plot_seasonal_venn(gained_seasonal)
+
+# Bar plot showing all overlap patterns
+plot_seasonal_summary(gained_seasonal)
+
+# Export all gene lists for GO enrichment
+export_seasonal_gene_lists(gained_seasonal, 'seasonal_gained_genes')
+
+## LOST
+# Analyze gained genes across the three seasonal transitions
+lost_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'lost')
+
+# Visualize with Venn diagram
+plot_seasonal_venn(lost_seasonal)
+
+# Bar plot showing all overlap patterns
+plot_seasonal_summary(lost_seasonal)
+
+# Export all gene lists for GO enrichment
+export_seasonal_gene_lists(lost_seasonal, 'seasonal_lost_genes')
+
+## SIGN FLIP
+# Analyze gained genes across the three seasonal transitions
+sign_flip_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'sign_flip')
+
+# Visualize with Venn diagram
+plot_seasonal_venn(sign_flip_seasonal)
+
+# Bar plot showing all overlap patterns
+plot_seasonal_summary(sign_flip_seasonal)
+
+# Export all gene lists for GO enrichment
+export_seasonal_gene_lists(sign_flip_seasonal, 'seasonal_sign_flip_genes')
+
+## STABLE
+# Analyze gained genes across the three seasonal transitions
+stable_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'conserved_stable')
+
+# Visualize with Venn diagram
+plot_seasonal_venn(stable_seasonal)
+
+# Bar plot showing all overlap patterns
+plot_seasonal_summary(stable_seasonal)
+
+# Export all gene lists for GO enrichment
+export_seasonal_gene_lists(stable_seasonal, 'seasonal_stable_genes')
+```
 
