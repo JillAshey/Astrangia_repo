@@ -66,6 +66,11 @@ counts <- counts %>%
   dplyr::select(-c(Name, Coords, MIRNA))
 ```
 
+Rename miRNAs so that it includes just the cluster name 
+```{r}
+counts$miRNA_name <- sub("^(([^_]+_){1}[^_]+).*", "\\1", counts$miRNA_name)
+```
+
 Make miRNA_name the row names and remove it as a column 
 ```{r}
 rownames(counts) <- counts$miRNA_name
@@ -77,6 +82,11 @@ Remove extra info from column names
 ```{r}
 colnames(counts) <- gsub("_R1_001.fastq.gz_1", "", colnames(counts))
 colnames(counts) <- gsub("AST.", "AST-", colnames(counts))
+```
+
+Save putative miRNAs
+```{r}
+write.csv(counts, "../output/Molecular/smRNA/shortstack/putative_miRNA_counts.csv")
 ```
 
 Read in metadata 
