@@ -438,6 +438,15 @@ calculate_condition_correlations <- function(mrna_data, mirna_data,
                 mirna_subset[miRNA, ], 
                 method = "spearman")$p.value
       }, error = function(e) NA_real_),
+      
+      # NEW: Calculate mean expression values for this condition
+      mean_expr_mRNA = mean(mrna_subset[mRNA, ], na.rm = TRUE),
+      mean_expr_miRNA = mean(mirna_subset[miRNA, ], na.rm = TRUE),
+      
+      # OPTIONAL: Also calculate SD or other statistics
+      sd_expr_mRNA = sd(mrna_subset[mRNA, ], na.rm = TRUE),
+      sd_expr_miRNA = sd(mirna_subset[miRNA, ], na.rm = TRUE),
+      
       # Add metadata
       timepoint = timepoint_val,
       treatment = treatment_val,
@@ -532,7 +541,7 @@ print(summary_by_condition)
 # ==========================================
 
 #saveRDS(all_correlations, "all_correlations.rds")
-#write.csv(all_correlations, "../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
+write.csv(all_correlations, "../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
 all_correlations <- read.csv("../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
 
 #cat("\n=== DATA SAVED ===\n")
@@ -560,13 +569,13 @@ print(p1)
 
 # Negative vs positive correlations
 all_correlations <- all_correlations %>%
-  mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) %>%
-  count(timepoint, treatment, cor_type)
+  mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) #%>%
+  #dplyr::count(timepoint, treatment, cor_type)
 
 p2 <- all_correlations %>%
   #filter(p_adj < 0.05) %>%
-  mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) %>%
-  dplyr::count(timepoint, treatment, cor_type) %>%
+  #mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) %>%
+  #dplyr::count(timepoint, treatment, cor_type) %>%
   ggplot(aes(x = timepoint, y = n, fill = cor_type)) +
   geom_col(position = "dodge") +
   facet_wrap(~treatment) +
@@ -598,6 +607,37 @@ p3 <- all_correlations %>%
 print(p3)
 ```
 
+Filter so that miRNA expression is greater than mRNA expression
+```{r}
+all_correlations_high_miRNA <- all_correlations %>%
+  filter(mean_expr_miRNA > mean_expr_mRNA)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Using correlation strength instead of pvalue as a cutoff
 ```{r}
 # ==========================================
@@ -607,7 +647,7 @@ Using correlation strength instead of pvalue as a cutoff
 cat("=== CLASSIFYING CORRELATIONS BY STRENGTH ===\n\n")
 
 # Add categories based on correlation strength
-all_correlations_classified <- all_correlations %>%
+all_correlations_classified <- all_correlations_high_miRNA %>%
   mutate(
     # Correlation strength category
     cor_strength = case_when(
@@ -1140,7 +1180,7 @@ p_summary <- seasonal_categories %>%
   theme(panel.grid.minor = element_blank())
 
 print(p_summary)
-ggsave("../output/Molecular/interactions/networks/seasonal_pattern_summary_barplot.pdf", width = 8, height = 5)
+#ggsave("../output/Molecular/interactions/networks/seasonal_pattern_summary_barplot.pdf", width = 8, height = 5)
 
 # ==========================================
 # VISUALIZATION 2: Line trajectories (small multiples)
