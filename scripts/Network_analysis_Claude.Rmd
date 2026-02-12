@@ -5,10 +5,10 @@ date: "2026-01-26"
 output: html_document
 ---
 
-Trying some more network stuff based on Claude AI stuff. 
+# Network analysis of mRNA-miRNA interactions
 
 Load packages
-```{r}
+```{r, include=F}
 library(tidyverse)
 library(DESeq2)
 library(igraph)
@@ -21,7 +21,12 @@ library(RColorBrewer)
 library(ggalluvial)
 library(bipartite)
 library(parallel)
+library(plotly)
+library(broom)
+library(topGO)
 ```
+
+## Read in data and normalize 
 
 Read in metadata 
 ```{r}
@@ -34,7 +39,7 @@ metadata <- metadata %>%
 ```
 
 Load mRNA counts and normalize 
-```{r}
+```{r, include=F}
 mrna_counts <- read_csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
 mrna_counts_df <- as.data.frame(mrna_counts)
 rownames(mrna_counts_df) <- mrna_counts_df$...1
@@ -43,6 +48,9 @@ mrna_counts_df$...1 <- NULL
 # Remove AST-1105 -- did not sequence well 
 mrna_counts_df <- mrna_counts_df %>%
   select(-"AST-1105")
+
+# Reorder count matrices to match metadata sample order
+mrna_counts <- mrna_counts_df[, metadata$sample]
 
 # Normalize 
 dds_mrna <- DESeqDataSetFromMatrix(
@@ -54,7 +62,7 @@ mrna_norm <- assay(vsd_mrna)
 ```
 
 Load miRNA counts and normalize 
-```{r}
+```{r, include=F}
 mirna_counts <- read.csv("../output/Molecular/smRNA/shortstack/putative_miRNA_counts.csv") # AST-1105 already removed from the df 
 mirna_counts_df <- as.data.frame(mirna_counts)
 rownames(mirna_counts_df) <- mirna_counts_df$X
@@ -66,6 +74,9 @@ colnames(mirna_counts_df) <- ifelse(
   gsub("\\.", "-", colnames(mirna_counts_df)),
   colnames(mirna_counts_df))
 
+# Reorder count matrices to match metadata sample order
+mirna_counts <- mirna_counts_df[, metadata$sample]
+
 # Normalize 
 dds_mirna <- DESeqDataSetFromMatrix(
   countData = mirna_counts_df,
@@ -74,6 +85,8 @@ dds_mirna <- DESeqDataSetFromMatrix(
 vsd_mirna <- varianceStabilizingTransformation(dds_mirna, blind = FALSE)
 mirna_norm <- assay(vsd_mirna)
 ```
+
+## Read in interaction data 
 
 Read in miranda data - 1kb 3'UTR binding 
 ```{r}
@@ -132,7 +145,7 @@ miranda_data <- unique(miranda_data)
 
 Check data 
 ```{r}
-cat("=== DATA DIMENSIONS ===\n")
+# Data dimensions
 cat("mRNA genes:", nrow(mrna_counts_df), "\n")
 cat("mRNA samples:", ncol(mrna_counts_df), "\n")
 cat("miRNA:", nrow(mirna_counts_df), "\n")
@@ -141,7 +154,6 @@ cat("Metadata rows:", nrow(metadata), "\n")
 cat("Predicted interactions:", nrow(miranda_data), "\n\n")
 
 # Check that sample names match
-cat("=== SAMPLE NAME CHECK ===\n")
 cat("Samples in mRNA data:", paste(colnames(mrna_counts_df), collapse = ", "), "...\n")
 cat("Samples in miRNA data:", paste(colnames(mirna_counts_df), collapse = ", "), "...\n")
 cat("Samples in metadata:", paste(metadata$sample), collapse = ", ", "...\n\n")
@@ -151,255 +163,55 @@ all_match <- all(colnames(mrna_counts_df) == metadata$sample) &
              all(colnames(mirna_counts_df) == metadata$sample)
 cat("Do all samples match? ", all_match, "\n\n")
 
-cat("=== INTERACTION PREDICTIONS ===\n")
+# Check interaction predictions
 cat("Column names in interactions:", paste(colnames(miranda_data), collapse = ", "), "\n")
 head(miranda_data)
 table(miranda_data$binding_type)
 ```
 
-Normalize counts and check interactions
+## Remove any miRNAs or mRNA not expressed from miranda data 
+
+Some miRNAs and mRNAs were not expressed in our data but interactions were still predicted with these data. Remove the miRNAs and mRNAs not expressed from the interaction data 
 ```{r}
-# ==========================================
-# STEP 1D: Reorder samples to match metadata
-# ==========================================
+# Check which genes/miRNAs are missing
+mirnas_in_interactions <- unique(miranda_data$miRNA)
+mrnas_in_interactions <- unique(miranda_data$mRNA)
 
-# Reorder count matrices to match metadata sample order
-mrna_counts <- mrna_counts_df[, metadata$sample]
-mirna_counts <- mirna_counts_df[, metadata$sample]
+mirnas_in_counts <- rownames(mirna_norm)
+mrnas_in_counts <- rownames(mrna_norm)
 
-# Verify they match now
-cat("=== VERIFY SAMPLE ORDER ===\n")
-cat("Do samples match now? ", 
-    all(colnames(mrna_counts) == metadata$sample) & 
-    all(colnames(mirna_counts) == metadata$sample), "\n\n")
-
-# ==========================================
-# STEP 1E: Check interaction data
-# ==========================================
-
-cat("=== INTERACTION BREAKDOWN ===\n")
-cat("Total predicted interactions:", nrow(miranda_data), "\n")
-cat("  3'UTR interactions:", sum(miranda_data$binding_type == "3'UTR"), "\n")
-cat("  CDS interactions:", sum(miranda_data$binding_type == "CDS"), "\n\n")
-
-# How many unique miRNAs and mRNAs in predictions?
-cat("Unique miRNAs in predictions:", length(unique(miranda_data$miRNA)), "\n")
-cat("Unique mRNAs in predictions:", length(unique(miranda_data$mRNA)), "\n\n")
-
-# Are all predicted miRNAs in your count data?
-mirnas_in_predictions <- unique(miranda_data$miRNA)
-mirnas_in_counts <- rownames(mirna_counts)
-cat("miRNAs in predictions but not in counts:", 
-    sum(!mirnas_in_predictions %in% mirnas_in_counts), "\n")
-
-# Are all predicted mRNAs in your count data?
-mrnas_in_predictions <- unique(miranda_data$mRNA)
-mrnas_in_counts <- rownames(mrna_counts)
-cat("mRNAs in predictions but not in counts:", 
-    sum(!mrnas_in_predictions %in% mrnas_in_counts), "\n\n")
-
-# ==========================================
-# STEP 1F: Normalize counts
-# ==========================================
-
-cat("=== NORMALIZING DATA ===\n")
-
-# mRNA normalization
-cat("Normalizing mRNA data...\n")
-dds_mrna <- DESeqDataSetFromMatrix(
-  countData = mrna_counts,
-  colData = metadata,
-  design = ~ 1
-)
-
-# Variance stabilizing transformation
-vsd_mrna <- vst(dds_mrna, blind = FALSE)
-mrna_norm <- assay(vsd_mrna)
-
-cat("mRNA normalization complete.\n\n")
-
-# miRNA normalization
-cat("Normalizing miRNA data...\n")
-dds_mirna <- DESeqDataSetFromMatrix(
-  countData = mirna_counts,
-  colData = metadata,
-  design = ~ 1
-)
-
-vsd_mirna <- varianceStabilizingTransformation(dds_mirna, blind = FALSE)
-mirna_norm <- assay(vsd_mirna)
-
-cat("miRNA normalization complete.\n\n")
-
-# ==========================================
-# STEP 1G: Basic expression QC
-# ==========================================
-
-cat("=== EXPRESSION SUMMARY ===\n")
-
-# Mean expression per miRNA (across all samples)
-mirna_mean_expr <- rowMeans(mirna_norm)
-cat("miRNA expression range:", round(min(mirna_mean_expr), 2), "to", 
-    round(max(mirna_mean_expr), 2), "\n")
-
-# How many miRNAs are highly expressed?
-high_expr_mirnas <- names(mirna_mean_expr)[mirna_mean_expr > median(mirna_mean_expr)]
-cat("Highly expressed miRNAs (above median):", length(high_expr_mirnas), "\n")
-
-# ==========================================
-# STEP 1H: Filter low-variance features
-# ==========================================
-
-cat("=== FILTERING LOW-VARIANCE FEATURES ===\n")
-
-# Calculate variance for each feature
-mrna_var <- apply(mrna_norm, 1, var)
-mirna_var <- apply(mirna_norm, 1, var)
-
-# Set minimum variance threshold (you can adjust this)
-min_var_threshold <- 0.01
-
-# Filter
-mrna_keep <- names(mrna_var)[mrna_var > min_var_threshold & !is.na(mrna_var)]
-mirna_keep <- names(mirna_var)[mirna_var > min_var_threshold & !is.na(mirna_var)]
-
-cat("mRNAs passing variance filter:", length(mrna_keep), "of", nrow(mrna_norm), "\n")
-cat("miRNAs passing variance filter:", length(mirna_keep), "of", nrow(mirna_norm), "\n\n")
-
-# Create filtered versions
-mrna_norm_filtered <- mrna_norm[mrna_keep, ]
-mirna_norm_filtered <- mirna_norm[mirna_keep, ]
-
-# Filter interactions to only include genes/miRNAs that passed filters
-interactions_filtered <- miranda_data %>%
-  filter(miRNA %in% mirna_keep, mRNA %in% mrna_keep)
-
-cat("Interactions after filtering:", nrow(interactions_filtered), "of", nrow(miranda_data), "\n\n")
-
-# ==========================================
-# STEP 1I: Summary of what we'll analyze
-# ==========================================
-
-cat("=== READY FOR ANALYSIS ===\n")
-cat("miRNAs to analyze:", length(mirna_keep), "\n")
-cat("mRNAs to analyze:", length(mrna_keep), "\n")
-cat("Predicted interactions to test:", nrow(interactions_filtered), "\n")
-cat("  3'UTR:", sum(interactions_filtered$binding_type == "3'UTR"), "\n")
-cat("  CDS:", sum(interactions_filtered$binding_type == "CDS"), "\n")
-cat("\nSamples per condition:\n")
-print(table(metadata$timepoint, metadata$treatment))
-```
-
-miR-100 = Cluster 2003
-miR-2022 = Cluster_3853
-miR-2025 = Cluster_1340
-miR-2036 = Cluster_1772
-
-```{r}
-# ==========================================
-# STEP 1J: Save processed data
-# ==========================================
-
-# Save normalized data and filtered interactions
-# saveRDS(mrna_norm_filtered, "mrna_normalized.rds")
-# saveRDS(mirna_norm_filtered, "mirna_normalized.rds")
-# saveRDS(interactions_filtered, "interactions_filtered.rds")
-# saveRDS(metadata, "metadata.rds")
-# 
-# cat("Data saved!\n\n")
-
-# ==========================================
-# STEP 1K: Quick QC visualization
-# ==========================================
-
-# PCA to see if samples cluster by timepoint
-# (Just to confirm your seasonal pattern exists in the data)
-
-# For miRNA
-pca_mirna <- prcomp(t(mirna_norm_filtered), scale. = TRUE)
-pca_mirna_df <- as.data.frame(pca_mirna$x[, 1:2]) %>%
-  rownames_to_column("sample") %>%
-  left_join(metadata, by = "sample")
-
-# Variance explained
-var_explained_mirna <- round(100 * summary(pca_mirna)$importance[2, 1:2], 1)
-
-# Plot
-p1 <- ggplot(pca_mirna_df, aes(x = PC1, y = PC2, color = timepoint, shape = treatment)) +
-  geom_point(size = 4) +
-  theme_minimal() +
-  labs(
-    title = "miRNA expression - PCA",
-    x = paste0("PC1 (", var_explained_mirna[1], "%)"),
-    y = paste0("PC2 (", var_explained_mirna[2], "%)")
-  ) +
-  scale_color_manual(values = c("TP0" = "#3B4CC0", "TP5" = "#B40426", "TP7" = "#F0E442"))
-
-print(p1)
-
-# Sample correlation heatmap for miRNA
-sample_cor_mirna <- cor(mirna_norm_filtered, method = "spearman")
-
-# Annotation for heatmap
-annotation_col <- metadata %>%
-  select(sample, timepoint, treatment) %>%
-  column_to_rownames("sample")
-
-pheatmap(sample_cor_mirna,
-         annotation_col = annotation_col,
-         annotation_row = annotation_col,
-         main = "Sample-to-sample correlation (miRNA)",
-         show_rownames = FALSE,
-         show_colnames = FALSE)
-
-# ==========================================
-# STEP 1L: Expression of key miRNAs
-# ==========================================
-
-# Look at your key miRNAs across conditions
-# miR-100 = Cluster_2003
-# miR-2022 = Cluster_3853
-# miR-2025 = Cluster_1340
-# miR-2036 = Cluster_1772
-key_mirnas <- c("Cluster_2003", "Cluster_3853", "Cluster_1340", "Cluster_1772")
-key_present <- key_mirnas[key_mirnas %in% rownames(mirna_norm_filtered)]
-
-if (length(key_present) > 0) {
-  
-  # Get expression data for key miRNAs
-  key_expr <- mirna_norm_filtered[key_present, , drop = FALSE] %>%
-    as.data.frame() %>%
-    rownames_to_column("miRNA") %>%
-    pivot_longer(-miRNA, names_to = "sample", values_to = "expression") %>%
-    left_join(metadata, by = "sample")
-  
-  # Plot
-  p2 <- ggplot(key_expr, aes(x = timepoint, y = expression, color = treatment)) +
-    geom_point(size = 3, position = position_jitter(width = 0.1)) +
-    facet_wrap(~miRNA, scales = "free_y") +
-    theme_minimal() +
-    labs(
-      title = "Expression of key miRNAs",
-      y = "Normalized expression (VST)"
-    )
-  
-  print(p2)
-  
-} else {
-  cat("Key miRNAs not found in data. Check miRNA names.\n")
-  cat("Available miRNAs:\n")
-  print(head(rownames(mirna_norm_filtered), 20))
+# miRNAs missing
+missing_mirnas <- setdiff(mirnas_in_interactions, mirnas_in_counts)
+cat("miRNAs in interactions but NOT in expression data:", length(missing_mirnas), "\n")
+if (length(missing_mirnas) > 0) {
+  cat("Examples:", head(missing_mirnas, 5), "\n")
 }
+
+# mRNAs missing
+missing_mrnas <- setdiff(mrnas_in_interactions, mrnas_in_counts)
+cat("\nmRNAs in interactions but NOT in expression data:", length(missing_mrnas), "\n")
+if (length(missing_mrnas) > 0) {
+  cat("Examples:", head(missing_mrnas, 5), "\n")
+}
+
+# Filter interactions to only include those present in expression data 
+miranda_data_filtered <- miranda_data %>%
+  filter(miRNA %in% mirnas_in_counts,
+         mRNA %in% mrnas_in_counts)
+
+cat("Filtered interactions:", nrow(miranda_data_filtered), "\n")
+cat("Removed:", nrow(miranda_data) - nrow(miranda_data_filtered), "interactions\n\n")
+
+# Verify all are present now
+cat("Verification:\n")
+cat("All miRNAs present?", all(miranda_data_filtered$miRNA %in% mirnas_in_counts), "\n")
+cat("All mRNAs present?", all(miranda_data_filtered$mRNA %in% mrnas_in_counts), "\n\n")
 ```
 
-Correlation time! 
-```{r}
-# Load saved objects (if starting fresh)
-# mrna_norm_filtered <- readRDS("mrna_normalized.rds")
-# mirna_norm_filtered <- readRDS("mirna_normalized.rds")
-# interactions_filtered <- readRDS("interactions_filtered.rds")
-# metadata <- readRDS("metadata.rds")
+## Perform correlation analysis 
 
+Correlation time! Using spearman's correlation coefficient because it is non-parametric and robust against outliers.  
+```{r}
 # Function to calculate correlations for one condition
 calculate_condition_correlations <- function(mrna_data, mirna_data, 
                                              interactions_df,
@@ -412,8 +224,8 @@ calculate_condition_correlations <- function(mrna_data, mirna_data,
   
   # Get samples for this condition
   samples <- metadata %>% 
-    filter(timepoint == timepoint_val, treatment == treatment_val) %>% 
-    pull(sample)
+    dplyr::filter(timepoint == timepoint_val, treatment == treatment_val) %>% 
+    dplyr::pull(sample)
   
   n_samples <- length(samples)
   cat("  N samples:", n_samples, "\n")
@@ -460,1182 +272,69 @@ calculate_condition_correlations <- function(mrna_data, mirna_data,
   return(correlations)
 }
 
-# ==========================================
-# STEP 2B: Calculate for all conditions
-# ==========================================
-
-cat("=== CALCULATING CORRELATIONS FOR ALL CONDITIONS ===\n\n")
-
+# Calculate correlations for all conditions 
 all_correlations <- bind_rows(
   calculate_condition_correlations(
-    mrna_norm_filtered, mirna_norm_filtered, 
-    interactions_filtered, metadata,
-    "TP0", "Acclimation"
-  ),
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,  
+    "TP0", "Acclimation"),
   calculate_condition_correlations(
-    mrna_norm_filtered, mirna_norm_filtered, 
-    interactions_filtered, metadata,
-    "TP5", "Ambient"
-  ),
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP5", "Ambient"),
   calculate_condition_correlations(
-    mrna_norm_filtered, mirna_norm_filtered, 
-    interactions_filtered, metadata,
-    "TP5", "Heat"
-  ),
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP5", "Heat"),
   calculate_condition_correlations(
-    mrna_norm_filtered, mirna_norm_filtered, 
-    interactions_filtered, metadata,
-    "TP7", "Ambient"
-  ),
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP7", "Ambient"),
   calculate_condition_correlations(
-    mrna_norm_filtered, mirna_norm_filtered, 
-    interactions_filtered, metadata,
-    "TP7", "Heat"
-  )
-)
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP7", "Heat"))
+length(unique(all_correlations$miRNA))
+length(unique(all_correlations$mRNA))
+```
 
-# ==========================================
-# STEP 2C: Multiple testing correction
-# ==========================================
-
-cat("=== APPLYING MULTIPLE TESTING CORRECTION ===\n")
-
+Apply multiple testing correction for pvalues 
+```{r}
 all_correlations <- all_correlations %>%
   mutate(
     p_adj = p.adjust(p_value, method = "BH"),
-    pair_id = paste(miRNA, mRNA, sep = "_")
-  )
+    pair_id = paste(miRNA, mRNA, sep = "_"))
 
 cat("Total correlation tests:", nrow(all_correlations), "\n")
 cat("Significant at FDR < 0.05:", sum(all_correlations$p_adj < 0.05), "\n")
 cat("Significant at FDR < 0.01:", sum(all_correlations$p_adj < 0.01), "\n\n")
-
-# ==========================================
-# STEP 2D: Summary statistics
-# ==========================================
-
-cat("=== SUMMARY BY CONDITION ===\n")
-
-summary_by_condition <- all_correlations %>%
-  group_by(timepoint, treatment, n_samples) %>%
-  summarise(
-    n_tested = n(),
-    n_sig_05 = sum(p_adj < 0.05),
-    n_sig_01 = sum(p_adj < 0.01),
-    prop_sig = n_sig_05 / n_tested,
-    mean_abs_cor = mean(abs(cor_value)),
-    median_cor = median(cor_value),
-    n_negative = sum(cor_value < 0 & p_adj < 0.05),
-    n_positive = sum(cor_value > 0 & p_adj < 0.05),
-    prop_negative_of_sig = n_negative / n_sig_05,
-    .groups = "drop"
-  )
-
-print(summary_by_condition)
-
-# Save summary
-#write_csv(summary_by_condition, "correlation_summary_by_condition.csv")
-
-# ==========================================
-# STEP 2E: Save results
-# ==========================================
-
-#saveRDS(all_correlations, "all_correlations.rds")
-write.csv(all_correlations, "../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
-all_correlations <- read.csv("../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
-
-#cat("\n=== DATA SAVED ===\n")
-#cat("Saved to: all_correlations.rds and all_correlations.csv\n\n")
-
-# ==========================================
-# STEP 2F: Quick visualizations
-# ==========================================
-
-# Distribution of correlations by condition
-p1 <- ggplot(all_correlations, 
-             aes(x = cor_value, fill = timepoint)) +
-  geom_density(alpha = 0.6) +
-  facet_wrap(~treatment, ncol = 1) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  theme_minimal() +
-  labs(
-    subtitle = "Predicted miRNA-mRNA interactions",
-    x = "Spearman correlation",
-    y = "Density"
-  ) +
-  scale_fill_manual(values = c("TP0" = "#3B4CC0", "TP5" = "#B40426", "TP7" = "#F0E442"))
-
-print(p1)
-
-# Negative vs positive correlations
-all_correlations <- all_correlations %>%
-  mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) #%>%
-  #dplyr::count(timepoint, treatment, cor_type)
-
-p2 <- all_correlations %>%
-  #filter(p_adj < 0.05) %>%
-  #mutate(cor_type = ifelse(cor_value < 0, "Negative", "Positive")) %>%
-  #dplyr::count(timepoint, treatment, cor_type) %>%
-  ggplot(aes(x = timepoint, y = n, fill = cor_type)) +
-  geom_col(position = "dodge") +
-  facet_wrap(~treatment) +
-  theme_minimal() +
-  labs(
-    title = "Negative vs Positive correlations",
-    y = "Number of interactions",
-    fill = "Correlation"
-  ) +
-  scale_fill_manual(values = c("Negative" = "#377EB8", "Positive" = "#E41A1C"))
-
-print(p2)
-
-# Correlation strength by binding type
-p3 <- all_correlations %>%
-  #filter(p_adj < 0.05) %>%
-  ggplot(aes(x = binding_type, y = abs(cor_value), fill = binding_type)) +
-  geom_boxplot() +
-  facet_wrap(~timepoint) +
-  theme_minimal() +
-  labs(
-    title = "Correlation strength by binding type",
-    subtitle = "3'UTR vs CDS predictions",
-    y = "|Spearman correlation|",
-    x = ""
-  ) +
-  theme(legend.position = "none")
-
-print(p3)
 ```
 
-Filter so that miRNA expression is greater than mRNA expression
+Save correlation df
+```{r}
+write.csv(all_correlations, "../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
+```
+
+## Filter correlation data
+
+Filter so that miRNA expression is greater than mRNA expression (to stay in line with canonical mechanism of miRNA repression)
 ```{r}
 all_correlations_high_miRNA <- all_correlations %>%
   filter(mean_expr_miRNA > mean_expr_mRNA)
+length(unique(all_correlations_high_miRNA$miRNA))
+length(unique(all_correlations_high_miRNA$mRNA))
 ```
 
+## Calculate bipartite network metrics 
 
+Calculate the following network metrics for each condition (TP0, TP5 ambient, TP5 heat, TP7 ambient, TP7 heat):
+- Degree - number of target mRNAs per miRNA
+- Betweenness - fewest number of targets to connect to another miRNA. High betweenness = connector miRNA, connected to other miRNA networks; low betweenness = less connected to other miRNA networks, more peripheral. Range from 0 to infinite. 
+- Degree of specialization (d') - the selectivity of miRNA with their targets. Ranges from 0 to 1, with 1 being a perfect specialist (ie miRNA and its targets are completely disconnected from other miRNAs and their targets).
 
+These metrics were derived from [Despard et al. 2025](https://onlinelibrary.wiley.com/doi/10.1002/ece3.71351).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Using correlation strength instead of pvalue as a cutoff
-```{r}
-# ==========================================
-# STEP 3A: Define correlation strength categories
-# ==========================================
-
-cat("=== CLASSIFYING CORRELATIONS BY STRENGTH ===\n\n")
-
-# Add categories based on correlation strength
-all_correlations_classified <- all_correlations_high_miRNA %>%
-  mutate(
-    # Correlation strength category
-    cor_strength = case_when(
-      abs(cor_value) >= 0.7 ~ "Strong",
-      abs(cor_value) >= 0.5 ~ "Moderate",
-      abs(cor_value) >= 0.3 ~ "Weak",
-      TRUE ~ "Very weak"
-    ),
-    # Direction
-    cor_direction = case_when(
-      cor_value < -0.5 ~ "Strong negative",
-      cor_value < 0 ~ "Weak negative", 
-      cor_value > 0.5 ~ "Strong positive",
-      TRUE ~ "Weak positive"
-    ),
-    # Simple direction
-    direction = ifelse(cor_value < 0, "Negative", "Positive")
-  )
-
-# Summary by strength
-strength_summary <- all_correlations_classified %>%
-  dplyr::count(timepoint, treatment, cor_strength, direction) %>%
-  pivot_wider(names_from = direction, values_from = n, values_fill = 0) %>%
-  arrange(timepoint, treatment, cor_strength)
-
-cat("Correlation strength distribution:\n")
-print(strength_summary)
-
-# ==========================================
-# STEP 3B: Focus on strong correlations
-# ==========================================
-
-# Define threshold for "strong" correlation
-strong_threshold <- 0.6  # You can adjust this
-
-strong_correlations <- all_correlations_classified %>%
-  filter(abs(cor_value) >= strong_threshold)
-
-cat("\n=== STRONG CORRELATIONS (|r| >=", strong_threshold, ") ===\n")
-cat("Total strong correlations:", nrow(strong_correlations), "\n")
-
-strong_summary <- strong_correlations %>%
-  group_by(timepoint, treatment) %>%
-  summarise(
-    n_strong = n(),
-    n_negative = sum(cor_value < 0),
-    n_positive = sum(cor_value > 0),
-    prop_negative = n_negative / n_strong,
-    mean_cor = mean(cor_value),
-    .groups = "drop"
-  )
-
-print(strong_summary)
-
-# By binding type
-strong_by_type <- strong_correlations %>%
-  dplyr::count(timepoint, treatment, binding_type, direction) %>%
-  pivot_wider(names_from = direction, values_from = n, values_fill = 0)
-
-cat("\nStrong correlations by binding type:\n")
-print(strong_by_type)
-
-# ==========================================
-# STEP 3C: Identify interaction patterns across conditions
-# ==========================================
-
-cat("\n=== ANALYZING PATTERNS ACROSS CONDITIONS ===\n")
-
-# For each miRNA-mRNA pair, get correlations across all conditions
-interaction_patterns <- all_correlations_classified %>%
-  group_by(miRNA, mRNA, pair_id, binding_type) %>%
-  summarise(
-    # How many conditions tested
-    n_conditions = n(),
-    
-    # Correlation statistics across conditions
-    mean_cor = mean(cor_value),
-    sd_cor = sd(cor_value),
-    min_cor = min(cor_value),
-    max_cor = max(cor_value),
-    range_cor = max_cor - min_cor,
-    
-    # How many are strong
-    n_strong = sum(abs(cor_value) >= strong_threshold),
-    
-    # Direction consistency
-    all_negative = all(cor_value < 0),
-    all_positive = all(cor_value > 0),
-    switches_sign = any(cor_value > 0) & any(cor_value < 0),
-    
-    # Predominant direction
-    mostly_negative = sum(cor_value < 0) >= 3,
-    mostly_positive = sum(cor_value > 0) >= 3,
-    
-    .groups = "drop"
-  )
-
-# ==========================================
-# STEP 3D: Classify interaction types
-# ==========================================
-
-interaction_classified <- interaction_patterns %>%
-  mutate(
-    interaction_type = case_when(
-      # Constitutive strong repression
-      all_negative & n_strong >= 3 ~ "Constitutive repression",
-      
-      # Constitutive activation/co-regulation
-      all_positive & n_strong >= 3 ~ "Constitutive activation",
-      
-      # Mostly negative with strong correlation
-      mostly_negative & n_strong >= 2 ~ "Predominantly repressive",
-      
-      # Mostly positive
-      mostly_positive & n_strong >= 2 ~ "Predominantly activating",
-      
-      # Sign switching (very dynamic)
-      switches_sign & max(abs(c(min_cor, max_cor))) >= 0.5 ~ "Context-dependent",
-      
-      # Large range (dynamic but same sign)
-      range_cor >= 0.7 & !switches_sign ~ "Dynamic regulation",
-      
-      # Weak/inconsistent
-      TRUE ~ "Weak/variable"
-    )
-  )
-
-# Summary of interaction types
-type_summary <- interaction_classified %>%
-  dplyr::count(interaction_type, binding_type) %>%
-  arrange(desc(n))
-
-cat("\nInteraction types identified:\n")
-print(type_summary)
-
-# ==========================================
-# STEP 3E: Focus on biologically interesting patterns
-# ==========================================
-
-# Constitutive repressors (canonical miRNA behavior)
-constitutive_repression <- interaction_classified %>%
-  filter(interaction_type == "Constitutive repression") %>%
-  arrange(mean_cor)
-
-cat("\n=== CONSTITUTIVE REPRESSION ===\n")
-cat("N interactions:", nrow(constitutive_repression), "\n")
-if(nrow(constitutive_repression) > 0) {
-  cat("\nTop 10 strongest:\n")
-  print(head(constitutive_repression %>% select(miRNA, mRNA, mean_cor, binding_type), 10))
-}
-
-# Context-dependent (most interesting for seasonal story!)
-context_dependent <- interaction_classified %>%
-  filter(interaction_type == "Context-dependent") %>%
-  arrange(desc(range_cor))
-
-cat("\n=== CONTEXT-DEPENDENT REGULATION ===\n")
-cat("N interactions:", nrow(context_dependent), "\n")
-if(nrow(context_dependent) > 0) {
-  cat("\nTop 10 most dynamic:\n")
-  print(head(context_dependent %>% select(miRNA, mRNA, min_cor, max_cor, range_cor, binding_type), 10))
-}
-
-# Dynamic regulation (same direction, big changes)
-dynamic_regulation <- interaction_classified %>%
-  filter(interaction_type == "Dynamic regulation") %>%
-  arrange(desc(range_cor))
-
-cat("\n=== DYNAMIC REGULATION ===\n")
-cat("N interactions:", nrow(dynamic_regulation), "\n")
-if(nrow(dynamic_regulation) > 0) {
-  cat("\nTop 10:\n")
-  print(head(dynamic_regulation %>% select(miRNA, mRNA, min_cor, max_cor, range_cor, binding_type), 10))
-}
-
-# ==========================================
-# STEP 3F: Save classified results
-# ==========================================
-
-# saveRDS(all_correlations_classified, "correlations_classified.rds")
-# saveRDS(interaction_classified, "interaction_patterns.rds")
-# 
-# write_csv(all_correlations_classified, "correlations_classified.csv")
-# write_csv(interaction_classified, "interaction_patterns.csv")
-# 
-# # Save specific types for follow-up
-# write_csv(constitutive_repression, "constitutive_repression.csv")
-# write_csv(context_dependent, "context_dependent.csv")
-# write_csv(dynamic_regulation, "dynamic_regulation.csv")
-# 
-# cat("\n=== FILES SAVED ===\n")
-```
-
-Visualizing patterns
-```{r}
-# ==========================================
-# STEP 4A: Detailed look at correlation patterns
-# ==========================================
-
-# Get the full correlation data for each interaction type
-interaction_details <- all_correlations_classified %>%
-  left_join(
-    interaction_classified %>% select(pair_id, interaction_type, range_cor),
-    by = "pair_id"
-  )
-
-# ==========================================
-# STEP 4B: Heatmap of context-dependent interactions
-# ==========================================
-
-# Get top context-dependent interactions
-top_context_dependent <- context_dependent %>%
-  slice_max(range_cor, n = 50) %>%
-  pull(pair_id)
-
-# Get their correlations across conditions
-context_dep_cors <- all_correlations_classified %>%
-  filter(pair_id %in% top_context_dependent) %>%
-  mutate(condition = paste(timepoint, treatment, sep = "_")) %>%
-  select(pair_id, condition, cor_value) %>%
-  pivot_wider(names_from = condition, values_from = cor_value) %>%
-  column_to_rownames("pair_id")
-
-# Plot heatmap
-library(pheatmap)
-
-pheatmap(context_dep_cors,
-         color = colorRampPalette(c("blue", "white", "red"))(100),
-         breaks = seq(-1, 1, length.out = 101),
-         cluster_cols = FALSE,
-         main = "Top 50 context-dependent interactions",
-         fontsize_row = 6,
-         show_rownames = TRUE)
-
-# ==========================================
-# STEP 4C: Examples of each interaction type
-# ==========================================
-
-# Function to plot individual interaction patterns
-plot_interaction_pattern <- function(mirna, mrna, cor_data) {
-  
-  data_to_plot <- cor_data %>%
-    filter(miRNA == mirna, mRNA == mrna) %>%
-    mutate(condition = paste(timepoint, treatment, sep = "\n"))
-  
-  ggplot(data_to_plot, aes(x = condition, y = cor_value)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
-    geom_line(aes(group = 1), linewidth = 1) +
-    geom_point(size = 4, aes(color = cor_value)) +
-    scale_color_gradient2(low = "blue", mid = "white", high = "red", 
-                         midpoint = 0, limits = c(-1, 1)) +
-    theme_minimal() +
-    labs(
-      title = paste(mirna, "→", mrna),
-      y = "Spearman correlation",
-      x = ""
-    ) +
-    theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
-}
-
-# Plot examples of each type
-# Constitutive repression
-if (nrow(constitutive_repression) > 0) {
-  example <- constitutive_repression[1, ]
-  p1 <- plot_interaction_pattern(example$miRNA, example$mRNA, all_correlations_classified)
-  print(p1)
-  #ggsave("example_constitutive_repression.pdf", width = 6, height = 4)
-}
-
-# Context-dependent
-if (nrow(context_dependent) > 0) {
-  example <- context_dependent[1, ]
-  p2 <- plot_interaction_pattern(example$miRNA, example$mRNA, all_correlations_classified)
-  print(p2)
-  #ggsave("example_context_dependent.pdf", width = 6, height = 4)
-}
-
-# ==========================================
-# STEP 4D: Fixed seasonal pattern analysis
-# ==========================================
-
-# We need to compare across timepoints, but treatment changes
-# TP0 = Acclimation (baseline)
-# TP5 = Ambient or Heat
-# TP7 = Ambient or Heat
-
-# Strategy: Compare ambient conditions only (TP5 & TP7)
-# And use TP0 as baseline
-
-# First, get TP0 correlations (baseline)
-tp0_correlations <- all_correlations_classified %>%
-  filter(timepoint == "TP0") %>%
-  select(miRNA, mRNA, pair_id, cor_TP0 = cor_value, binding_type)
-
-# Get TP5 Ambient
-tp5_ambient <- all_correlations_classified %>%
-  filter(timepoint == "TP5", treatment == "Ambient") %>%
-  select(miRNA, mRNA, pair_id, cor_TP5_Ambient = cor_value)
-
-# Get TP7 Ambient
-tp7_ambient <- all_correlations_classified %>%
-  filter(timepoint == "TP7", treatment == "Ambient") %>%
-  select(miRNA, mRNA, pair_id, cor_TP7_Ambient = cor_value)
-
-# Combine - seasonal progression under ambient conditions
-seasonal_pattern <- tp0_correlations %>%
-  left_join(tp5_ambient, by = c("miRNA", "mRNA", "pair_id")) %>%
-  left_join(tp7_ambient, by = c("miRNA", "mRNA", "pair_id")) %>%
-  mutate(
-    # Changes between timepoints
-    change_TP0_to_TP5 = cor_TP5_Ambient - cor_TP0,
-    change_TP5_to_TP7 = cor_TP7_Ambient - cor_TP5_Ambient,
-    change_TP0_to_TP7 = cor_TP7_Ambient - cor_TP0,
-    
-    # Maximum absolute change
-    max_change = pmax(
-      abs(change_TP0_to_TP5), 
-      abs(change_TP5_to_TP7),
-      abs(change_TP0_to_TP7),
-      na.rm = TRUE
-    )
-  )
-
-# Check the structure
-cat("=== SEASONAL PATTERN DATA ===\n")
-cat("Total interactions:", nrow(seasonal_pattern), "\n")
-cat("Complete data (all 3 timepoints):", sum(complete.cases(seasonal_pattern)), "\n\n")
-
-# Look at big seasonal changes
-big_seasonal_changes <- seasonal_pattern %>%
-  filter(complete.cases(.)) %>%  # Only keep complete data
-  filter(max_change > 0.7) %>%
-  arrange(desc(max_change))
-
-cat("=== BIG SEASONAL CHANGES (ambient conditions) ===\n")
-cat("N interactions with |Δr| > 0.7:", nrow(big_seasonal_changes), "\n\n")
-
-if (nrow(big_seasonal_changes) > 0) {
-  cat("Top 10:\n")
-  print(head(big_seasonal_changes %>% 
-             select(miRNA, mRNA, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient, 
-                    max_change, binding_type), 10))
-}
-
-# Summary statistics
-seasonal_summary <- seasonal_pattern %>%
-  filter(complete.cases(.)) %>%
-  summarise(
-    n_total = n(),
-    mean_change_TP0_to_TP5 = mean(abs(change_TP0_to_TP5)),
-    mean_change_TP5_to_TP7 = mean(abs(change_TP5_to_TP7)),
-    mean_change_TP0_to_TP7 = mean(abs(change_TP0_to_TP7)),
-    n_big_change = sum(max_change > 0.7),
-    n_moderate_change = sum(max_change > 0.5 & max_change <= 0.7)
-  )
-
-cat("\n=== SEASONAL CHANGE SUMMARY ===\n")
-print(seasonal_summary)
-```
-
-```{r}
-# ==========================================
-# ANSWER QUESTION 1: Complete data across timepoints
-# ==========================================
-
-# How many interactions have data at all 3 timepoints?
-n_complete <- seasonal_pattern %>%
-  filter(!is.na(cor_TP0) & !is.na(cor_TP5_Ambient) & !is.na(cor_TP7_Ambient)) %>%
-  nrow()
-
-cat("Q1: Interactions with complete data (all 3 timepoints):", n_complete, "\n\n")
-
-# ==========================================
-# ANSWER QUESTION 2: Big seasonal changes
-# ==========================================
-
-# Count interactions with big changes (|Δr| > 0.7)
-big_changes <- seasonal_pattern %>%
-  filter(!is.na(max_change)) %>%  # Remove NAs
-  filter(max_change > 0.7)
-
-n_big_changes <- nrow(big_changes)
-
-cat("Q2: Interactions with BIG seasonal changes (|Δr| > 0.7):", n_big_changes, "\n\n")
-
-# Show some examples
-cat("Examples of big seasonal changes:\n")
-print(head(big_changes %>% 
-           select(miRNA, mRNA, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient, max_change), 10))
-
-# ==========================================
-# ANSWER QUESTION 3: Which transition is bigger?
-# ==========================================
-
-# Compare the magnitude of changes between transitions
-transition_comparison <- seasonal_pattern %>%
-  filter(!is.na(change_TP0_to_TP5) & !is.na(change_TP5_to_TP7)) %>%
-  summarise(
-    # Average absolute change for each transition
-    mean_change_Feb_to_June = mean(abs(change_TP0_to_TP5)),
-    mean_change_June_to_Aug = mean(abs(change_TP5_to_TP7)),
-    mean_change_Feb_to_Aug = mean(abs(change_TP0_to_TP7)),
-    
-    # How many show bigger change in each period
-    n_bigger_change_Feb_to_June = sum(abs(change_TP0_to_TP5) > abs(change_TP5_to_TP7)),
-    n_bigger_change_June_to_Aug = sum(abs(change_TP5_to_TP7) > abs(change_TP0_to_TP5)),
-    
-    # Total tested
-    n_total = n()
-  )
-
-cat("\nQ3: Which seasonal transition shows bigger changes?\n")
-print(transition_comparison)
-
-cat("\nInterpretation:\n")
-cat("- If mean_change_Feb_to_June > mean_change_June_to_Aug: Winter→Summer transition is bigger\n")
-cat("- If mean_change_June_to_Aug > mean_change_Feb_to_June: Summer→Late summer transition is bigger\n\n")
-
-# ==========================================
-# BONUS: Visualize the patterns
-# ==========================================
-
-# Distribution of changes
-library(ggplot2)
-
-change_data <- seasonal_pattern %>%
-  filter(!is.na(change_TP0_to_TP5) & !is.na(change_TP5_to_TP7)) %>%
-  select(pair_id, change_TP0_to_TP5, change_TP5_to_TP7) %>%
-  pivot_longer(cols = c(change_TP0_to_TP5, change_TP5_to_TP7),
-               names_to = "transition",
-               values_to = "change") %>%
-  mutate(transition = recode(transition,
-                             "change_TP0_to_TP5" = "Feb → June",
-                             "change_TP5_to_TP7" = "June → Aug"))
-
-p1 <- ggplot(change_data, aes(x = change, fill = transition)) +
-  geom_density(alpha = 0.6) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  theme_minimal() +
-  labs(
-    title = "Seasonal changes in miRNA-mRNA correlations",
-    x = "Change in correlation (Δr)",
-    y = "Density",
-    fill = "Transition"
-  )
-
-print(p1)
-
-# Box plot comparison
-p2 <- ggplot(change_data, aes(x = transition, y = abs(change), fill = transition)) +
-  geom_boxplot() +
-  theme_minimal() +
-  labs(
-    title = "Magnitude of seasonal changes",
-    x = "",
-    y = "|Change in correlation|",
-    fill = ""
-  ) +
-  theme(legend.position = "none")
-
-print(p2)
-
-# ==========================================
-# DETAILED BREAKDOWN
-# ==========================================
-
-# Categorize the seasonal patterns
-seasonal_categories <- seasonal_pattern %>%
-  filter(!is.na(max_change)) %>%
-  mutate(
-    pattern = case_when(
-      # Big increase over time
-      change_TP0_to_TP7 > 0.7 ~ "Strong increase",
-      # Big decrease over time  
-      change_TP0_to_TP7 < -0.7 ~ "Strong decrease",
-      # U-shape (decreases then increases)
-      change_TP0_to_TP5 < -0.5 & change_TP5_to_TP7 > 0.5 ~ "U-shape",
-      # Inverted U (increases then decreases)
-      change_TP0_to_TP5 > 0.5 & change_TP5_to_TP7 < -0.5 ~ "Inverted U",
-      # Relatively stable
-      max_change < 0.3 ~ "Stable",
-      # Everything else
-      TRUE ~ "Variable"
-    )
-  )
-
-cat("\n=== SEASONAL PATTERN CATEGORIES ===\n")
-pattern_counts <- table(seasonal_categories$pattern)
-print(pattern_counts)
-
-cat("\nExamples of each pattern type:\n")
-for (pattern_type in names(pattern_counts)) {
-  examples <- seasonal_categories %>%
-    filter(pattern == pattern_type) %>%
-    head(3) %>%
-    select(miRNA, mRNA, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient, pattern)
-  
-  if (nrow(examples) > 0) {
-    cat("\n", pattern_type, ":\n")
-    print(examples)
-  }
-}
-```
-
-```{r}
-# ==========================================
-# VISUALIZATION 1: Summary bar chart with examples
-# ==========================================
-
-library(tidyverse)
-library(patchwork)
-library(ggrepel)
-
-# A. Overall pattern distribution
-p_summary <- seasonal_categories %>%
-  dplyr::count(pattern) %>%
-  mutate(pattern = fct_reorder(pattern, n)) %>%
-  ggplot(aes(x = pattern, y = n, fill = pattern)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = scales::comma(n)), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  theme_minimal(base_size = 12) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "Seasonal regulatory patterns",
-    subtitle = paste0(nrow(seasonal_categories), " predicted miRNA-mRNA interactions"),
-    x = "",
-    y = "Number of interactions"
-  ) +
-  theme(panel.grid.minor = element_blank())
-
-print(p_summary)
-#ggsave("../output/Molecular/interactions/networks/seasonal_pattern_summary_barplot.pdf", width = 8, height = 5)
-
-# ==========================================
-# VISUALIZATION 2: Line trajectories (small multiples)
-# ==========================================
-
-# Get example interactions for each pattern (median trajectory)
-# pattern_examples <- seasonal_categories %>%
-#   group_by(pattern) %>%
-#   # Get interactions closest to median correlation at each timepoint
-#   mutate(
-#     dist_from_median = abs(cor_TP0 - median(cor_TP0)) + 
-#                        abs(cor_TP5_Ambient - median(cor_TP5_Ambient)) + 
-#                        abs(cor_TP7_Ambient - median(cor_TP7_Ambient))
-#   ) %>%
-#   slice_min(dist_from_median, n = 100) %>%  # Top 50 most "typical" per pattern
-#   ungroup()
-
-# Reshape for plotting
-trajectory_data <- seasonal_categories %>%
-  select(pattern, miRNA, mRNA, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient) %>%
-  pivot_longer(
-    cols = c(cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient),
-    names_to = "timepoint",
-    values_to = "correlation"
-  ) %>%
-  mutate(
-    timepoint = recode(timepoint,
-                      "cor_TP0" = "Feb",
-                      "cor_TP5_Ambient" = "June", 
-                      "cor_TP7_Ambient" = "Aug"),
-    timepoint = factor(timepoint, levels = c("Feb", "June", "Aug")),
-    interaction_id = paste(miRNA, mRNA, sep = "_")
-  )
-
-# Calculate mean trajectory per pattern
-mean_trajectory <- trajectory_data %>%
-  group_by(pattern, timepoint) %>%
-  summarise(
-    mean_cor = mean(correlation, na.rm = T),
-    se_cor = sd(correlation, na.rm = T) / sqrt(n()),
-    .groups = "drop")
-
-# Plot
-p_trajectories <- ggplot(trajectory_data, 
-                         aes(x = timepoint, y = correlation, group = interaction_id)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", linewidth = 0.3) +
-  # Individual trajectories (faint)
-  geom_line(alpha = 0.1, color = "gray30") +
-  # Mean trajectory (bold)
-  geom_line(data = mean_trajectory,
-            aes(x = timepoint, y = mean_cor, group = 1),
-            color = "red", linewidth = 1.5, inherit.aes = FALSE) +
-  geom_point(data = mean_trajectory,
-             aes(x = timepoint, y = mean_cor, group = 1),
-             color = "red", size = 3, inherit.aes = FALSE) +
-  # Ribbon for SE
-  geom_ribbon(data = mean_trajectory,
-              aes(x = timepoint, y = mean_cor,
-                  ymin = mean_cor - se_cor, ymax = mean_cor + se_cor,
-                  group = 1),
-              alpha = 0.2, fill = "red", inherit.aes = FALSE) +
-  facet_wrap(~pattern, ncol = 3) +
-  theme_minimal(base_size = 11) +
-  labs(
-    title = "Seasonal trajectory patterns for miRNA-mRNA correlations",
-    subtitle = "Red line = mean trajectory ± SE, gray lines = individual interactions",
-    x = "Season",
-    y = "Spearman correlation"
-  ) +
-  theme(
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold", size = 11)
-  )
-
-print(p_trajectories)
-ggsave("../output/Molecular/interactions/networks/seasonal_pattern_trajectories.pdf", width = 12, height = 8)
-
-# ==========================================
-# VISUALIZATION 3: Heatmap (top dynamic interactions)
-# ==========================================
-
-# Get top 100 most dynamic interactions (by max_change)
-top_dynamic <- seasonal_categories %>%
-  arrange(desc(max_change)) %>%
-  slice_head(n = 100) %>%
-  mutate(
-    interaction_label = paste0(miRNA, "→", substr(mRNA, 1, 20), "..."),
-    interaction_label = fct_reorder(interaction_label, max_change)
-  )
-
-# Reshape for heatmap
-heatmap_data <- top_dynamic %>%
-  select(interaction_label, pattern, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient) %>%
-  pivot_longer(
-    cols = c(cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient),
-    names_to = "timepoint",
-    values_to = "correlation"
-  ) %>%
-  mutate(
-    timepoint = recode(timepoint,
-                      "cor_TP0" = "Feb (TP0)",
-                      "cor_TP5_Ambient" = "June (TP5)",
-                      "cor_TP7_Ambient" = "Aug (TP7)"),
-    timepoint = factor(timepoint, levels = c("Feb (TP0)", "June (TP5)", "Aug (TP7)"))
-  )
-
-p_heatmap <- ggplot(heatmap_data, aes(x = timepoint, y = interaction_label, fill = correlation)) +
-  geom_tile(color = "white", linewidth = 0.1) +
-  scale_fill_gradient2(
-    low = "blue", mid = "white", high = "red",
-    midpoint = 0,
-    limits = c(-1, 1),
-    name = "Correlation"
-  ) +
-  theme_minimal(base_size = 10) +
-  labs(
-    title = "Top 100 most dynamic miRNA-mRNA interactions",
-    subtitle = "Ordered by magnitude of seasonal change",
-    x = "Season",
-    y = ""
-  ) +
-  theme(
-    axis.text.y = element_text(size = 6),
-    panel.grid = element_blank(),
-    axis.text.x = element_text(angle = 0)
-  )
-
-print(p_heatmap)
-ggsave("../output/Molecular/interactions/networks/seasonal_top100_dynamic_heatmap.pdf", width = 6, height = 14)
-
-# ==========================================
-# VISUALIZATION 4: Alluvial diagram (flow between categories)
-# ==========================================
-
-# Categorize correlations at each timepoint
-alluvial_data <- seasonal_categories %>%
-  dplyr::select(miRNA, mRNA, pattern, cor_TP0, cor_TP5_Ambient, cor_TP7_Ambient) %>%
-  mutate(
-    cat_TP0 = case_when(
-      cor_TP0 < -0.5 ~ "Strong negative",
-      cor_TP0 < 0 ~ "Weak negative",
-      cor_TP0 < 0.5 ~ "Weak positive",
-      TRUE ~ "Strong positive"
-    ),
-    cat_TP5 = case_when(
-      cor_TP5_Ambient < -0.5 ~ "Strong negative",
-      cor_TP5_Ambient < 0 ~ "Weak negative",
-      cor_TP5_Ambient < 0.5 ~ "Weak positive",
-      TRUE ~ "Strong positive"
-    ),
-    cat_TP7 = case_when(
-      cor_TP7_Ambient < -0.5 ~ "Strong negative",
-      cor_TP7_Ambient < 0 ~ "Weak negative",
-      cor_TP7_Ambient < 0.5 ~ "Weak positive",
-      TRUE ~ "Strong positive"
-    )
-  ) %>%
-  # Count flows
-  dplyr::count(cat_TP0, cat_TP5, cat_TP7, pattern)
-
-# Set factor levels for ordering
-cor_levels <- c("Strong negative", "Weak negative", "Weak positive", "Strong positive")
-
-alluvial_data <- alluvial_data %>%
-  mutate(
-    cat_TP0 = factor(cat_TP0, levels = cor_levels),
-    cat_TP5 = factor(cat_TP5, levels = cor_levels),
-    cat_TP7 = factor(cat_TP7, levels = cor_levels)
-  )
-
-p_alluvial <- ggplot(alluvial_data,
-                     aes(y = n, axis1 = cat_TP0, axis2 = cat_TP5, axis3 = cat_TP7)) +
-  geom_alluvium(aes(fill = pattern), width = 1/12, alpha = 0.7) +
-  geom_stratum(width = 1/12, fill = "gray80", color = "white") +
-  geom_label(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
-  scale_x_discrete(limits = c("Feb", "June", "Aug"), expand = c(.05, .05)) +
-  scale_fill_brewer(palette = "Set2") +
-  theme_minimal() +
-  labs(
-    title = "Flow of miRNA-mRNA correlations across seasons",
-    subtitle = "How correlation categories change from winter to summer",
-    y = "Number of interactions",
-    fill = "Pattern"
-  ) +
-  theme(
-    panel.grid = element_blank(),
-    axis.text.y = element_blank()
-  )
-
-print(p_alluvial)
-#ggsave("seasonal_flow_alluvial.pdf", width = 10, height = 7)
-
-# ==========================================
-# VISUALIZATION 5: Combined figure for manuscript
-# ==========================================
-
-# Combine the best plots into one figure
-manuscript_figure <- (p_summary / p_trajectories) +
-  plot_annotation(
-    title = "Seasonal reorganization of miRNA-mRNA regulatory networks",
-    tag_levels = "A",
-    theme = theme(plot.title = element_text(size = 16, face = "bold"))
-  )
-
-print(manuscript_figure)
-ggsave("../output/Molecular/interactions/networks/seasonal_patterns.pdf", width = 14, height = 12)
-
-# Individual panels
-#ggsave("FigureA_pattern_summary.pdf", plot = p_summary, width = 8, height = 5)
-#ggsave("FigureB_trajectories.pdf", plot = p_trajectories, width = 12, height = 8)
-```
-
-Look at TREATMENT effects for JUNE
-```{r}
-# Subset T5 amb and heat 
-# Get TP5 Ambient
-tp5_ambient <- all_correlations_classified %>%
-  filter(timepoint == "TP5", treatment == "Ambient") %>%
-  select(miRNA, mRNA, pair_id, cor_TP5_Ambient = cor_value)
-
-# Get TP5 Heat
-tp5_heat <- all_correlations_classified %>%
-  filter(timepoint == "TP5", treatment == "Heat") %>%
-  select(miRNA, mRNA, pair_id, cor_TP5_Heat = cor_value)
-
-# Combine - treatment patterns in June
-tp5_pattern <- tp5_ambient %>%
-  left_join(tp5_heat, by = c("miRNA", "mRNA", "pair_id")) %>%
-  mutate(
-    # Changes between treatments
-    change_TP5amb_to_TP5heat = cor_TP5_Ambient - cor_TP5_Heat)
-
-# Categorize the treatment patterns in June
-tp5_categories <- tp5_pattern %>%
-  filter(!is.na(change_TP5amb_to_TP5heat)) %>%
-  mutate(
-    pattern = case_when(
-      # Big increase over treatment
-      change_TP5amb_to_TP5heat > 0.7 ~ "Strong decrease",
-      # Big decrease over treatment  
-      change_TP5amb_to_TP5heat < -0.7 ~ "Strong increase",
-      # Relatively stable
-      change_TP5amb_to_TP5heat < 0.3 ~ "Stable",
-      # Everything else
-      TRUE ~ "Variable"
-    )
-  )
-
-# Overall pattern distribution
-tp5_pattern_summary <- tp5_categories %>%
-  dplyr::count(pattern) %>%
-  mutate(pattern = fct_reorder(pattern, n)) %>%
-  ggplot(aes(x = pattern, y = n, fill = pattern)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = scales::comma(n)), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  theme_minimal(base_size = 12) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "Seasonal regulatory patterns",
-    subtitle = paste0(nrow(tp5_pattern_summary), " predicted miRNA-mRNA interactions"),
-    x = "",
-    y = "Number of interactions"
-  ) +
-  theme(panel.grid.minor = element_blank())
-
-print(tp5_pattern_summary)
-ggsave("../output/Molecular/interactions/networks/tp5_pattern_summary_barplot.pdf", width = 8, height = 5)
-
-# Plot trajectories 
-# Reshape for plotting
-tp5_trajectory_data <- tp5_categories %>%
-  select(pattern, miRNA, mRNA, cor_TP5_Ambient, cor_TP5_Heat) %>%
-  pivot_longer(
-    cols = c(cor_TP5_Ambient, cor_TP5_Heat),
-    names_to = "timepoint",
-    values_to = "correlation"
-  ) %>%
-  mutate(
-    timepoint = recode(timepoint,
-                      "cor_TP5_Ambient" = "June_Ambient", 
-                      "cor_TP5_Heat" = "June_Heat" 
-
-    #timepoint = factor(timepoint, levels = c("June_Ambient", "June_Heat")),
-  )) %>%
-  mutate(
-    interaction_id = paste(miRNA, mRNA, sep = "_")
-  )
-
-# Calculate mean trajectory per pattern
-tp5_mean_trajectory <- tp5_trajectory_data %>%
-  group_by(pattern, timepoint) %>%
-  summarise(
-    mean_cor = mean(correlation, na.rm = T),
-    se_cor = sd(correlation, na.rm = T) / sqrt(n()),
-    .groups = "drop")
-
-# Plot
-tp5_p_trajectories <- ggplot(tp5_trajectory_data, 
-                         aes(x = timepoint, y = correlation, group = interaction_id)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", linewidth = 0.3) +
-  # Individual trajectories (faint)
-  geom_line(alpha = 0.1, color = "gray30") +
-  # Mean trajectory (bold)
-  geom_line(data = tp5_mean_trajectory,
-            aes(x = timepoint, y = mean_cor, group = 1),
-            color = "red", linewidth = 1.5, inherit.aes = FALSE) +
-  geom_point(data = tp5_mean_trajectory,
-             aes(x = timepoint, y = mean_cor, group = 1),
-             color = "red", size = 3, inherit.aes = FALSE) +
-  # Ribbon for SE
-  geom_ribbon(data = tp5_mean_trajectory,
-              aes(x = timepoint, y = mean_cor,
-                  ymin = mean_cor - se_cor, ymax = mean_cor + se_cor,
-                  group = 1),
-              alpha = 0.2, fill = "red", inherit.aes = FALSE) +
-  facet_wrap(~pattern, ncol = 3) +
-  theme_minimal(base_size = 11) +
-  labs(
-    title = "June trajectory patterns for miRNA-mRNA correlations",
-    subtitle = "Red line = mean trajectory ± SE, gray lines = individual interactions",
-    x = "Treatment",
-    y = "Spearman correlation"
-  ) +
-  theme(
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold", size = 11)
-  )
-
-print(tp5_p_trajectories)
-ggsave("../output/Molecular/interactions/networks/tp5_pattern_trajectories.pdf", width = 12, height = 8)
-```
-
-Look at TREATMENT effects for AUGUST
-```{r}
-# Subset T7 amb and heat 
-# Get TP7 Ambient
-tp7_ambient <- all_correlations_classified %>%
-  filter(timepoint == "TP7", treatment == "Ambient") %>%
-  select(miRNA, mRNA, pair_id, cor_TP7_Ambient = cor_value)
-
-# Get TP7 Heat
-tp7_heat <- all_correlations_classified %>%
-  filter(timepoint == "TP7", treatment == "Heat") %>%
-  select(miRNA, mRNA, pair_id, cor_TP7_Heat = cor_value)
-
-# Combine - treatment patterns in August
-tp7_pattern <- tp7_ambient %>%
-  left_join(tp7_heat, by = c("miRNA", "mRNA", "pair_id")) %>%
-  mutate(
-    # Changes between treatments
-    change_TP7amb_to_TP7heat = cor_TP7_Ambient - cor_TP7_Heat)
-
-# Categorize the treatment patterns in August 
-tp7_categories <- tp7_pattern %>%
-  filter(!is.na(change_TP7amb_to_TP7heat)) %>%
-  mutate(
-    pattern = case_when(
-      # Big increase over treatment
-      change_TP7amb_to_TP7heat > 0.7 ~ "Strong decrease",
-      # Big decrease over treatment  
-      change_TP7amb_to_TP7heat < -0.7 ~ "Strong increase",
-      # Relatively stable
-      change_TP7amb_to_TP7heat < 0.3 ~ "Stable",
-      # Everything else
-      TRUE ~ "Variable"
-    )
-  )
-
-# Overall pattern distribution
-tp7_pattern_summary <- tp7_categories %>%
-  dplyr::count(pattern) %>%
-  mutate(pattern = fct_reorder(pattern, n)) %>%
-  ggplot(aes(x = pattern, y = n, fill = pattern)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = scales::comma(n)), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  theme_minimal(base_size = 12) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "Seasonal regulatory patterns",
-    subtitle = paste0(nrow(tp5_pattern_summary), " predicted miRNA-mRNA interactions"),
-    x = "",
-    y = "Number of interactions"
-  ) +
-  theme(panel.grid.minor = element_blank())
-
-print(tp7_pattern_summary)
-ggsave("../output/Molecular/interactions/networks/tp7_pattern_summary_barplot.pdf", width = 8, height = 5)
-
-# Plot trajectories 
-# Reshape for plotting
-tp7_trajectory_data <- tp7_categories %>%
-  select(pattern, miRNA, mRNA, cor_TP7_Ambient, cor_TP7_Heat) %>%
-  pivot_longer(
-    cols = c(cor_TP7_Ambient, cor_TP7_Heat),
-    names_to = "timepoint",
-    values_to = "correlation"
-  ) %>%
-  mutate(
-    timepoint = recode(timepoint,
-                      "cor_TP7_Ambient" = "August_Ambient", 
-                      "cor_TP7_Heat" = "August_Heat" 
-
-    #timepoint = factor(timepoint, levels = c("June_Ambient", "June_Heat")),
-  )) %>%
-  mutate(
-    interaction_id = paste(miRNA, mRNA, sep = "_")
-  )
-
-# Calculate mean trajectory per pattern
-tp7_mean_trajectory <- tp7_trajectory_data %>%
-  group_by(pattern, timepoint) %>%
-  summarise(
-    mean_cor = mean(correlation, na.rm = T),
-    se_cor = sd(correlation, na.rm = T) / sqrt(n()),
-    .groups = "drop")
-
-# Plot
-tp7_p_trajectories <- ggplot(tp7_trajectory_data, 
-                         aes(x = timepoint, y = correlation, group = interaction_id)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", linewidth = 0.3) +
-  # Individual trajectories (faint)
-  geom_line(alpha = 0.1, color = "gray30") +
-  # Mean trajectory (bold)
-  geom_line(data = tp7_mean_trajectory,
-            aes(x = timepoint, y = mean_cor, group = 1),
-            color = "red", linewidth = 1.5, inherit.aes = FALSE) +
-  geom_point(data = tp7_mean_trajectory,
-             aes(x = timepoint, y = mean_cor, group = 1),
-             color = "red", size = 3, inherit.aes = FALSE) +
-  # Ribbon for SE
-  geom_ribbon(data = tp7_mean_trajectory,
-              aes(x = timepoint, y = mean_cor,
-                  ymin = mean_cor - se_cor, ymax = mean_cor + se_cor,
-                  group = 1),
-              alpha = 0.2, fill = "red", inherit.aes = FALSE) +
-  facet_wrap(~pattern, ncol = 3) +
-  theme_minimal(base_size = 11) +
-  labs(
-    title = "August trajectory patterns for miRNA-mRNA correlations",
-    subtitle = "Red line = mean trajectory ± SE, gray lines = individual interactions",
-    x = "Treatment",
-    y = "Spearman correlation"
-  ) +
-  theme(
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold", size = 11)
-  )
-
-print(tp7_p_trajectories)
-ggsave("../output/Molecular/interactions/networks/tp7_pattern_trajectories.pdf", width = 12, height = 8)
-```
-
-Bipartite network anaysis (custom scripts). 
+The following chunk are custom scripts for bipartite network calculations. I tried using the bipartite r package but was running into issues with run time. 
 ```{r custom functions for network calculations}
 # Degree for "higher" level (rows): number of non-zero links per miRNA
 miRNA_degree <- function(bp_matrix) {
@@ -1794,45 +493,39 @@ create_bipartite_matrix_despard <- function(
 }
 ```
 
-Create bipartite matrices
+Create bipartite matrics for all conditions
 ```{r}
 bp_TP0 <- create_bipartite_matrix_despard(
-  all_correlations_classified,
+  all_correlations_high_miRNA,
   "TP0", "Acclimation",
-  cor_threshold = 0.1
-)
+  cor_threshold = 0.0)
 
 bp_TP5_Ambient <- create_bipartite_matrix_despard(
-  all_correlations_classified,
+  all_correlations_high_miRNA,
   "TP5", "Ambient",
-  cor_threshold = 0.1
-)
+  cor_threshold = 0.0)
 
 bp_TP5_Heat <- create_bipartite_matrix_despard(
-  all_correlations_classified,
+  all_correlations_high_miRNA,
   "TP5", "Heat",
-  cor_threshold = 0.1
-)
+  cor_threshold = 0.0)
 
 bp_TP7_Ambient <- create_bipartite_matrix_despard(
-  all_correlations_classified,
+  all_correlations_high_miRNA,
   "TP7", "Ambient",
-  cor_threshold = 0.1
-)
+  cor_threshold = 0.0)
 
 bp_TP7_Heat <- create_bipartite_matrix_despard(
-  all_correlations_classified,
+  all_correlations_high_miRNA,
   "TP7", "Heat",
-  cor_threshold = 0.1
-)
+  cor_threshold = 0.0)
 
 bp_matrices_list <- list(
   "TP0_Acclimation" = bp_TP0,
   "TP5_Ambient"     = bp_TP5_Ambient,
   "TP5_Heat"        = bp_TP5_Heat,
   "TP7_Ambient"     = bp_TP7_Ambient,
-  "TP7_Heat"        = bp_TP7_Heat
-)
+  "TP7_Heat"        = bp_TP7_Heat)
 
 # Check dimensions
 for (name in names(bp_matrices_list)) {
@@ -1840,9 +533,7 @@ for (name in names(bp_matrices_list)) {
     name, ":",
     nrow(bp_matrices_list[[name]]), "miRNAs x",
     ncol(bp_matrices_list[[name]]), "mRNAs,",
-    sum(bp_matrices_list[[name]]), "interactions\n"
-  )
-}
+    sum(bp_matrices_list[[name]]), "interactions\n")}
 ```
 
 Calculate network metrics (degree, betweenness, d') for each condition
@@ -1913,156 +604,69 @@ df_TP7_heat <- data.frame(
   row.names   = NULL)
 
 network_metrics <- rbind(df_TP0, df_TP5_amb, df_TP7_amb, df_TP5_heat, df_TP7_heat)
+
+# Save as csv 
+write.csv(network_metrics, "../output/Molecular/interactions/networks/network_metrics.csv")
 ```
 
-Summarize network metrics 
+## Seasonal network metrics 
+
+Subset network metrics by season
 ```{r}
-network_metrics_summary <- network_metrics %>%
-  group_by(condition) %>%
-  summarise(
-    n_miRNAs = n(),
-    mean_degree = mean(degree, na.rm = TRUE),
-    sd_degree = sd(degree, na.rm = TRUE),
-    sem_degree = sd(degree, na.rm = TRUE) / sqrt(sum(!is.na(degree))),
-    min_degree = min(degree, na.rm = TRUE),
-    max_degree = max(degree, na.rm = TRUE), 
-    median_degree = median(degree, na.rm = TRUE),
-    mean_betweenness = mean(betweenness, na.rm = TRUE),
-    sd_betweenness = sd(betweenness, na.rm = TRUE),
-    sem_betweenness = sd(betweenness, na.rm = TRUE) / sqrt(sum(!is.na(betweenness))),
-    min_betweenness = min(betweenness, na.rm = TRUE),
-    max_betweenness = max(betweenness, na.rm = TRUE), 
-    median_betweenness = median(betweenness, na.rm = TRUE),
-    mean_dprime = mean(dprime, na.rm = TRUE),
-    sd_dprime = sd(dprime, na.rm = TRUE),
-    sem_dprime = sd(dprime, na.rm = TRUE) / sqrt(sum(!is.na(dprime))),
-    min_dprime = min(dprime, na.rm = TRUE),
-    max_dprime = max(dprime, na.rm = TRUE), 
-    median_dprime = median(dprime, na.rm = TRUE),
-    .groups = "drop")
-```
-
-Plot seasonal
-```{r}
-# Subset ambient only 
-seasonal_network_metrics_summary <- network_metrics_summary %>%
-  filter(condition %in% c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient"))
-
-# Set levels 
-seasonal_network_metrics_summary$condition <- factor(seasonal_network_metrics_summary$condition, levels = c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient"))
-
-# 1. DEGREE plot
-p_degree <- ggplot(seasonal_network_metrics_summary, aes(x = condition, y = mean_degree)) +
-  geom_point(size = 4, color = "steelblue", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_degree - sem_degree, ymax = mean_degree + sem_degree),
-                width = 0.2, size = 1, color = "steelblue") +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    x = "Condition", 
-    y = "Mean degree",
-    title = "Mean miRNA degree across seasonal timepoints",
-    subtitle = "Dots show means, error bars show SEM"
-  )
-print(p_degree)
-#ggsave("seasonal_degree_individual.pdf", width = 7, height = 5)
-
-# 2. BETWEENNESS plot
-p_betweenness <- ggplot(seasonal_network_metrics_summary, aes(x = condition, y = mean_betweenness)) +
-  geom_point(size = 4, color = "steelblue", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_betweenness - sem_betweenness, ymax = mean_betweenness + sem_betweenness),
-                width = 0.2, size = 1, color = "steelblue") +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    x = "Condition", 
-    y = "Mean betweenness",
-    title = "Mean miRNA betweenness across seasonal timepoints",
-    subtitle = "Dots show means, error bars show SEM"
-  )
-print(p_betweenness)
-#ggsave("seasonal_betweenness_individual.pdf", width = 7, height = 5)
-
-# 3. D' plot  
-p_dprime <- ggplot(seasonal_network_metrics_summary, aes(x = condition, y = mean_dprime)) +
-  geom_point(size = 4, color = "steelblue", fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_dprime - sd_dprime/sqrt(n_miRNAs), 
-                    ymax = mean_dprime + sd_dprime/sqrt(n_miRNAs)),
-                width = 0.2, size = 1, color = "steelblue") +
-  theme_minimal(base_size = 12) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    x = "Condition", 
-    y = "Mean d' (specialization)",
-    title = "Mean miRNA specialization (d') across seasonal timepoints",
-    subtitle = "Dots show means, error bars show SEM"
-  )
-print(p_dprime)
-#ggsave("seasonal_dprime_individual.pdf", width = 7, height = 5)
-```
-
-Different plots for seasonal 
-```{r}
-# Subset ambient only 
 seasonal_network_metrics <- network_metrics %>%
   filter(condition %in% c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient"))
+```
 
+Make PCA of seasonal network metrics 
+```{r}
+# Make PCA 
+metrics <- seasonal_network_metrics[, c("degree", "betweenness", "dprime")]
+pca <- prcomp(metrics, center = TRUE, scale. = TRUE)
+
+# Extract scores 
+scores <- as.data.frame(pca$x)
+scores$condition <- seasonal_network_metrics$condition
+scores$miRNA <- seasonal_network_metrics$miRNA
+
+# Calculate variance explained
+var_explained <- pca$sdev^2 / sum(pca$sdev^2)
+pc1_lab <- paste0("PC1 (", round(var_explained[1] * 100, 1), "%)")
+pc2_lab <- paste0("PC2 (", round(var_explained[2] * 100, 1), "%)")
+
+# Plot
+ggplot(scores, aes(PC1, PC2, color = condition)) +
+  geom_point(size = 2, alpha = 0.8) +
+  scale_color_brewer(palette = "Set1") +
+  labs(x = pc1_lab, y = pc2_lab, color = "Condition") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_line(color = "grey90"),
+    legend.position = "right")
+```
+
+Hover labels to identify miRNAs 
+```{r}
+plt <- ggplot(scores, aes(PC1, PC2, color = condition,
+                          text = paste0("miRNA: ", miRNA))) +
+  geom_point(size = 2, alpha = 0.8) +
+  labs(x = pc1_lab, y = pc2_lab, color = "Condition") +
+  theme_minimal(base_size = 14)
+
+ggplotly(plt, tooltip = c("text", "x", "y"))
+
+```
+
+Remake the figures above ^^ to be pretty! Maybe label some of the 'hub' miRNAs'
+
+Make violin plots for seasonal network metrics 
+```{r}
 # Ensure condition is ordered chronologically
 seasonal_network_metrics <- seasonal_network_metrics %>%
   mutate(condition = factor(condition, 
                            levels = c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient")))
 
-# 1. DEGREE boxplot (individual miRNAs)
-p_degree_raw <- ggplot(seasonal_network_metrics, aes(x = condition, y = degree, fill = condition)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 1.5, outlier.fill = "white") +
-  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
-                              "TP5_Ambient" = "#56B4E9", 
-                              "TP7_Ambient" = "#009E73")) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Condition", 
-       y = "Degree (number of mRNA targets)",
-       title = "miRNA degree distribution across seasonal timepoints")
-
-print(p_degree_raw)
-#ggsave("miRNA_degree_boxplot.pdf", width = 7, height = 6)
-
-# 2. BETWEENNESS boxplot
-p_betweenness_raw <- ggplot(seasonal_network_metrics, aes(x = condition, y = betweenness, fill = condition)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 1.5, outlier.fill = "white") +
-  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
-                              "TP5_Ambient" = "#56B4E9", 
-                              "TP7_Ambient" = "#009E73")) +
-  scale_y_log10() +  # log scale for betweenness
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Condition", 
-       y = "Betweenness centrality (log scale)",
-       title = "miRNA betweenness distribution across seasonal timepoints")
-
-print(p_betweenness_raw)
-#ggsave("miRNA_betweenness_boxplot.pdf", width = 7, height = 6)
-
-# 3. D' boxplot
-p_dprime_raw <- ggplot(seasonal_network_metrics, aes(x = condition, y = dprime, fill = condition)) +
-  geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 1.5, outlier.fill = "white") +
-  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
-                              "TP5_Ambient" = "#56B4E9", 
-                              "TP7_Ambient" = "#009E73")) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Condition", 
-       y = "Specialization index (d')",
-       title = "miRNA specialization (d') distribution across seasonal timepoints")
-
-print(p_dprime_raw)
-#ggsave("miRNA_dprime_boxplot.pdf", width = 7, height = 6)
-
-# 1. DEGREE violin plot
-p_degree_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = degree, fill = condition)) +
+# Degree plot 
+degree_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = degree, fill = condition)) +
   geom_violin(alpha = 0.7, trim = FALSE) +
   geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
   scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
@@ -2073,29 +677,10 @@ p_degree_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = degre
         axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "Condition", 
        y = "Degree (number of mRNA targets)",
-       title = "miRNA degree distribution across seasonal timepoints")
+       title = "miRNA degree distribution across seasonal timepoints"); degree_seasonal_violin
 
-print(p_degree_violin)
-
-# 2. BETWEENNESS violin plot (log scale)
-p_betweenness_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = betweenness, fill = condition)) +
-  geom_violin(alpha = 0.7, trim = FALSE) +
-  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
-  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
-                              "TP5_Ambient" = "#56B4E9", 
-                              "TP7_Ambient" = "#009E73")) +
-  scale_y_log10() +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Condition", 
-       y = "Betweenness centrality (log scale)",
-       title = "miRNA betweenness distribution across seasonal timepoints")
-
-print(p_betweenness_violin)
-
-# 3. D' violin plot
-p_dprime_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = dprime, fill = condition)) +
+# Betweenness plot 
+betweenness_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = betweenness, fill = condition)) +
   geom_violin(alpha = 0.7, trim = FALSE) +
   geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
   scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
@@ -2105,10 +690,956 @@ p_dprime_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = dprim
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "Condition", 
-       y = "Specialization index (d')",
-       title = "miRNA specialization (d') distribution across seasonal timepoints")
+       y = "Betweenness",
+       title = "miRNA betweenness distribution across seasonal timepoints"); betweenness_seasonal_violin
 
-print(p_dprime_violin)
+# dprime plot 
+dprime_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = dprime, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
+                              "TP5_Ambient" = "#56B4E9", 
+                              "TP7_Ambient" = "#009E73")) +
+  theme_linedraw(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "d'",
+       title = "miRNA d' distribution across seasonal timepoints"); dprime_seasonal_violin
 ```
+
+Test for differences in degree, betweenness and dprime by season
+```{r}
+# KRUSKAL-WALLIS TESTS (non-parametric)
+kruskal_results <- seasonal_network_metrics %>%
+  summarise(
+    degree_kw = list(kruskal.test(degree ~ season)),
+    betweenness_kw = list(kruskal.test(betweenness ~ season)),
+    dprime_kw = list(kruskal.test(dprime ~ season))
+  ) %>%
+  mutate(
+    degree_p = map_dbl(degree_kw, ~.x$p.value),
+    betweenness_p = map_dbl(betweenness_kw, ~.x$p.value),
+    dprime_p = map_dbl(dprime_kw, ~.x$p.value)
+  ) %>%
+  select(ends_with("_p"))
+print(kruskal_results)
+```
+
+No significant differences across season for all metrics. 
+
+## Seasonal correlation trajectories 
+
+Filter correlation data for seasonal 
+```{r}
+seasonal_all_correlations_high_miRNA <- all_correlations_high_miRNA %>%
+  filter(timepoint %in% c("TP0", "TP5", "TP7")) %>%
+  filter(treatment %in% c("Acclimation", "Ambient"))
+```
+
+Reshape df for trajectory calculations
+```{r}
+pair_trajectories <- seasonal_all_correlations_high_miRNA %>%
+  select(pair_id, miRNA, mRNA, timepoint, cor_value) %>%
+  #mutate(time_num = recode(timepoint, "TP0" = 0, "TP5" = 5, "TP7" = 7)) %>%
+  group_by(pair_id, miRNA, mRNA, timepoint) %>%
+  summarise(cor_value = mean(cor_value, na.rm = TRUE), .groups = "drop") %>%
+  # Drop time_num here, keep only what's needed for pivot
+  #select(-time_num) %>%
+  pivot_wider(names_from = timepoint, values_from = cor_value, 
+              values_fill = NA, values_fn = mean) %>%
+  # Add back complete trajectory filter
+  filter(!is.na(TP0), !is.na(TP5), !is.na(TP7))
+```
+
+Fit trajectories
+```{r}
+fit_pair_trajectory <- function(row) {
+  df <- data.frame(time = c(0, 5, 7), cor = c(row$TP0, row$TP5, row$TP7))
+  mod <- lm(cor ~ poly(time, 2), data = df)
+  
+  tidy(mod) %>%        # Now broom::tidy() will work
+    filter(term != "(Intercept)") %>%
+    mutate(
+      pair_id = row$pair_id,
+      miRNA = row$miRNA, 
+      mRNA = row$mRNA
+    ) %>%
+    select(pair_id, miRNA, mRNA, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate)
+}
+
+pair_fits <- pair_trajectories %>%
+  rowwise() %>%
+  do(fit_pair_trajectory(.)) %>%
+  ungroup()
+```
+
+Cluster trajectories 
+```{r}
+# Extract clustering features
+features <- pair_fits %>%
+  rename(linear = `poly(time, 2)1`, quadratic = `poly(time, 2)2`) %>%
+  select(pair_id, linear, quadratic)
+
+# Standardize features
+features_scaled <- scale(features[, c("linear", "quadratic")])
+
+# K-means clustering (try k=4-6)
+set.seed(123)
+k <- 5
+clusters <- kmeans(features_scaled, centers = k, nstart = 100)
+
+features$cluster <- as.factor(clusters$cluster)
+
+# Join with pair trajectories df 
+pair_trajectories <- pair_trajectories %>%
+  left_join(features %>% select(pair_id, cluster), by = "pair_id")
+```
+
+Plot trajectories 
+```{r}
+# Prepare long format data (same as before)
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "Feb", "TP5" = "June", "TP7" = "Aug"))
+
+# Stats for mean ± SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, timepoint) %>%
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    se_cor = sd(cor, na.rm = TRUE)/sqrt(n()),
+    n_pairs = n(),
+    .groups = "drop"
+  )
+
+# Single plot with faceted panels
+p_faceted <- ggplot() +
+  # Faint individual trajectories in each panel
+  geom_line(data = trajectory_long, 
+            aes(x = timepoint, y = cor, group = pair_id), 
+            alpha = 0.08, color = "grey60", linewidth = 0.4) +
+  # Mean ± SE per cluster (red lines)
+  geom_line(data = cluster_stats, 
+            aes(x = timepoint, y = mean_cor, group = cluster), 
+            color = "red3", linewidth = 1.3) +
+  geom_ribbon(data = cluster_stats, 
+              aes(x = timepoint, ymin = mean_cor - se_cor, 
+                  ymax = mean_cor + se_cor), 
+              fill = "red", alpha = 0.2, color = NA) +
+  geom_point(data = cluster_stats, 
+             aes(x = timepoint, y = mean_cor), 
+             color = "red3", size = 2.8) +
+  
+  # Facet by cluster (separate panels)
+  facet_wrap(~ cluster, scales = "free_y", ncol = 5) +
+  
+  #scale_x_continuous(breaks = c(0, 5, 7), labels = c("Feb", "June", "Aug")) +
+  labs(x = "Season", y = "Spearman correlation",
+       title = "Seasonal miRNA-mRNA pair correlation trajectories by cluster") +
+  theme_bw(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  ); p_faceted
+```
+
+## Enrichment of clusters -- seasonal 
+
+Read in gene2go information (generated in `topGO.Rmd` file)
+```{r}
+go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+```
+
+Read in gene-to-go-mappings
+```{r}
+gene2go_topgo <- readMappings("../data/Molecular/Ast_gene2go.tab", IDsep=";")
+```
+
+Set function to select genes of interest (ie those that have pvalue < 0.05)
+```{r}
+topDiffGenes <- function(allScore) {
+return(allScore < 0.05)}
+```
+
+### Cluster 1 seasonal
+
+Subset by Cluster 1 and select only negative correlations for TP0 and TP7 
+```{r}
+subset_cluster1 <- pair_trajectories %>%
+  filter(cluster == 1, TP0 < 0, TP5 > 0, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster1$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 1 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "1"
+```
+
+#### Molecular Functions - cluster 1 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "1"
+```
+
+#### Bind functional results for cluster 1 and save as csv
+
+```{r}
+cluster1_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster1_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster1_functional.csv")
+```
+
+### Cluster 2 seasonal
+
+Subset by Cluster 2 and select only negative correlations for TP0 
+```{r}
+subset_cluster2 <- pair_trajectories %>%
+  filter(cluster == 2, TP0 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster2$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 2 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "2"
+```
+
+#### Molecular Functions - cluster 2 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "2"
+```
+
+#### Bind functional results for cluster 2 and save as csv
+
+```{r}
+cluster2_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster2_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster2_functional.csv")
+```
+
+### Cluster 3 seasonal
+
+Subset by Cluster 3 and select only negative correlations for TP7
+```{r}
+subset_cluster3 <- pair_trajectories %>%
+  filter(cluster == 3, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster3$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 3 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "3"
+```
+
+#### Molecular Functions - cluster 3 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "3"
+```
+
+#### Bind functional results for cluster 3 and save as csv
+
+```{r}
+cluster3_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster3_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster3_functional.csv")
+```
+
+### Cluster 4 seasonal
+
+Subset by Cluster 4 and select only negative correlations for TP5, positive correlations for TP0 and TP7
+```{r}
+subset_cluster4 <- pair_trajectories %>%
+  filter(cluster == 4, TP0 > 0, TP5 < 0, TP7 > 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster4$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 4 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "4"
+```
+
+#### Molecular Functions - cluster 4 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "4"
+```
+
+#### Bind functional results for cluster 4 and save as csv
+
+```{r}
+cluster4_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster4_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster4_functional.csv")
+```
+
+### Cluster 5 seasonal
+
+Subset by Cluster 5 and select only negative correlations for all timepoints
+```{r}
+subset_cluster5 <- pair_trajectories %>%
+  filter(cluster == 5, TP0 < 0, TP5 < 0, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster5$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 5 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "5"
+```
+
+#### Molecular Functions - cluster 5 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "5"
+```
+
+#### Bind functional results for cluster 5 and save as csv
+
+```{r}
+cluster5_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster5_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster5_functional.csv")
+```
+
+## Plot seasonal functional results 
+
+Bind functional results from all clusters 
+```{r}
+seasonal_functions <- rbind(cluster1_seasonal_functional, cluster2_seasonal_functional, cluster3_seasonal_functional, cluster4_seasonal_functional, cluster5_seasonal_functional)
+```
+
+Plot w/ trajectory plots 
+```{r}
+# ==========================================
+# COMBINED TRAJECTORY + FUNCTION PLOTS
+# Two columns: trajectory (left) + GO terms (right)
+# Rows = clusters
+# ==========================================
+
+library(tidyverse)
+library(patchwork)
+library(ggtext)
+library(tidytext)
+
+# ==========================================
+# STEP 1: Prepare trajectory data
+# ==========================================
+
+# Individual trajectories
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
+  mutate(season = factor(season, 
+                           levels = c("February", "June", "August")))
+
+# Cluster means and SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, season) %>%
+  summarise(
+    mean_cor = mean(cor),
+    se_cor = sd(cor) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# ==========================================
+# STEP 2: Prepare GO enrichment data
+# ==========================================
+
+# Get top N GO terms per cluster
+top_n_terms <- 10  # Adjust as needed
+
+go_data_plot <- seasonal_functions %>%
+  filter(ontology == "Biological Processes") %>%
+  group_by(cluster) %>%
+  arrange(Fisher) %>%
+  slice_head(n = top_n_terms) %>%
+  ungroup() %>%
+  mutate(
+    # Shorten long term names
+    Term_short = str_trunc(Term, width = 50, side = "right"),
+    # -log10 p-value for plotting
+    neglog10p = -log10(Fisher),
+    # Order terms by p-value within cluster
+    Term_ordered = reorder_within(Term_short, Fisher, cluster)
+  )
+
+# ==========================================
+# STEP 3: Create trajectory plots for each cluster
+# ==========================================
+
+trajectory_plots <- lapply(unique(cluster_stats$cluster), function(clust) {
+  
+  # Filter data for this cluster
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
+  
+  # Create plot
+  p <- ggplot() +
+    # Horizontal line at zero
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    
+    # Individual trajectories (faint)
+    geom_line(data = traj_data, 
+              aes(x = season, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    
+    # Mean ± SE
+    geom_ribbon(data = stat_data, 
+                aes(x = season, y = mean_cor,
+                    ymin = mean_cor - se_cor, 
+                    ymax = mean_cor + se_cor,
+                    group = 1), 
+                fill = "red3", alpha = 0.2) +
+    
+    geom_line(data = stat_data, 
+              aes(x = season, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    
+    geom_point(data = stat_data, 
+               aes(x = season, y = mean_cor), 
+               color = "red3", size = 3) +
+    
+    # Labels
+    labs(
+      title = paste0("Cluster ", clust),
+      x = "Season",
+      y = "Spearman correlation"
+    ) +
+    
+    theme_bw(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+  
+  return(p)
+})
+
+# ==========================================
+# STEP 4: Create GO enrichment plots for each cluster
+# ==========================================
+
+go_plots <- lapply(unique(go_data_plot$cluster), function(clust) {
+  
+  # Filter data for this cluster
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  # Create plot
+  p <- ggplot(go_data, aes(x = neglog10p, 
+                           y = reorder(Term_short, neglog10p),
+                           size = Significant)) + 
+    geom_point(alpha = 0.8) +                     # Using points instead of bars
+    labs(
+      x = expression(-log[10](Fisher)),
+      y = "",
+      size = "Gene Count",
+      colour = "Ontology",
+      title = paste("Cluster", clust)
+    ) +
+    
+    # Optional: Adjust the range of point sizes to make them readable
+    scale_size_continuous(range = c(3, 10)) + 
+    
+    theme_bw(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      axis.text.y = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80") # Adds a guide line
+    )
+  
+  return(p)
+})
+
+# ==========================================
+# STEP 5: Combine plots using patchwork
+# ==========================================
+
+# Function to combine trajectory + GO for one cluster
+combine_cluster_plots <- function(i) {
+  trajectory_plots[[i]] + go_plots[[i]] + 
+    plot_layout(widths = c(1, 1.2))  # GO plot slightly wider for term names
+}
+
+# Combine all clusters vertically
+n_clusters <- length(unique(cluster_stats$cluster))
+
+combined_plot <- wrap_plots(
+  lapply(1:n_clusters, combine_cluster_plots),
+  ncol = 1) #+
+#   plot_annotation(
+#     title = "Seasonal miRNA-mRNA regulatory dynamics by cluster",
+#     theme = theme(
+#       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+#       plot.subtitle = element_text(size = 12, hjust = 0.5)
+#     )
+#   )
+
+print(combined_plot)
+
+# Save
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.pdf", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.png", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+```
+
+Add the network plots at the top
+```{r}
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(scales)
+
+# Ensure consistent season factor levels for network metrics
+seasonal_network_metrics <- seasonal_network_metrics %>%
+  mutate(condition = factor(condition, 
+                           levels = c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient")),
+         season = recode(condition, 
+                        "TP0_Acclimation" = "February", 
+                        "TP5_Ambient" = "June", 
+                        "TP7_Ambient" = "August"),
+         season = factor(season, levels = c("February", "June", "August")))
+
+# ==========================================
+# 1. COMPACT NETWORK VIOLIN PLOTS (TOP ROW A,B,C)
+# ==========================================
+
+# Degree violin plot 
+degree_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = degree, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  theme_linedraw(base_size = 14) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(x = "", y = "Degree\n(# mRNA targets)")
+
+# Betweenness violin plot 
+betweenness_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = betweenness, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  scale_y_log10(labels = label_number()) +
+  theme_linedraw(base_size = 14) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(x = "", y = "Betweenness\n(log scale)")
+
+# d' violin plot 
+dprime_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = dprime, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  theme_linedraw(base_size = 14) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(x = "", y = "d'\n(specialization)")
+
+# Compact top row (A,B,C)
+network_row <- degree_violin + betweenness_violin + dprime_violin + 
+  plot_layout(widths = c(1, 1, 1), heights = 1) &
+  theme(plot.margin = margin(10, 5, 15, 5))
+
+# ==========================================
+# 2. TRAJECTORY + GO PLOTS (BOTTOM SECTION D)
+# ==========================================
+
+# Individual trajectories
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
+  mutate(season = factor(season, levels = c("February", "June", "August")))
+
+# Cluster means and SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, season) %>%
+  summarise(
+    mean_cor = mean(cor),
+    se_cor = sd(cor) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Get top N GO terms per cluster
+top_n_terms <- 10
+go_data_plot <- seasonal_functions %>%
+  filter(ontology == "Biological Processes") %>%
+  group_by(cluster) %>%
+  arrange(Fisher) %>%
+  slice_head(n = top_n_terms) %>%
+  ungroup() %>%
+  mutate(
+    Term_short = str_trunc(Term, width = 50, side = "right"),
+    neglog10p = -log10(Fisher)
+  )
+
+# Trajectory plots for each cluster (publication styling)
+trajectory_plots <- lapply(unique(cluster_stats$cluster), function(clust) {
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
+  
+  ggplot() +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    geom_line(data = traj_data, aes(x = season, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    geom_ribbon(data = stat_data, aes(x = season, y = mean_cor,
+                                      ymin = mean_cor - se_cor, 
+                                      ymax = mean_cor + se_cor, group = 1), 
+                fill = "red3", alpha = 0.2) +
+    geom_line(data = stat_data, aes(x = season, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    geom_point(data = stat_data, aes(x = season, y = mean_cor), 
+               color = "red3", size = 3) +
+    labs(title = paste0("Cluster ", clust), x = "", y = "Spearman correlation") +
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 14, colour = "black"),
+      axis.title = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank()
+    )
+})
+
+# GO enrichment plots for each cluster (publication styling)
+go_plots <- lapply(unique(go_data_plot$cluster), function(clust) {
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  ggplot(go_data, aes(x = neglog10p, y = reorder(Term_short, neglog10p), size = Significant)) + 
+    geom_point(alpha = 0.8, colour = "black") + 
+    labs(x = expression(-log[10](italic(Fisher))), y = "", size = "Gene Count",
+         title = paste("Cluster", clust)) +
+    scale_size_continuous(range = c(3, 10)) + 
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 12, colour = "black"),
+      axis.text.x = element_text(size = 14, colour = "black"),
+      axis.title.x = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+    )
+})
+
+# Combine trajectory + GO for each cluster
+n_clusters <- length(unique(cluster_stats$cluster))
+cluster_combined <- lapply(1:n_clusters, function(i) {
+  trajectory_plots[[i]] + go_plots[[i]] + plot_layout(widths = c(1, 1.2))
+})
+
+# Combine ALL clusters vertically  
+cluster_row <- wrap_plots(cluster_combined, ncol = 1, heights = rep(1, n_clusters))
+
+# ==========================================
+# 3. FINAL PUBLICATION FIGURE WITH A,B,C,D
+# ==========================================
+
+final_plot <- network_row / cluster_row + 
+  plot_layout(heights = c(0.6, 2.2)) +
+  plot_annotation(
+    tag_levels = "A")
+
+
+print(final_plot)
+
+# Save high-quality publication versions
+ggsave("../output/Molecular/interactions/networks/seasonal_network_analysis.pdf", 
+       final_plot, width = 16, height = 3.5 + 4 * n_clusters, limitsize = FALSE, dpi = 600)
+ggsave("../output/Molecular/interactions/networks/seasonal_network_analysis.png", 
+       final_plot, width = 16, height = 3.5 + 4 * n_clusters, limitsize = FALSE, dpi = 600)
+```
+
 
 

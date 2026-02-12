@@ -10,11 +10,11 @@ Use DESeq2 to evaluate differential expression of miRNAs; using miRNAs generated
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install(update = TRUE)
-BiocManager::install("DESeq2", force = TRUE)
-install.packages("locfit")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install(update = TRUE)
+# BiocManager::install("DESeq2", force = TRUE)
+# install.packages("locfit")
 
 library(genefilter)
 library(DESeq2)
@@ -114,7 +114,7 @@ head(TP0_v_5_amb)
 
 # Save results for all miRNAs 
 TP0_v_5_amb_df <- as.data.frame(TP0_v_5_amb)
-#write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv")
+write.csv(TP0_v_5_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_5_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_5_amb); ma_plot
@@ -130,7 +130,7 @@ TP0_v_5_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_5_amb.sig))
 TP0_v_5_amb.sig <- as.data.frame(TP0_v_5_amb.sig)
 TP0_v_5_amb.sig.list <- as.data.frame(counts(TP0_v_5_amb.sig.list))
 TP0_v_5_amb.sig.list.full <- cbind(TP0_v_5_amb.sig, TP0_v_5_amb.sig.list)
-#write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_amb_DEM.csv")
+write.csv(TP0_v_5_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP5_amb_DEM.csv")
 ```
 
 TP0 v TP7 Ambient
@@ -141,7 +141,7 @@ head(TP0_v_7_amb)
 
 # Save results for all miRNAs 
 TP0_v_7_amb_df <- as.data.frame(TP0_v_7_amb)
-#write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
+write.csv(TP0_v_7_amb_df, file = "../output/Molecular/smRNA/shortstack/TP0_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot <- plotMA(TP0_v_7_amb); ma_plot
@@ -157,7 +157,7 @@ TP0_v_7_amb.sig.list <- data[which(rownames(dds) %in% rownames(TP0_v_7_amb.sig))
 TP0_v_7_amb.sig <- as.data.frame(TP0_v_7_amb.sig)
 TP0_v_7_amb.sig.list <- as.data.frame(counts(TP0_v_7_amb.sig.list))
 TP0_v_7_amb.sig.list.full <- cbind(TP0_v_7_amb.sig, TP0_v_7_amb.sig.list)
-#write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_amb_DEM.csv")
+write.csv(TP0_v_7_amb.sig.list.full, file = "../output/Molecular/smRNA/shortstack/TP0_amb_v_TP7_amb_DEM.csv")
 ```
 
 TP5 v TP7 Ambient 
@@ -168,7 +168,7 @@ head(TP5_v_7_amb)
 
 # Save results for all miRNAs 
 TP5_v_7_amb_df <- as.data.frame(TP5_v_7_amb)
-#write.csv(TP5_v_7_amb_df, file = "../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv")
+write.csv(TP5_v_7_amb_df, file = "../output/Molecular/smRNA/TP5_v_7_amb_miRNA.csv")
 
 # Volcano plot for LFC 
 ma_plot<- plotMA(TP5_v_7_amb); ma_plot

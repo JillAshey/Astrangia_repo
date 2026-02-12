@@ -47,7 +47,7 @@ feb_all_unique <- feb_all %>%
 
 Read in gene2go information (generated in `topGO.Rmd` file)
 ```{r}
-go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
 ```
 
 Make list of genes for input to topGO
@@ -56,7 +56,7 @@ Make list of genes for input to topGO
 clust_genes <- as.character(feb_all_unique$gene_id)
 
 # All genes 
-all_genes <- as.character(go_ast$mRNA)
+all_genes <- as.character(ast_gene2go$mRNA)
 
 # Apply 1 or 0 if gene is gene of interest 
 GeneList <- factor(as.integer(all_genes %in% clust_genes))
@@ -90,7 +90,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -321,7 +321,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -551,7 +551,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 155)
 ```
 
 Filter by significant results
@@ -734,9 +734,11 @@ ggsave(filename = "../output/Molecular/mRNA/enrichment/GO_en_sig_August_expresse
 
 ## Examining any overlaps in functional terms across season
 
+BP ONLY
+
 ```{r}
 feb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_February_expressed_genes.csv") %>%
-  filter(!ontology == "Cellular Components")
+  filter(ontology == "Biological Processes")
 length(unique(feb_genes$Term))
 unique_terms_by_ontology <- tapply(feb_genes$Term, feb_genes$ontology, function(x) length(unique(x)))
 blah <- feb_genes %>%
@@ -744,7 +746,7 @@ blah <- feb_genes %>%
    summarise(gene_count = n_distinct(mRNA))
 
 june_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_expressed_genes.csv")%>%
-  filter(!ontology == "Cellular Components")
+  filter(ontology == "Biological Processes")
 length(unique(june_genes$Term))
 unique_terms_by_ontology <- tapply(june_genes$Term, june_genes$ontology, function(x) length(unique(x)))
 blah2 <- june_genes %>%
@@ -752,7 +754,7 @@ blah2 <- june_genes %>%
    summarise(gene_count = n_distinct(mRNA))
 
 aug_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_August_expressed_genes.csv")%>%
-  filter(!ontology == "Cellular Components")
+  filter(ontology == "Biological Processes")
 length(unique(aug_genes$Term))
 unique_terms_by_ontology <- tapply(aug_genes$Term, aug_genes$ontology, function(x) length(unique(x)))
 blah3 <- aug_genes %>%
@@ -764,18 +766,41 @@ june_terms <- unique(june_genes$Term)
 aug_terms <- unique(aug_genes$Term)
 
 # Overlapping terms 
-overlapping_terms_feb_june <- intersect(feb_terms, june_terms) # 13 overlapping terms
-overlapping_terms_feb_aug <- intersect(feb_terms, aug_terms) # 1 overlapping term
-overlapping_terms_june_aug <- intersect(june_terms, aug_terms) # 70 overlapping terms
+overlapping_terms_feb_june <- intersect(feb_terms, june_terms) 
+overlapping_terms_feb_aug <- intersect(feb_terms, aug_terms) 
+overlapping_terms_june_aug <- intersect(june_terms, aug_terms)
 
 # Terms shared between Feb, June and August 
 common_terms <- Reduce(intersect, list(feb_terms, june_terms, aug_terms)) # 1 common term
+
+# Terms unique to Feb 
+feb_unique_terms <- setdiff(feb_terms, union(june_terms, aug_terms))
 
 # Terms unique to June 
 june_unique_terms <- setdiff(june_terms, union(aug_terms, feb_terms))
 
 # Terms unique to August 
 aug_unique_terms <- setdiff(aug_terms, union(june_terms, feb_terms))
+```
+
+Filter by unique terms at each timepoint 
+```{r}
+feb_genes_unique <- feb_genes %>%
+  filter(Term %in% feb_unique_terms)
+
+june_genes_unique <- june_genes %>%
+  filter(Term %in% june_unique_terms)
+
+aug_genes_unique <- aug_genes %>%
+  filter(Term %in% aug_unique_terms)
+```
+
+Filter by shared terms for June and August 
+```{r}
+june_genes_shared <- june_genes %>%
+  filter(Term %in% overlapping_terms_june_aug)
+aug_genes_shared <- aug_genes %>%
+  filter(Term %in% overlapping_terms_june_aug)
 ```
 
 Make an upset plot
@@ -786,20 +811,20 @@ sets_list <- list(
   August   = aug_terms
 )
 
-pset_data <- fromList(sets_list)
+upset_data <- fromList(sets_list)
 
-png("../output/Molecular/mRNA/enrichment/seasonal_upset_plot.png", width = 8, height = 6, units = "in", res = 600)
+png("../output/Molecular/mRNA/enrichment/seasonal_upset_plot_BP.png", width = 8, height = 6, units = "in", res = 600)
 upset(upset_data,
       sets = c("February", "June", "August"),
       order.by = "freq",
-      sets.bar.color = c("#8a36b6", "#f19e21", "#5eca4a"),  # <-- custom colors
-      main.bar.color = "grey40",
+      sets.bar.color = c("#009E73", "#56B4E9", "#E69F00"), # <-- custom colors
+      main.bar.color = c("black"),
       matrix.color = "black",
-      mb.ratio = c(0.7, 0.3),      # ratio between main barplot and set size barplot
-      show.numbers = "yes",        # show counts on bars
-      text.scale = 1.6,            # scale up all text
-      point.size = 4,              # size of matrix points
-      line.size = 1)               # thickness of connecting lines
+      mb.ratio = c(0.7, 0.3),
+      show.numbers = "yes",
+      text.scale = 1.6,
+      point.size = 4,
+      line.size = 1)
 dev.off()
 ```
 
