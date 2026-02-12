@@ -1,3134 +1,1667 @@
 ---
-title: "mRNA-miRNA network analysis"
+title: "More network stuff"
 author: "Jill Ashey"
-date: "2025-12-16"
+date: "2026-01-26"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Network analysis of mRNA-miRNA interactions
 
+Load packages
+```{r, include=F}
 library(tidyverse)
+library(DESeq2)
 library(igraph)
+library(corrplot)
+library(pheatmap)
 library(ggraph)
 library(tidygraph)
-library(ggrepel)
-library(VennDiagram)
-```
-
-### Compare networks 
-
-#### TP0 v TP5 amb 
-
-```{r}
-tp0_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
-tp5_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
-```
-
-Edges and collapse functions 
-```{r}
-collapse_fixed <- function(df) {
-  df |>
-    group_by(miRNA, mRNA) |>
-    slice_max(order_by = abs(PCC.cor), n = 1) |>
-    ungroup() |>
-    mutate(
-      weight = ifelse(PCC.cor < 0, PCC.cor, 0)
-    ) |>
-    select(miRNA, mRNA, PCC.cor, weight, score, energy)
-}
-```
-
-```{r}
-tp0_edges <- collapse_fixed(tp0_amb)
-tp5_edges <- collapse_fixed(tp5_amb)
-
-# Sanity check 
-nrow(tp0_edges)
-nrow(tp5_edges)
-
-all(tp0_edges$miRNA == tp5_edges$miRNA &
-    tp0_edges$mRNA  == tp5_edges$mRNA)
-```
-
-Build networks with identical topology 
-```{r}
-make_network <- function(edges) {
-
-  edges_nonzero <- edges |>
-    dplyr::filter(weight != 0)
-
-  graph_from_data_frame(
-    edges_nonzero,
-    directed = TRUE
-  )
-}
-
-
-g_tp0 <- make_network(tp0_edges)
-g_tp5 <- make_network(tp5_edges)
-
-# Add node types
-all_nodes <- unique(c(tp0_edges$miRNA, tp0_edges$mRNA))
-
-node_types <- ifelse(grepl("^Cluster_", all_nodes),
-                     "miRNA", "mRNA")
-
-V(g_tp0)$type <- node_types[match(V(g_tp0)$name, all_nodes)]
-V(g_tp5)$type <- node_types[match(V(g_tp5)$name, all_nodes)]
-
-### Sanity check
-g_tp0
-g_tp5
-
-summary(E(g_tp0)$weight)
-summary(E(g_tp5)$weight)
-
-edge_density(g_tp0)
-edge_density(g_tp5)
-
-# Plot
-# Convert igraph to tidygraph
-tg_tp0 <- as_tbl_graph(g_tp0)
-tg_tp5 <- as_tbl_graph(g_tp5)
-
-# Example: tp0 ambient network
-E(tg_tp0)$weight_pos <- abs(E(tg_tp0)$weight) + 0.01  # add small constant to avoid 0
-ggraph(tg_tp0, layout = "fr", weights = E(tg_tp0)$weight_pos) +
-  geom_edge_link(aes(width = abs(weight)), alpha = 0.6, color = "steelblue") +
-  geom_node_point(aes(color = type, size = strength(g_tp0, mode="out"))) +
-  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
-  scale_color_manual(values = c("miRNA" = "red", "mRNA" = "lightblue")) +
-  scale_edge_width(range = c(0.2, 2)) +
-  theme_void() +
-  ggtitle("Feb ambient: miRNA-mRNA network")
-
-```
-
-Edge level dynamics 
-```{r}
-edge_compare <- tp0_edges |>
-  rename(weight_tp0 = weight) |>
-  left_join(
-    tp5_edges |> rename(weight_tp5 = weight),
-    by = c("miRNA", "mRNA")
-  ) |>
-  mutate(
-    delta_weight = weight_tp5 - weight_tp0,
-    gained = weight_tp0 == 0 & weight_tp5 != 0,
-    lost   = weight_tp0 != 0 & weight_tp5 == 0,
-    changed = weight_tp0 != weight_tp5
-  )
-
-edge_summary <- edge_compare %>%
-  summarise(
-    n_gained     = sum(gained,  na.rm = TRUE),
-    n_lost       = sum(lost,    na.rm = TRUE),
-    n_changed    = sum(changed, na.rm = TRUE),
-    mean_delta_w = mean(delta_weight, na.rm = TRUE)
-  )
-
-# Plot
-edge_compare |>
-  filter(abs(delta_weight) > 0.1) |>  # top rewired edges
-  ggplot(aes(x = weight_tp0, y = weight_tp5)) +
-  geom_point(alpha=0.6) +
-  geom_abline(slope=1, intercept=0, linetype="dashed") +
-  geom_text_repel(aes(label = paste(miRNA, mRNA, sep="-")), max.overlaps = 10) +
-  theme_bw() +
-  labs(x = "TP0 weight", y = "TP5 weight") +
-  ggtitle("Edge-level weight changes (Feb → June ambient)")
-
-hist(edge_compare$delta_weight)
-```
-
-Node level changes
-```{r}
-node_tp0 <- tibble(
-  node = V(g_tp0)$name,
-  strength_tp0 = strength(g_tp0)
-)
-
-node_tp5 <- tibble(
-  node = V(g_tp5)$name,
-  strength_tp5 = strength(g_tp5)
-)
-
-node_compare <- node_tp0 |>
-  left_join(node_tp5, by = "node") |>
-  mutate(
-    delta_strength = strength_tp5 - strength_tp0,
-    type = ifelse(grepl("^Cluster_", node), "miRNA", "mRNA")
-  )
-
-mirna_node <- node_compare |>
-  filter(type == "miRNA") |>
-  arrange(desc(abs(delta_strength)))
-
-# Plot
-node_compare |>
-  filter(type == "miRNA") |>
-  ggplot(aes(x = strength_tp0, y = strength_tp5)) +
-  geom_point(alpha=0.6) +
-  geom_abline(slope=1, intercept=0, linetype="dashed") +
-  geom_text_repel(aes(label=node), max.overlaps = 10) +
-  theme_bw() +
-  labs(x = "TP0 out-strength", y = "TP5 out-strength") +
-  ggtitle("miRNA regulatory influence changes")
-
-```
-
-Network topology comparisons
-```{r}
-network_stats <- function(g, label) {
-
-  miRNA_nodes <- V(g)$name[V(g)$type == "miRNA"]
-
-  # undirected graph with preserved weights
-  g_u <- as.undirected(
-    g,
-    mode = "collapse",
-    edge.attr.comb = list(weight = function(x) sum(abs(x)))
-  )
-
-  tibble(
-    timepoint = label,
-
-    n_nodes = vcount(g),
-    n_edges = ecount(g),
-
-    density = edge_density(g),
-
-    mean_miRNA_out_degree =
-      mean(degree(g, mode = "out")[miRNA_nodes]),
-
-    mean_miRNA_out_strength =
-      mean(strength(g, mode = "out")[miRNA_nodes]),
-
-    modularity =
-      modularity(cluster_louvain(g_u))
-  )
-}
-
-stats_tp0 <- network_stats(g_tp0, "tp0_ambient")
-stats_tp5 <- network_stats(g_tp5, "tp5_ambient")
-network_stats_df <- bind_rows(stats_tp0, stats_tp5)
-```
-
-```{r}
-# Example: combine stats for plotting
-network_stats_df_long <- network_stats_df |>
-  pivot_longer(cols = c(density, mean_miRNA_out_degree, mean_miRNA_out_strength, modularity),
-               names_to = "metric", values_to = "value")
-
-ggplot(network_stats_df_long, aes(x = timepoint, y = value, color = metric, group = metric)) +
-  geom_point(size = 3) +
-  geom_line(size = 1) +
-  facet_wrap(~metric, scales = "free_y") +
-  theme_bw(base_size = 14) +
-  labs(x = "Timepoint", y = "Value", color = "Metric") +
-  ggtitle("Network topology metrics across time")
-
-```
-
-#### TP0 v TP7 amb 
-
-```{r}
-tp0_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
-tp7_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7amb.csv")
-```
-
-Edges and collapse functions 
-```{r}
-collapse_fixed <- function(df) {
-  df |>
-    group_by(miRNA, mRNA) |>
-    slice_max(order_by = abs(PCC.cor), n = 1) |>
-    ungroup() |>
-    mutate(
-      weight = ifelse(PCC.cor < 0, PCC.cor, 0)
-    ) |>
-    select(miRNA, mRNA, PCC.cor, weight, score, energy)
-}
-```
-
-```{r}
-tp0_edges <- collapse_fixed(tp0_amb)
-tp7_edges <- collapse_fixed(tp7_amb)
-
-# Sanity check 
-nrow(tp0_edges)
-nrow(tp7_edges)
-
-all(tp0_edges$miRNA == tp7_edges$miRNA &
-    tp0_edges$mRNA  == tp7_edges$mRNA)
-```
-
-Build networks with identical topology 
-```{r}
-make_network <- function(edges) {
-
-  edges_nonzero <- edges |>
-    dplyr::filter(weight != 0)
-
-  graph_from_data_frame(
-    edges_nonzero,
-    directed = TRUE
-  )
-}
-
-
-g_tp0 <- make_network(tp0_edges)
-g_tp7 <- make_network(tp7_edges)
-
-# Add node types
-all_nodes <- unique(c(tp0_edges$miRNA, tp0_edges$mRNA))
-
-node_types <- ifelse(grepl("^Cluster_", all_nodes),
-                     "miRNA", "mRNA")
-
-V(g_tp0)$type <- node_types[match(V(g_tp0)$name, all_nodes)]
-V(g_tp7)$type <- node_types[match(V(g_tp7)$name, all_nodes)]
-
-### Sanity check
-g_tp0
-g_tp7
-
-summary(E(g_tp0)$weight)
-summary(E(g_tp7)$weight)
-
-edge_density(g_tp0)
-edge_density(g_tp7)
-
-# Plot
-# Convert igraph to tidygraph
-tg_tp0 <- as_tbl_graph(g_tp0)
-tg_tp7 <- as_tbl_graph(g_tp7)
-
-# Example: tp0 ambient network
-E(tg_tp0)$weight_pos <- abs(E(tg_tp0)$weight) + 0.01  # add small constant to avoid 0
-ggraph(tg_tp0, layout = "fr", weights = E(tg_tp0)$weight_pos) +
-  geom_edge_link(aes(width = abs(weight)), alpha = 0.6, color = "steelblue") +
-  geom_node_point(aes(color = type, size = strength(g_tp0, mode="out"))) +
-  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
-  scale_color_manual(values = c("miRNA" = "red", "mRNA" = "lightblue")) +
-  scale_edge_width(range = c(0.2, 2)) +
-  theme_void() +
-  ggtitle("Feb ambient: miRNA-mRNA network")
-
-```
-
-Edge level dynamics 
-```{r}
-edge_compare <- tp0_edges |>
-  rename(weight_tp0 = weight) |>
-  left_join(
-    tp7_edges |> rename(weight_tp7 = weight),
-    by = c("miRNA", "mRNA")
-  ) |>
-  mutate(
-    delta_weight = weight_tp7 - weight_tp0,
-    gained = weight_tp0 == 0 & weight_tp7 != 0,
-    lost   = weight_tp0 != 0 & weight_tp7 == 0,
-    changed = weight_tp0 != weight_tp7
-  )
-
-edge_summary <- edge_compare %>%
-  summarise(
-    n_gained     = sum(gained,  na.rm = TRUE),
-    n_lost       = sum(lost,    na.rm = TRUE),
-    n_changed    = sum(changed, na.rm = TRUE),
-    mean_delta_w = mean(delta_weight, na.rm = TRUE)
-  )
-
-# Plot
-edge_compare |>
-  filter(abs(delta_weight) > 0.1) |>  # top rewired edges
-  ggplot(aes(x = weight_tp0, y = weight_tp7)) +
-  geom_point(alpha=0.6) +
-  geom_abline(slope=1, intercept=0, linetype="dashed") +
-  geom_text_repel(aes(label = paste(miRNA, mRNA, sep="-")), max.overlaps = 10) +
-  theme_bw() +
-  labs(x = "TP0 weight", y = "TP7 weight") +
-  ggtitle("Edge-level weight changes (Feb → August ambient)")
-
-hist(edge_compare$delta_weight)
-```
-
-Node level changes
-```{r}
-node_tp0 <- tibble(
-  node = V(g_tp0)$name,
-  strength_tp0 = strength(g_tp0)
-)
-
-node_tp7 <- tibble(
-  node = V(g_tp7)$name,
-  strength_tp7 = strength(g_tp7)
-)
-
-node_compare <- node_tp0 |>
-  left_join(node_tp7, by = "node") |>
-  mutate(
-    delta_strength = strength_tp7 - strength_tp0,
-    type = ifelse(grepl("^Cluster_", node), "miRNA", "mRNA")
-  )
-
-mirna_node <- node_compare |>
-  filter(type == "miRNA") |>
-  arrange(desc(abs(delta_strength)))
-
-# Plot
-node_compare |>
-  filter(type == "miRNA") |>
-  ggplot(aes(x = strength_tp0, y = strength_tp7)) +
-  geom_point(alpha=0.6) +
-  #geom_abline(slope=1, intercept=0, linetype="dashed") +
-  geom_text_repel(aes(label=node), max.overlaps = 10) +
-  theme_bw() +
-  labs(x = "TP0 out-strength", y = "TP5 out-strength") +
-  ggtitle("miRNA regulatory influence changes")
-
-changing_miRNAs <- node_compare %>%
-  filter(type == "miRNA", abs(delta_strength) > quantile(abs(delta_strength), 0.9))
-
-
-```
-
-Network topology comparisons
-```{r}
-network_stats <- function(g, label) {
-
-  miRNA_nodes <- V(g)$name[V(g)$type == "miRNA"]
-
-  # undirected graph with preserved weights
-  g_u <- as.undirected(
-    g,
-    mode = "collapse",
-    edge.attr.comb = list(weight = function(x) sum(abs(x)))
-  )
-
-  tibble(
-    timepoint = label,
-
-    n_nodes = vcount(g),
-    n_edges = ecount(g),
-
-    density = edge_density(g),
-
-    mean_miRNA_out_degree =
-      mean(degree(g, mode = "out")[miRNA_nodes]),
-
-    mean_miRNA_out_strength =
-      mean(strength(g, mode = "out")[miRNA_nodes]),
-
-    modularity =
-      modularity(cluster_louvain(g_u))
-  )
-}
-
-stats_tp0 <- network_stats(g_tp0, "tp0_ambient")
-stats_tp7 <- network_stats(g_tp7, "tp7_ambient")
-network_stats_df <- bind_rows(stats_tp0, stats_tp7)
-```
-
-```{r}
-# Example: combine stats for plotting
-network_stats_df_long <- network_stats_df |>
-  pivot_longer(cols = c(density, mean_miRNA_out_degree, mean_miRNA_out_strength, modularity),
-               names_to = "metric", values_to = "value")
-
-ggplot(network_stats_df_long, aes(x = timepoint, y = value, color = metric, group = metric)) +
-  geom_point(size = 3) +
-  geom_line(size = 1) +
-  facet_wrap(~metric, scales = "free_y") +
-  theme_bw(base_size = 14) +
-  labs(x = "Timepoint", y = "Value", color = "Metric") +
-  ggtitle("Network topology metrics across time")
-
-```
-
-
-
-
-
-
-
-
-
-Trying something else 
-
-```{r}
+library(patchwork)
+library(RColorBrewer)
+library(ggalluvial)
 library(bipartite)
-library(igraph)
+library(parallel)
+library(plotly)
+library(broom)
+library(topGO)
+```
+
+## Read in data and normalize 
+
+Read in metadata 
+```{r}
+metadata <- read.csv("../data/Molecular/RNA_metadata.csv")
+
+# Remove AST-1105 -- did not sequence well 
+metadata <- metadata %>%
+  filter(!ID == "AST-1105") %>%
+  rename(sample = ID, timepoint = Timepoint, treatment = Treatment)
+```
+
+Load mRNA counts and normalize 
+```{r, include=F}
+mrna_counts <- read_csv("../output/Molecular/mRNA/filtered_gene_counts.csv")
+mrna_counts_df <- as.data.frame(mrna_counts)
+rownames(mrna_counts_df) <- mrna_counts_df$...1
+mrna_counts_df$...1 <- NULL
+
+# Remove AST-1105 -- did not sequence well 
+mrna_counts_df <- mrna_counts_df %>%
+  select(-"AST-1105")
+
+# Reorder count matrices to match metadata sample order
+mrna_counts <- mrna_counts_df[, metadata$sample]
+
+# Normalize 
+dds_mrna <- DESeqDataSetFromMatrix(
+  countData = mrna_counts_df,
+  colData = metadata,
+  design = ~1)
+vsd_mrna <- vst(dds_mrna, blind = FALSE)
+mrna_norm <- assay(vsd_mrna)
+```
+
+Load miRNA counts and normalize 
+```{r, include=F}
+mirna_counts <- read.csv("../output/Molecular/smRNA/shortstack/putative_miRNA_counts.csv") # AST-1105 already removed from the df 
+mirna_counts_df <- as.data.frame(mirna_counts)
+rownames(mirna_counts_df) <- mirna_counts_df$X
+mirna_counts_df$X <- NULL
+
+# Replace . with - in sample names 
+colnames(mirna_counts_df) <- ifelse(
+  str_starts(colnames(mirna_counts_df), "AST"),
+  gsub("\\.", "-", colnames(mirna_counts_df)),
+  colnames(mirna_counts_df))
+
+# Reorder count matrices to match metadata sample order
+mirna_counts <- mirna_counts_df[, metadata$sample]
+
+# Normalize 
+dds_mirna <- DESeqDataSetFromMatrix(
+  countData = mirna_counts_df,
+  colData = metadata,
+  design = ~1)
+vsd_mirna <- varianceStabilizingTransformation(dds_mirna, blind = FALSE)
+mirna_norm <- assay(vsd_mirna)
+```
+
+## Read in interaction data 
+
+Read in miranda data - 1kb 3'UTR binding 
+```{r}
+miranda_3utr <- read.delim("../output/Molecular/interactions/miranda_strict_all_1kb_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_3utr) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df
+miranda_3utr$miRNA <- sub("^>", "", miranda_3utr$miRNA)  # Remove leading ">"
+miranda_3utr$miRNA <- sub("\\..*", "", miranda_3utr$miRNA)  # Remove everything from the first period onwards
+miranda_3utr$mRNA <- sub(";.*", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+miranda_3utr$mRNA <- sub("ID=", "", miranda_3utr$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_3utr)
+length(unique(miranda_3utr$miRNA))
+length(unique(miranda_3utr$mRNA))
+
+# Calculate length of binding 
+miranda_3utr <- miranda_3utr %>%
+  separate(query_start_end, into = c("start", "end"), sep = " ", convert = TRUE) %>%
+  mutate(interaction_length = end - start)
+miranda_3utr$binding_type <- "3'UTR"
+```
+
+Read in miranda data - entire mRNA binding
+```{r}
+miranda_mrna <- read.delim("~/Desktop/PutnamLab/Astrangia/Molecular/miranda_strict_all_mrna_apoc_shortstack_parsed.txt", header = F)
+colnames(miranda_mrna) <- c("miRNA", "mRNA", "score", "energy", "query_start_end", "subject_start_end", "total_bp_shared", "query_similar", "subject_similar")
+
+# Format miranda df 
+miranda_mrna$miRNA <- sub("^>", "", miranda_mrna$miRNA)  # Remove leading ">"
+miranda_mrna$miRNA <- sub("\\..*", "", miranda_mrna$miRNA)  # Remove everything from the first period onwards
+miranda_mrna$mRNA <- sub(";.*", "", miranda_mrna$mRNA)  # Remove everything from "::" onwards
+miranda_mrna$mRNA <- sub("ID=", "", miranda_mrna$mRNA)  # Remove everything from "::" onwards
+miranda_mrna$mRNA <- sub("model", "TU", miranda_mrna$mRNA)  # Remove everything from "::" onwards
+
+dim(miranda_mrna)
+length(unique(miranda_mrna$miRNA))
+length(unique(miranda_mrna$mRNA))
+
+# Calculate length of binding 
+miranda_mrna <- miranda_mrna %>%
+  separate(query_start_end, into = c("start", "end"), sep = " ", convert = TRUE) %>%
+  mutate(interaction_length = end - start) 
+miranda_mrna$binding_type <- "CDS"
+```
+
+Bind miranda dfs and filter so that interaction length must be at least 13 bp
+```{r}
+miranda_data <- rbind(miranda_3utr, miranda_mrna)
+
+# Filter interaction length 
+miranda_data <- miranda_data %>%
+  filter(interaction_length >= 13) 
+miranda_data <- unique(miranda_data)
+```
+
+Check data 
+```{r}
+# Data dimensions
+cat("mRNA genes:", nrow(mrna_counts_df), "\n")
+cat("mRNA samples:", ncol(mrna_counts_df), "\n")
+cat("miRNA:", nrow(mirna_counts_df), "\n")
+cat("miRNA samples:", ncol(mirna_counts_df), "\n")
+cat("Metadata rows:", nrow(metadata), "\n")
+cat("Predicted interactions:", nrow(miranda_data), "\n\n")
+
+# Check that sample names match
+cat("Samples in mRNA data:", paste(colnames(mrna_counts_df), collapse = ", "), "...\n")
+cat("Samples in miRNA data:", paste(colnames(mirna_counts_df), collapse = ", "), "...\n")
+cat("Samples in metadata:", paste(metadata$sample), collapse = ", ", "...\n\n")
+
+# Check if all samples match
+all_match <- all(colnames(mrna_counts_df) == metadata$sample) & 
+             all(colnames(mirna_counts_df) == metadata$sample)
+cat("Do all samples match? ", all_match, "\n\n")
+
+# Check interaction predictions
+cat("Column names in interactions:", paste(colnames(miranda_data), collapse = ", "), "\n")
+head(miranda_data)
+table(miranda_data$binding_type)
+```
+
+## Remove any miRNAs or mRNA not expressed from miranda data 
+
+Some miRNAs and mRNAs were not expressed in our data but interactions were still predicted with these data. Remove the miRNAs and mRNAs not expressed from the interaction data 
+```{r}
+# Check which genes/miRNAs are missing
+mirnas_in_interactions <- unique(miranda_data$miRNA)
+mrnas_in_interactions <- unique(miranda_data$mRNA)
+
+mirnas_in_counts <- rownames(mirna_norm)
+mrnas_in_counts <- rownames(mrna_norm)
+
+# miRNAs missing
+missing_mirnas <- setdiff(mirnas_in_interactions, mirnas_in_counts)
+cat("miRNAs in interactions but NOT in expression data:", length(missing_mirnas), "\n")
+if (length(missing_mirnas) > 0) {
+  cat("Examples:", head(missing_mirnas, 5), "\n")
+}
+
+# mRNAs missing
+missing_mrnas <- setdiff(mrnas_in_interactions, mrnas_in_counts)
+cat("\nmRNAs in interactions but NOT in expression data:", length(missing_mrnas), "\n")
+if (length(missing_mrnas) > 0) {
+  cat("Examples:", head(missing_mrnas, 5), "\n")
+}
+
+# Filter interactions to only include those present in expression data 
+miranda_data_filtered <- miranda_data %>%
+  filter(miRNA %in% mirnas_in_counts,
+         mRNA %in% mrnas_in_counts)
+
+cat("Filtered interactions:", nrow(miranda_data_filtered), "\n")
+cat("Removed:", nrow(miranda_data) - nrow(miranda_data_filtered), "interactions\n\n")
+
+# Verify all are present now
+cat("Verification:\n")
+cat("All miRNAs present?", all(miranda_data_filtered$miRNA %in% mirnas_in_counts), "\n")
+cat("All mRNAs present?", all(miranda_data_filtered$mRNA %in% mrnas_in_counts), "\n\n")
+```
+
+## Perform correlation analysis 
+
+Correlation time! Using spearman's correlation coefficient because it is non-parametric and robust against outliers.  
+```{r}
+# Function to calculate correlations for one condition
+calculate_condition_correlations <- function(mrna_data, mirna_data, 
+                                             interactions_df,
+                                             metadata, 
+                                             timepoint_val, 
+                                             treatment_val,
+                                             min_cor_threshold = 0.3) {
+  
+  cat("Processing:", timepoint_val, "-", treatment_val, "\n")
+  
+  # Get samples for this condition
+  samples <- metadata %>% 
+    dplyr::filter(timepoint == timepoint_val, treatment == treatment_val) %>% 
+    dplyr::pull(sample)
+  
+  n_samples <- length(samples)
+  cat("  N samples:", n_samples, "\n")
+  
+  # Subset data to these samples
+  mrna_subset <- mrna_data[, samples, drop = FALSE]
+  mirna_subset <- mirna_data[, samples, drop = FALSE]
+  
+  # Calculate correlations only for predicted interactions
+  cat("  Calculating", nrow(interactions_df), "correlations...\n")
+  
+  correlations <- interactions_df %>%
+    rowwise() %>%
+    mutate(
+      # Calculate correlation
+      cor_value = cor(mrna_subset[mRNA, ], 
+                     mirna_subset[miRNA, ], 
+                     method = "spearman"),
+      # Calculate p-value
+      p_value = tryCatch({
+        cor.test(mrna_subset[mRNA, ], 
+                mirna_subset[miRNA, ], 
+                method = "spearman")$p.value
+      }, error = function(e) NA_real_),
+      
+      # NEW: Calculate mean expression values for this condition
+      mean_expr_mRNA = mean(mrna_subset[mRNA, ], na.rm = TRUE),
+      mean_expr_miRNA = mean(mirna_subset[miRNA, ], na.rm = TRUE),
+      
+      # OPTIONAL: Also calculate SD or other statistics
+      sd_expr_mRNA = sd(mrna_subset[mRNA, ], na.rm = TRUE),
+      sd_expr_miRNA = sd(mirna_subset[miRNA, ], na.rm = TRUE),
+      
+      # Add metadata
+      timepoint = timepoint_val,
+      treatment = treatment_val,
+      n_samples = n_samples
+    ) %>%
+    ungroup() %>%
+    filter(!is.na(cor_value), !is.na(p_value))
+  
+  cat("  Done! Valid correlations:", nrow(correlations), "\n\n")
+  
+  return(correlations)
+}
+
+# Calculate correlations for all conditions 
+all_correlations <- bind_rows(
+  calculate_condition_correlations(
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,  
+    "TP0", "Acclimation"),
+  calculate_condition_correlations(
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP5", "Ambient"),
+  calculate_condition_correlations(
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP5", "Heat"),
+  calculate_condition_correlations(
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP7", "Ambient"),
+  calculate_condition_correlations(
+    mrna_norm, mirna_norm, 
+    miranda_data_filtered, metadata,
+    "TP7", "Heat"))
+length(unique(all_correlations$miRNA))
+length(unique(all_correlations$mRNA))
+```
+
+Apply multiple testing correction for pvalues 
+```{r}
+all_correlations <- all_correlations %>%
+  mutate(
+    p_adj = p.adjust(p_value, method = "BH"),
+    pair_id = paste(miRNA, mRNA, sep = "_"))
+
+cat("Total correlation tests:", nrow(all_correlations), "\n")
+cat("Significant at FDR < 0.05:", sum(all_correlations$p_adj < 0.05), "\n")
+cat("Significant at FDR < 0.01:", sum(all_correlations$p_adj < 0.01), "\n\n")
+```
+
+Save correlation df
+```{r}
+write.csv(all_correlations, "../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
+```
+
+## Filter correlation data
+
+Filter so that miRNA expression is greater than mRNA expression (to stay in line with canonical mechanism of miRNA repression)
+```{r}
+all_correlations_high_miRNA <- all_correlations %>%
+  filter(mean_expr_miRNA > mean_expr_mRNA)
+length(unique(all_correlations_high_miRNA$miRNA))
+length(unique(all_correlations_high_miRNA$mRNA))
+```
+
+## Calculate bipartite network metrics 
+
+Calculate the following network metrics for each condition (TP0, TP5 ambient, TP5 heat, TP7 ambient, TP7 heat):
+- Degree - number of target mRNAs per miRNA
+- Betweenness - fewest number of targets to connect to another miRNA. High betweenness = connector miRNA, connected to other miRNA networks; low betweenness = less connected to other miRNA networks, more peripheral. Range from 0 to infinite. 
+- Degree of specialization (d') - the selectivity of miRNA with their targets. Ranges from 0 to 1, with 1 being a perfect specialist (ie miRNA and its targets are completely disconnected from other miRNAs and their targets).
+
+These metrics were derived from [Despard et al. 2025](https://onlinelibrary.wiley.com/doi/10.1002/ece3.71351).
+
+The following chunk are custom scripts for bipartite network calculations. I tried using the bipartite r package but was running into issues with run time. 
+```{r custom functions for network calculations}
+# Degree for "higher" level (rows): number of non-zero links per miRNA
+miRNA_degree <- function(bp_matrix) {
+  rowSums(bp_matrix > 0)
+}
+
+# Simple betweenness centrality on miRNA projection:
+# 1) project bipartite matrix onto miRNAs: B = A %*% t(A)
+# 2) compute betweenness on unweighted graph defined by B > 0
+miRNA_betweenness <- function(bp_matrix) {
+  A <- (bp_matrix > 0) * 1
+  if (nrow(A) < 3) {
+    return(setNames(rep(0, nrow(A)), rownames(A)))
+  }
+  B <- A %*% t(A)      # miRNA–miRNA projection (weighted)
+  G <- (B > 0) * 1     # unweighted adjacency
+
+  n <- nrow(G)
+  bt <- numeric(n)
+  names(bt) <- rownames(G)
+
+  # Brandes-like betweenness for unweighted graphs
+  for (s in seq_len(n)) {
+    S <- integer(0)
+    P <- vector("list", n)
+    sigma <- rep(0, n); sigma[s] <- 1
+    d <- rep(-1L, n); d[s] <- 0L
+
+    Q <- c(s)
+    while (length(Q) > 0) {
+      v <- Q[1]; Q <- Q[-1]
+      S <- c(S, v)
+      nbrs <- which(G[v, ] != 0)
+      for (w in nbrs) {
+        if (d[w] < 0L) {
+          d[w] <- d[v] + 1L
+          Q <- c(Q, w)
+        }
+        if (d[w] == d[v] + 1L) {
+          sigma[w] <- sigma[w] + sigma[v]
+          P[[w]] <- c(P[[w]], v)
+        }
+      }
+    }
+
+    delta <- rep(0, n)
+    while (length(S) > 0) {
+      w <- S[length(S)]
+      S <- S[-length(S)]
+      for (v in P[[w]]) {
+        if (sigma[w] > 0) {
+          delta[v] <- delta[v] + (sigma[v] / sigma[w]) * (1 + delta[w])
+        }
+      }
+      if (w != s) {
+        bt[w] <- bt[w] + delta[w]
+      }
+    }
+  }
+
+  bt
+}
+
+# Blüthgen's d' specialization for miRNAs (rows).
+# Treats entries >0 as interactions; uses information-theoretic formula.
+miRNA_dprime <- function(bp_matrix) {
+  A <- as.matrix(bp_matrix)
+  A[A < 0] <- 0
+
+  row_tot <- rowSums(A)
+  col_tot <- colSums(A)
+  Ttot <- sum(A)
+
+  if (Ttot == 0 || all(row_tot == 0) || all(col_tot == 0)) {
+    return(setNames(rep(NA_real_, nrow(A)), rownames(A)))
+  }
+
+  # p_ij: interaction probability per row
+  p_ij <- sweep(A, 1, row_tot, FUN = "/")
+  p_j  <- col_tot / Ttot
+
+  dprime <- numeric(nrow(A))
+  names(dprime) <- rownames(A)
+
+  for (i in seq_len(nrow(A))) {
+    if (row_tot[i] == 0) {
+      dprime[i] <- NA_real_
+      next
+    }
+    p_i <- p_ij[i, ]
+    used <- p_i > 0 & p_j > 0
+    if (!any(used)) {
+      dprime[i] <- NA_real_
+      next
+    }
+
+    # Kullback–Leibler divergence K_i
+    Ki <- sum(p_i[used] * log(p_i[used] / p_j[used]))
+
+    # approximate K_max for given p_j: perfect specialization
+    # if all p_j[used] equal, Kmax can become 0 or NA, guard explicitly
+    jstar <- which.min(p_j[used])
+    p_star <- numeric(sum(used))
+    p_star[jstar] <- 1
+
+    # suppress warnings in case of 0*log(0/0)
+    Kmax_vec <- suppressWarnings(p_star * log(p_star / p_j[used]))
+    Kmax <- sum(Kmax_vec[is.finite(Kmax_vec)])
+
+    if (is.na(Kmax) || Kmax <= 0) {
+      dprime[i] <- NA_real_
+    } else {
+      dprime[i] <- Ki / Kmax
+    }
+  }
+
+  dprime
+}
+
+create_bipartite_matrix_despard <- function(
+  cor_data,
+  timepoint_val,
+  treatment_val,
+  cor_threshold = 0.1
+) {
+  # Filter for this condition with strong correlations
+  filtered_data <- cor_data %>%
+    filter(
+      timepoint == timepoint_val,
+      treatment == treatment_val,
+      !is.na(cor_value),
+      abs(cor_value) >= cor_threshold
+    ) %>%
+    select(miRNA, mRNA) %>%
+    distinct() %>%
+    mutate(presence = 1) # Unweighted (presence/absence)
+
+  if (nrow(filtered_data) == 0) {
+    return(matrix(
+      nrow = 0, ncol = 0,
+      dimnames = list(character(0), character(0))
+    ))
+  }
+
+  # Create matrix: rows = miRNAs (higher level), cols = mRNAs (lower level)
+  bp_matrix <- filtered_data %>%
+    pivot_wider(
+      names_from  = mRNA,
+      values_from = presence,
+      values_fill = 0
+    ) %>%
+    column_to_rownames("miRNA") %>%
+    as.matrix()
+
+  bp_matrix
+}
+```
+
+Create bipartite matrics for all conditions
+```{r}
+bp_TP0 <- create_bipartite_matrix_despard(
+  all_correlations_high_miRNA,
+  "TP0", "Acclimation",
+  cor_threshold = 0.0)
+
+bp_TP5_Ambient <- create_bipartite_matrix_despard(
+  all_correlations_high_miRNA,
+  "TP5", "Ambient",
+  cor_threshold = 0.0)
+
+bp_TP5_Heat <- create_bipartite_matrix_despard(
+  all_correlations_high_miRNA,
+  "TP5", "Heat",
+  cor_threshold = 0.0)
+
+bp_TP7_Ambient <- create_bipartite_matrix_despard(
+  all_correlations_high_miRNA,
+  "TP7", "Ambient",
+  cor_threshold = 0.0)
+
+bp_TP7_Heat <- create_bipartite_matrix_despard(
+  all_correlations_high_miRNA,
+  "TP7", "Heat",
+  cor_threshold = 0.0)
+
+bp_matrices_list <- list(
+  "TP0_Acclimation" = bp_TP0,
+  "TP5_Ambient"     = bp_TP5_Ambient,
+  "TP5_Heat"        = bp_TP5_Heat,
+  "TP7_Ambient"     = bp_TP7_Ambient,
+  "TP7_Heat"        = bp_TP7_Heat)
+
+# Check dimensions
+for (name in names(bp_matrices_list)) {
+  cat(
+    name, ":",
+    nrow(bp_matrices_list[[name]]), "miRNAs x",
+    ncol(bp_matrices_list[[name]]), "mRNAs,",
+    sum(bp_matrices_list[[name]]), "interactions\n")}
+```
+
+Calculate network metrics (degree, betweenness, d') for each condition
+```{r}
+# TP0 Acclimation
+deg_TP0 <- miRNA_degree(bp_TP0)
+bt_TP0  <- miRNA_betweenness(bp_TP0)
+dpr_TP0 <- miRNA_dprime(bp_TP0)
+
+df_TP0 <- data.frame(
+  condition   = "TP0_Acclimation",
+  miRNA       = names(deg_TP0),
+  degree      = as.numeric(deg_TP0),
+  betweenness = as.numeric(bt_TP0[names(deg_TP0)]),
+  dprime      = as.numeric(dpr_TP0[names(deg_TP0)]),
+  row.names   = NULL)
+
+# TP5 Ambient
+deg_TP5_amb <- miRNA_degree(bp_TP5_Ambient)
+bt_TP5_amb  <- miRNA_betweenness(bp_TP5_Ambient)
+dpr_TP5_amb <- miRNA_dprime(bp_TP5_Ambient)
+
+df_TP5_amb <- data.frame(
+  condition   = "TP5_Ambient",
+  miRNA       = names(deg_TP5_amb),
+  degree      = as.numeric(deg_TP5_amb),
+  betweenness = as.numeric(bt_TP5_amb[names(deg_TP5_amb)]),
+  dprime      = as.numeric(dpr_TP5_amb[names(deg_TP5_amb)]),
+  row.names   = NULL)
+
+# TP5 Heat
+deg_TP5_heat <- miRNA_degree(bp_TP5_Heat)
+bt_TP5_heat  <- miRNA_betweenness(bp_TP5_Heat)
+dpr_TP5_heat <- miRNA_dprime(bp_TP5_Heat)
+
+df_TP5_heat <- data.frame(
+  condition   = "TP5_Heat",
+  miRNA       = names(deg_TP5_heat),
+  degree      = as.numeric(deg_TP5_heat),
+  betweenness = as.numeric(bt_TP5_heat[names(deg_TP5_heat)]),
+  dprime      = as.numeric(dpr_TP5_heat[names(deg_TP5_heat)]),
+  row.names   = NULL)
+
+# TP7 Ambient
+deg_TP7_amb <- miRNA_degree(bp_TP7_Ambient)
+bt_TP7_amb  <- miRNA_betweenness(bp_TP7_Ambient)
+dpr_TP7_amb <- miRNA_dprime(bp_TP7_Ambient)
+
+df_TP7_amb <- data.frame(
+  condition   = "TP7_Ambient",
+  miRNA       = names(deg_TP7_amb),
+  degree      = as.numeric(deg_TP7_amb),
+  betweenness = as.numeric(bt_TP7_amb[names(deg_TP7_amb)]),
+  dprime      = as.numeric(dpr_TP7_amb[names(deg_TP7_amb)]),
+  row.names   = NULL)
+
+# TP7 Heat
+deg_TP7_heat <- miRNA_degree(bp_TP7_Heat)
+bt_TP7_heat  <- miRNA_betweenness(bp_TP7_Heat)
+dpr_TP7_heat <- miRNA_dprime(bp_TP7_Heat)
+
+df_TP7_heat <- data.frame(
+  condition   = "TP7_Heat",
+  miRNA       = names(deg_TP7_heat),
+  degree      = as.numeric(deg_TP7_heat),
+  betweenness = as.numeric(bt_TP7_heat[names(deg_TP7_heat)]),
+  dprime      = as.numeric(dpr_TP7_heat[names(deg_TP7_heat)]),
+  row.names   = NULL)
+
+network_metrics <- rbind(df_TP0, df_TP5_amb, df_TP7_amb, df_TP5_heat, df_TP7_heat)
+
+# Save as csv 
+write.csv(network_metrics, "../output/Molecular/interactions/networks/network_metrics.csv")
+```
+
+## Seasonal network metrics 
+
+Subset network metrics by season
+```{r}
+seasonal_network_metrics <- network_metrics %>%
+  filter(condition %in% c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient"))
+```
+
+Make PCA of seasonal network metrics 
+```{r}
+# Make PCA 
+metrics <- seasonal_network_metrics[, c("degree", "betweenness", "dprime")]
+pca <- prcomp(metrics, center = TRUE, scale. = TRUE)
+
+# Extract scores 
+scores <- as.data.frame(pca$x)
+scores$condition <- seasonal_network_metrics$condition
+scores$miRNA <- seasonal_network_metrics$miRNA
+
+# Calculate variance explained
+var_explained <- pca$sdev^2 / sum(pca$sdev^2)
+pc1_lab <- paste0("PC1 (", round(var_explained[1] * 100, 1), "%)")
+pc2_lab <- paste0("PC2 (", round(var_explained[2] * 100, 1), "%)")
+
+# Plot
+ggplot(scores, aes(PC1, PC2, color = condition)) +
+  geom_point(size = 2, alpha = 0.8) +
+  scale_color_brewer(palette = "Set1") +
+  labs(x = pc1_lab, y = pc2_lab, color = "Condition") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_line(color = "grey90"),
+    legend.position = "right")
+```
+
+Hover labels to identify miRNAs 
+```{r}
+plt <- ggplot(scores, aes(PC1, PC2, color = condition,
+                          text = paste0("miRNA: ", miRNA))) +
+  geom_point(size = 2, alpha = 0.8) +
+  labs(x = pc1_lab, y = pc2_lab, color = "Condition") +
+  theme_minimal(base_size = 14)
+
+ggplotly(plt, tooltip = c("text", "x", "y"))
+
+```
+
+Remake the figures above ^^ to be pretty! Maybe label some of the 'hub' miRNAs'
+
+Make violin plots for seasonal network metrics 
+```{r}
+# Ensure condition is ordered chronologically
+seasonal_network_metrics <- seasonal_network_metrics %>%
+  mutate(condition = factor(condition, 
+                           levels = c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient")))
+
+# Degree plot 
+degree_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = degree, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
+                              "TP5_Ambient" = "#56B4E9", 
+                              "TP7_Ambient" = "#009E73")) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "Degree (number of mRNA targets)",
+       title = "miRNA degree distribution across seasonal timepoints"); degree_seasonal_violin
+
+# Betweenness plot 
+betweenness_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = betweenness, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
+                              "TP5_Ambient" = "#56B4E9", 
+                              "TP7_Ambient" = "#009E73")) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "Betweenness",
+       title = "miRNA betweenness distribution across seasonal timepoints"); betweenness_seasonal_violin
+
+# dprime plot 
+dprime_seasonal_violin <- ggplot(seasonal_network_metrics, aes(x = condition, y = dprime, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("TP0_Acclimation" = "#E69F00", 
+                              "TP5_Ambient" = "#56B4E9", 
+                              "TP7_Ambient" = "#009E73")) +
+  theme_linedraw(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "d'",
+       title = "miRNA d' distribution across seasonal timepoints"); dprime_seasonal_violin
+```
+
+Test for differences in degree, betweenness and dprime by season
+```{r}
+# KRUSKAL-WALLIS TESTS (non-parametric)
+kruskal_results <- seasonal_network_metrics %>%
+  summarise(
+    degree_kw = list(kruskal.test(degree ~ season)),
+    betweenness_kw = list(kruskal.test(betweenness ~ season)),
+    dprime_kw = list(kruskal.test(dprime ~ season))
+  ) %>%
+  mutate(
+    degree_p = map_dbl(degree_kw, ~.x$p.value),
+    betweenness_p = map_dbl(betweenness_kw, ~.x$p.value),
+    dprime_p = map_dbl(dprime_kw, ~.x$p.value)
+  ) %>%
+  select(ends_with("_p"))
+print(kruskal_results)
+```
+
+No significant differences across season for all metrics. 
+
+## Seasonal correlation trajectories 
+
+Filter correlation data for seasonal 
+```{r}
+seasonal_all_correlations_high_miRNA <- all_correlations_high_miRNA %>%
+  filter(timepoint %in% c("TP0", "TP5", "TP7")) %>%
+  filter(treatment %in% c("Acclimation", "Ambient"))
+```
+
+Reshape df for trajectory calculations
+```{r}
+pair_trajectories <- seasonal_all_correlations_high_miRNA %>%
+  select(pair_id, miRNA, mRNA, timepoint, cor_value) %>%
+  #mutate(time_num = recode(timepoint, "TP0" = 0, "TP5" = 5, "TP7" = 7)) %>%
+  group_by(pair_id, miRNA, mRNA, timepoint) %>%
+  summarise(cor_value = mean(cor_value, na.rm = TRUE), .groups = "drop") %>%
+  # Drop time_num here, keep only what's needed for pivot
+  #select(-time_num) %>%
+  pivot_wider(names_from = timepoint, values_from = cor_value, 
+              values_fill = NA, values_fn = mean) %>%
+  # Add back complete trajectory filter
+  filter(!is.na(TP0), !is.na(TP5), !is.na(TP7))
+```
+
+Fit trajectories
+```{r}
+fit_pair_trajectory <- function(row) {
+  df <- data.frame(time = c(0, 5, 7), cor = c(row$TP0, row$TP5, row$TP7))
+  mod <- lm(cor ~ poly(time, 2), data = df)
+  
+  tidy(mod) %>%        # Now broom::tidy() will work
+    filter(term != "(Intercept)") %>%
+    mutate(
+      pair_id = row$pair_id,
+      miRNA = row$miRNA, 
+      mRNA = row$mRNA
+    ) %>%
+    select(pair_id, miRNA, mRNA, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate)
+}
+
+pair_fits <- pair_trajectories %>%
+  rowwise() %>%
+  do(fit_pair_trajectory(.)) %>%
+  ungroup()
+```
+
+Cluster trajectories 
+```{r}
+# Extract clustering features
+features <- pair_fits %>%
+  rename(linear = `poly(time, 2)1`, quadratic = `poly(time, 2)2`) %>%
+  select(pair_id, linear, quadratic)
+
+# Standardize features
+features_scaled <- scale(features[, c("linear", "quadratic")])
+
+# K-means clustering (try k=4-6)
+set.seed(123)
+k <- 5
+clusters <- kmeans(features_scaled, centers = k, nstart = 100)
+
+features$cluster <- as.factor(clusters$cluster)
+
+# Join with pair trajectories df 
+pair_trajectories <- pair_trajectories %>%
+  left_join(features %>% select(pair_id, cluster), by = "pair_id")
+```
+
+Plot trajectories 
+```{r}
+# Prepare long format data (same as before)
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "Feb", "TP5" = "June", "TP7" = "Aug"))
+
+# Stats for mean ± SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, timepoint) %>%
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    se_cor = sd(cor, na.rm = TRUE)/sqrt(n()),
+    n_pairs = n(),
+    .groups = "drop"
+  )
+
+# Single plot with faceted panels
+p_faceted <- ggplot() +
+  # Faint individual trajectories in each panel
+  geom_line(data = trajectory_long, 
+            aes(x = timepoint, y = cor, group = pair_id), 
+            alpha = 0.08, color = "grey60", linewidth = 0.4) +
+  # Mean ± SE per cluster (red lines)
+  geom_line(data = cluster_stats, 
+            aes(x = timepoint, y = mean_cor, group = cluster), 
+            color = "red3", linewidth = 1.3) +
+  geom_ribbon(data = cluster_stats, 
+              aes(x = timepoint, ymin = mean_cor - se_cor, 
+                  ymax = mean_cor + se_cor), 
+              fill = "red", alpha = 0.2, color = NA) +
+  geom_point(data = cluster_stats, 
+             aes(x = timepoint, y = mean_cor), 
+             color = "red3", size = 2.8) +
+  
+  # Facet by cluster (separate panels)
+  facet_wrap(~ cluster, scales = "free_y", ncol = 5) +
+  
+  #scale_x_continuous(breaks = c(0, 5, 7), labels = c("Feb", "June", "Aug")) +
+  labs(x = "Season", y = "Spearman correlation",
+       title = "Seasonal miRNA-mRNA pair correlation trajectories by cluster") +
+  theme_bw(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  ); p_faceted
+```
+
+## Enrichment of clusters -- seasonal 
+
+Before analysis, make gene2go file from annotation information
+```{r}
+# Read in annotation info
+annot <- read.delim("/Users/jillashey/Desktop/PutnamLab/Astrangia_Genome/Apoculata_v2.0_GeneAnnotation_combined_prelim.txt", header = T)
+annot$Protein_ID <- gsub("model", "TU", annot$Protein_ID)
+annot$GO <- paste(annot$GO_Swiss.Prot, annot$GO_Trembl, sep = ";")
+
+# Select gene name and GO columns only 
+go_ast <- annot %>%
+  dplyr::select(Protein_ID, GO) %>%
+  mutate(GO = case_when(
+    grepl("^NA$|^NA;|;$|^;$", GO, ignore.case = TRUE) ~ NA_character_,
+    TRUE ~ GO
+  ))
+
+# Rename cols
+colnames(go_ast) <- c("mRNA", "GO")
+
+# Save as tsv
+write_tsv(go_ast, file = "../data/Molecular/Ast_gene2go.tab")
+```
+
+Read in gene2go information (generated above)
+```{r}
+go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+```
+
+Read in gene-to-go-mappings
+```{r}
+gene2go_topgo <- readMappings("../data/Molecular/Ast_gene2go.tab", IDsep=";")
+```
+
+Set function to select genes of interest (ie those that have pvalue < 0.05)
+```{r}
+topDiffGenes <- function(allScore) {
+return(allScore < 0.05)}
+```
+
+### Cluster 1 seasonal
+
+Subset by Cluster 1 and select only negative correlations for TP0 and TP7 
+```{r}
+subset_cluster1 <- pair_trajectories %>%
+  filter(cluster == 1, TP0 < 0, TP5 > 0, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster1$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 1 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "1"
+```
+
+#### Molecular Functions - cluster 1 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "1"
+```
+
+#### Bind functional results for cluster 1 and save as csv
+
+```{r}
+cluster1_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster1_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster1_functional.csv")
+```
+
+### Cluster 2 seasonal
+
+Subset by Cluster 2 and select only negative correlations for TP0 
+```{r}
+subset_cluster2 <- pair_trajectories %>%
+  filter(cluster == 2, TP0 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster2$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 2 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "2"
+```
+
+#### Molecular Functions - cluster 2 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "2"
+```
+
+#### Bind functional results for cluster 2 and save as csv
+
+```{r}
+cluster2_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster2_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster2_functional.csv")
+```
+
+### Cluster 3 seasonal
+
+Subset by Cluster 3 and select only negative correlations for TP7
+```{r}
+subset_cluster3 <- pair_trajectories %>%
+  filter(cluster == 3, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster3$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 3 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "3"
+```
+
+#### Molecular Functions - cluster 3 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "3"
+```
+
+#### Bind functional results for cluster 3 and save as csv
+
+```{r}
+cluster3_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster3_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster3_functional.csv")
+```
+
+### Cluster 4 seasonal
+
+Subset by Cluster 4 and select only negative correlations for TP5, positive correlations for TP0 and TP7
+```{r}
+subset_cluster4 <- pair_trajectories %>%
+  filter(cluster == 4, TP0 > 0, TP5 < 0, TP7 > 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster4$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 4 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "4"
+```
+
+#### Molecular Functions - cluster 4 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "4"
+```
+
+#### Bind functional results for cluster 4 and save as csv
+
+```{r}
+cluster4_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster4_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster4_functional.csv")
+```
+
+### Cluster 5 seasonal
+
+Subset by Cluster 5 and select only negative correlations for all timepoints
+```{r}
+subset_cluster5 <- pair_trajectories %>%
+  filter(cluster == 5, TP0 < 0, TP5 < 0, TP7 < 0)
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster5$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 5 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "5"
+```
+
+#### Molecular Functions - cluster 5 seasonal
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "5"
+```
+
+#### Bind functional results for cluster 5 and save as csv
+
+```{r}
+cluster5_seasonal_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster5_seasonal_functional, "../output/Molecular/interactions/networks/seasonal_cluster5_functional.csv")
+```
+
+## Plot seasonal functional results 
+
+Bind functional results from all clusters 
+```{r}
+seasonal_functions <- rbind(cluster1_seasonal_functional, cluster2_seasonal_functional, cluster3_seasonal_functional, cluster4_seasonal_functional, cluster5_seasonal_functional)
+```
+
+Plot w/ trajectory plots 
+```{r}
+# ==========================================
+# COMBINED TRAJECTORY + FUNCTION PLOTS
+# Two columns: trajectory (left) + GO terms (right)
+# Rows = clusters
+# ==========================================
+
+library(tidyverse)
+library(patchwork)
+library(ggtext)
+library(tidytext)
+
+# ==========================================
+# STEP 1: Prepare trajectory data
+# ==========================================
+
+# Individual trajectories
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
+  mutate(season = factor(season, 
+                           levels = c("February", "June", "August")))
+
+# Cluster means and SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, season) %>%
+  summarise(
+    mean_cor = mean(cor),
+    se_cor = sd(cor) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# ==========================================
+# STEP 2: Prepare GO enrichment data
+# ==========================================
+
+# Get top N GO terms per cluster
+top_n_terms <- 10  # Adjust as needed
+
+go_data_plot <- seasonal_functions %>%
+  filter(ontology == "Biological Processes") %>%
+  group_by(cluster) %>%
+  arrange(Fisher) %>%
+  slice_head(n = top_n_terms) %>%
+  ungroup() %>%
+  mutate(
+    # Shorten long term names
+    Term_short = str_trunc(Term, width = 50, side = "right"),
+    # -log10 p-value for plotting
+    neglog10p = -log10(Fisher),
+    # Order terms by p-value within cluster
+    Term_ordered = reorder_within(Term_short, Fisher, cluster)
+  )
+
+# ==========================================
+# STEP 3: Create trajectory plots for each cluster
+# ==========================================
+
+trajectory_plots <- lapply(unique(cluster_stats$cluster), function(clust) {
+  
+  # Filter data for this cluster
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
+  
+  # Create plot
+  p <- ggplot() +
+    # Horizontal line at zero
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    
+    # Individual trajectories (faint)
+    geom_line(data = traj_data, 
+              aes(x = season, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    
+    # Mean ± SE
+    geom_ribbon(data = stat_data, 
+                aes(x = season, y = mean_cor,
+                    ymin = mean_cor - se_cor, 
+                    ymax = mean_cor + se_cor,
+                    group = 1), 
+                fill = "red3", alpha = 0.2) +
+    
+    geom_line(data = stat_data, 
+              aes(x = season, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    
+    geom_point(data = stat_data, 
+               aes(x = season, y = mean_cor), 
+               color = "red3", size = 3) +
+    
+    # Labels
+    labs(
+      title = paste0("Cluster ", clust),
+      x = "Season",
+      y = "Spearman correlation"
+    ) +
+    
+    theme_bw(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+  
+  return(p)
+})
+
+# ==========================================
+# STEP 4: Create GO enrichment plots for each cluster
+# ==========================================
+
+go_plots <- lapply(unique(go_data_plot$cluster), function(clust) {
+  
+  # Filter data for this cluster
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  # Create plot
+  p <- ggplot(go_data, aes(x = neglog10p, 
+                           y = reorder(Term_short, neglog10p),
+                           size = Significant)) + 
+    geom_point(alpha = 0.8) +                     # Using points instead of bars
+    labs(
+      x = expression(-log[10](Fisher)),
+      y = "",
+      size = "Gene Count",
+      colour = "Ontology",
+      title = paste("Cluster", clust)
+    ) +
+    
+    # Optional: Adjust the range of point sizes to make them readable
+    scale_size_continuous(range = c(3, 10)) + 
+    
+    theme_bw(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+      axis.text.y = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80") # Adds a guide line
+    )
+  
+  return(p)
+})
+
+# ==========================================
+# STEP 5: Combine plots using patchwork
+# ==========================================
+
+# Function to combine trajectory + GO for one cluster
+combine_cluster_plots <- function(i) {
+  trajectory_plots[[i]] + go_plots[[i]] + 
+    plot_layout(widths = c(1, 1.2))  # GO plot slightly wider for term names
+}
+
+# Combine all clusters vertically
+n_clusters <- length(unique(cluster_stats$cluster))
+
+combined_plot <- wrap_plots(
+  lapply(1:n_clusters, combine_cluster_plots),
+  ncol = 1) #+
+#   plot_annotation(
+#     title = "Seasonal miRNA-mRNA regulatory dynamics by cluster",
+#     theme = theme(
+#       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+#       plot.subtitle = element_text(size = 12, hjust = 0.5)
+#     )
+#   )
+
+print(combined_plot)
+
+# Save
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.pdf", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.png", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+```
+
+Add the network plots at the top
+```{r}
 library(ggplot2)
+library(patchwork)
 library(dplyr)
 library(tidyr)
-library(reshape2)
-library(pheatmap)
-library(vegan)
-library(ggpubr)
-
-set.seed(123)
-
-# ============================================================================
-# 1. CREATE REALISTIC DUMMY DATA
-# ============================================================================
-# Define your actual experimental design
-timepoints <- c("Feb", "Jun", "Aug")
-treatments <- c("ambient", "heat")
-
-# Create all combinations (Feb only has ambient)
-conditions <- c("Feb_ambient", "Jun_ambient", "Jun_heat", "Aug_ambient", "Aug_heat")
-
-# Define miRNAs and mRNAs
-mirnas <- paste0("miR-", 1:8)
-mrnas <- paste0("gene-", LETTERS[1:15])
-
-# Function to generate realistic miRNA-mRNA networks that change over time
-# We'll simulate temporal dynamics where Feb differs most, and treatments differ less
-generate_realistic_data <- function() {
-  
-  interactions_list <- list()
-  
-  # February baseline - establish core network
-  feb_mirnas <- sample(mirnas, 5)
-  feb_mrnas <- sample(mrnas, 10)
-  feb_pairs <- expand.grid(mirna = feb_mirnas, mrna = feb_mrnas)
-  # Sample up to the number of rows available
-  n_sample_feb <- min(20, nrow(feb_pairs))
-  feb_pairs <- feb_pairs %>%
-    sample_n(n_sample_feb) %>%
-    mutate(
-      correlation = rnorm(n(), mean = -0.5, sd = 0.2),  # Negative correlations typical
-      condition = "Feb_ambient"
-    )
-  interactions_list[["Feb_ambient"]] <- feb_pairs
-  
-  # June ambient - evolved from Feb, some new interactions
-  jun_amb_mrnas <- c(sample(feb_mrnas, 7), sample(setdiff(mrnas, feb_mrnas), 5))
-  jun_amb_mirnas <- c(sample(feb_mirnas, 4), sample(setdiff(mirnas, feb_mirnas), 3))
-  jun_amb_pairs <- expand.grid(mirna = jun_amb_mirnas, mrna = jun_amb_mrnas)
-  n_sample_jun <- min(25, nrow(jun_amb_pairs))
-  jun_amb_pairs <- jun_amb_pairs %>%
-    sample_n(n_sample_jun) %>%
-    mutate(
-      correlation = rnorm(n(), mean = -0.45, sd = 0.25),
-      condition = "Jun_ambient"
-    )
-  interactions_list[["Jun_ambient"]] <- jun_amb_pairs
-  
-  # June heat - similar to ambient but with some rewiring
-  jun_heat_pairs <- jun_amb_pairs %>%
-    sample_frac(0.7) %>%  # Keep 70% of ambient interactions
-    mutate(
-      correlation = correlation + rnorm(n(), mean = 0.1, sd = 0.15),  # Slight shift
-      condition = "Jun_heat"
-    )
-  # Add some heat-specific interactions
-  new_heat <- expand.grid(
-    mirna = sample(mirnas, 3),
-    mrna = sample(mrnas, 5)
-  )
-  n_sample_heat <- min(8, nrow(new_heat))
-  new_heat <- new_heat %>%
-    sample_n(n_sample_heat) %>%
-    mutate(
-      correlation = rnorm(n(), mean = -0.3, sd = 0.2),
-      condition = "Jun_heat"
-    )
-  jun_heat_pairs <- rbind(jun_heat_pairs, new_heat)
-  interactions_list[["Jun_heat"]] <- jun_heat_pairs
-  
-  # August ambient - further divergence from Feb
-  aug_amb_mrnas <- c(sample(jun_amb_mrnas, min(5, length(jun_amb_mrnas))), 
-                     sample(setdiff(mrnas, jun_amb_mrnas), 
-                            min(6, length(setdiff(mrnas, jun_amb_mrnas)))))
-  aug_amb_mirnas <- c(sample(jun_amb_mirnas, min(3, length(jun_amb_mirnas))), 
-                      sample(setdiff(mirnas, jun_amb_mirnas), 
-                             min(4, length(setdiff(mirnas, jun_amb_mirnas)))))
-  aug_amb_pairs <- expand.grid(mirna = aug_amb_mirnas, mrna = aug_amb_mrnas)
-  n_sample_aug <- min(28, nrow(aug_amb_pairs))
-  aug_amb_pairs <- aug_amb_pairs %>%
-    sample_n(n_sample_aug) %>%
-    mutate(
-      correlation = rnorm(n(), mean = -0.4, sd = 0.3),
-      condition = "Aug_ambient"
-    )
-  interactions_list[["Aug_ambient"]] <- aug_amb_pairs
-  
-  # August heat - similar pattern to June heat
-  aug_heat_pairs <- aug_amb_pairs %>%
-    sample_frac(0.65) %>%
-    mutate(
-      correlation = correlation + rnorm(n(), mean = 0.12, sd = 0.18),
-      condition = "Aug_heat"
-    )
-  new_heat2 <- expand.grid(
-    mirna = sample(mirnas, 3),
-    mrna = sample(mrnas, 6)
-  )
-  n_sample_heat2 <- min(10, nrow(new_heat2))
-  new_heat2 <- new_heat2 %>%
-    sample_n(n_sample_heat2) %>%
-    mutate(
-      correlation = rnorm(n(), mean = -0.35, sd = 0.25),
-      condition = "Aug_heat"
-    )
-  aug_heat_pairs <- rbind(aug_heat_pairs, new_heat2)
-  interactions_list[["Aug_heat"]] <- aug_heat_pairs
-  
-  # Combine all
-  all_interactions <- bind_rows(interactions_list) %>%
-    distinct(condition, mirna, mrna, .keep_all = TRUE)
-  
-  return(all_interactions)
-}
-
-interaction_data <- generate_realistic_data()
-
-cat("Sample of interaction data:\n")
-print(head(interaction_data, 10))
-cat("\nInteractions per condition:\n")
-print(table(interaction_data$condition))
-
-# ============================================================================
-# 2. BUILD INCIDENCE MATRICES FOR ALL CONDITIONS
-# ============================================================================
-
-build_network <- function(data, cond, cor_threshold = 0.3) {
-  df <- data %>%
-    filter(condition == cond, abs(correlation) >= cor_threshold)
-  
-  if(nrow(df) == 0) return(NULL)
-  
-  # Create incidence matrix
-  inc_mat <- table(df$mirna, df$mrna)
-  inc_mat <- ifelse(inc_mat > 0, 1, 0)
-  return(inc_mat)
-}
-
-# Build all networks
-networks <- lapply(conditions, function(c) build_network(interaction_data, c, 0.25))
-names(networks) <- conditions
-
-# Remove any NULL networks
-networks <- networks[!sapply(networks, is.null)]
-
-cat("\n=== Network Sizes ===\n")
-for(cond in names(networks)) {
-  cat(sprintf("%s: %d miRNAs × %d mRNAs = %d edges\n", 
-              cond, nrow(networks[[cond]]), ncol(networks[[cond]]), 
-              sum(networks[[cond]])))
-}
-
-# ============================================================================
-# 3. CALCULATE NETWORK METRICS FOR COMPARISON
-# ============================================================================
-
-calculate_metrics <- function(net_matrix) {
-  if(is.null(net_matrix)) return(NULL)
-  
-  # Network-level metrics
-  net_metrics <- networklevel(net_matrix, index = c("connectance", "NODF", 
-                                                      "weighted nestedness", 
-                                                      "H2"))
-  
-  # Species-level metrics
-  mirna_metrics <- specieslevel(net_matrix, level = "higher", 
-                                 index = c("degree", "betweenness", "d"))
-  
-  list(
-    network = net_metrics,
-    mirna_degree_mean = mean(mirna_metrics$degree),
-    mirna_degree_sd = sd(mirna_metrics$degree),
-    mirna_specialization_mean = mean(mirna_metrics$d, na.rm = TRUE)
-  )
-}
-
-all_metrics <- lapply(networks, calculate_metrics)
-
-# Compile network-level comparison
-network_comparison <- data.frame(
-  condition = names(all_metrics),
-  timepoint = c("Feb", "Jun", "Jun", "Aug", "Aug"),
-  treatment = c("ambient", "ambient", "heat", "ambient", "heat"),
-  n_mirnas = sapply(networks, nrow),
-  n_mrnas = sapply(networks, ncol),
-  n_edges = sapply(networks, sum),
-  connectance = sapply(all_metrics, function(x) x$network["connectance"]),
-  nestedness = sapply(all_metrics, function(x) x$network["NODF"]),
-  mirna_degree_mean = sapply(all_metrics, function(x) x$mirna_degree_mean),
-  specialization = sapply(all_metrics, function(x) x$mirna_specialization_mean)
-)
-
-print("\n=== Network Metrics Comparison ===")
-print(network_comparison)
-
-# ============================================================================
-# 4. NETWORK SIMILARITY ANALYSIS - JACCARD INDEX
-# ============================================================================
-
-# Calculate Jaccard similarity between all network pairs
-calculate_jaccard <- function(net1, net2) {
-  if(is.null(net1) || is.null(net2)) return(NA)
-  
-  # Find common nodes
-  common_mirnas <- intersect(rownames(net1), rownames(net2))
-  common_mrnas <- intersect(colnames(net1), colnames(net2))
-  
-  if(length(common_mirnas) == 0 || length(common_mrnas) == 0) return(0)
-  
-  # Subset to common nodes
-  m1 <- net1[common_mirnas, common_mrnas, drop = FALSE]
-  m2 <- net2[common_mirnas, common_mrnas, drop = FALSE]
-  
-  # Calculate Jaccard
-  intersection <- sum(m1 == 1 & m2 == 1)
-  union <- sum(m1 == 1 | m2 == 1)
-  
-  if(union == 0) return(0)
-  return(intersection / union)
-}
-
-# Create similarity matrix
-n_conditions <- length(networks)
-jaccard_matrix <- matrix(NA, n_conditions, n_conditions,
-                         dimnames = list(names(networks), names(networks)))
-
-for(i in 1:n_conditions) {
-  for(j in 1:n_conditions) {
-    jaccard_matrix[i,j] <- calculate_jaccard(networks[[i]], networks[[j]])
-  }
-}
-
-print("\n=== Network Similarity (Jaccard Index) ===")
-print(round(jaccard_matrix, 3))
-
-# Visualize similarity matrix
-pheatmap(jaccard_matrix, 
-         main = "Network Similarity Across Conditions",
-         display_numbers = TRUE,
-         number_format = "%.2f",
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
-         color = colorRampPalette(c("white", "lightblue", "darkblue"))(50))
-
-# ============================================================================
-# 5. NETWORK TURNOVER ANALYSIS
-# ============================================================================
-
-# Calculate edge turnover (gained, lost, conserved)
-calculate_turnover <- function(net1, net2, name1, name2) {
-  if(is.null(net1) || is.null(net2)) return(NULL)
-  
-  # Get all nodes
-  all_mirnas <- union(rownames(net1), rownames(net2))
-  all_mrnas <- union(colnames(net1), colnames(net2))
-  
-  # Expand matrices to same dimensions
-  expand_matrix <- function(m, all_rows, all_cols) {
-    new_m <- matrix(0, length(all_rows), length(all_cols),
-                    dimnames = list(all_rows, all_cols))
-    new_m[rownames(m), colnames(m)] <- m
-    return(new_m)
-  }
-  
-  m1 <- expand_matrix(net1, all_mirnas, all_mrnas)
-  m2 <- expand_matrix(net2, all_mirnas, all_mrnas)
-  
-  conserved <- sum(m1 == 1 & m2 == 1)
-  lost <- sum(m1 == 1 & m2 == 0)
-  gained <- sum(m1 == 0 & m2 == 1)
-  
-  data.frame(
-    from = name1,
-    to = name2,
-    conserved = conserved,
-    lost = lost,
-    gained = gained,
-    total_original = sum(m1),
-    total_new = sum(m2),
-    turnover_rate = (lost + gained) / (conserved + lost + gained)
-  )
-}
-
-turnover_comparisons <- list(
-  # Temporal progression in ambient
-  calculate_turnover(networks$Feb_ambient, networks$Jun_ambient, 
-                     "Feb_ambient", "Jun_ambient"),
-  calculate_turnover(networks$Jun_ambient, networks$Aug_ambient, 
-                     "Jun_ambient", "Aug_ambient"),
-  calculate_turnover(networks$Feb_ambient, networks$Aug_ambient, 
-                     "Feb_ambient", "Aug_ambient"),
-  # Treatment effects
-  calculate_turnover(networks$Jun_ambient, networks$Jun_heat, 
-                     "Jun_ambient", "Jun_heat"),
-  calculate_turnover(networks$Aug_ambient, networks$Aug_heat, 
-                     "Aug_ambient", "Aug_heat")
-)
-
-turnover_df <- bind_rows(turnover_comparisons)
-
-print("\n=== Network Turnover Analysis ===")
-print(turnover_df)
-
-# Visualize turnover
-turnover_long <- turnover_df %>%
-  select(from, to, conserved, lost, gained) %>%
-  pivot_longer(cols = c(conserved, lost, gained), 
-               names_to = "edge_type", values_to = "count")
-
-ggplot(turnover_long, aes(x = paste(from, "→", to), y = count, fill = edge_type)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(values = c("conserved" = "#4DAF4A", 
-                                "lost" = "#E41A1C", 
-                                "gained" = "#377EB8")) +
-  labs(title = "Network Edge Turnover",
-       x = "Comparison", y = "Number of Edges", fill = "Edge Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# ============================================================================
-# 6. HUB CONSERVATION ANALYSIS
-# ============================================================================
-
-# Identify hubs (miRNAs with high degree) and track across conditions
-get_hubs <- function(net_matrix, top_n = 3) {
-  if(is.null(net_matrix)) return(NULL)
-  
-  degrees <- rowSums(net_matrix)
-  hub_mirnas <- names(sort(degrees, decreasing = TRUE)[1:min(top_n, length(degrees))])
-  
-  data.frame(
-    mirna = hub_mirnas,
-    degree = degrees[hub_mirnas]
-  )
-}
-
-# Get hubs for each condition
-hubs_list <- lapply(names(networks), function(cond) {
-  hubs <- get_hubs(networks[[cond]], top_n = 3)
-  if(!is.null(hubs)) {
-    hubs$condition <- cond
-    hubs$timepoint <- ifelse(grepl("Feb", cond), "Feb",
-                             ifelse(grepl("Jun", cond), "Jun", "Aug"))
-    hubs$treatment <- ifelse(grepl("heat", cond), "heat", "ambient")
-  }
-  return(hubs)
-})
-
-hubs_df <- bind_rows(hubs_list)
-
-print("\n=== Hub miRNAs Across Conditions ===")
-print(hubs_df)
-
-# Visualize hub conservation
-hub_matrix <- hubs_df %>%
-  select(mirna, condition, degree) %>%
-  pivot_wider(names_from = condition, values_from = degree, values_fill = 0)
-
-print("\n=== Hub Degree Matrix ===")
-print(hub_matrix)
-
-# ============================================================================
-# 7. STATISTICAL TESTING
-# ============================================================================
-
-cat("\n=== Statistical Tests ===\n")
-
-# Test 1: Are timepoint differences larger than treatment differences?
-# Compare Jaccard similarities
-
-# Ambient temporal changes
-temporal_similarities <- c(
-  jaccard_matrix["Feb_ambient", "Jun_ambient"],
-  jaccard_matrix["Jun_ambient", "Aug_ambient"]
-)
-
-# Treatment effects within timepoints
-treatment_similarities <- c(
-  jaccard_matrix["Jun_ambient", "Jun_heat"],
-  jaccard_matrix["Aug_ambient", "Aug_heat"]
-)
-
-cat("\nMean Jaccard - Temporal (ambient):", mean(temporal_similarities, na.rm = TRUE), "\n")
-cat("Mean Jaccard - Treatment effects:", mean(treatment_similarities, na.rm = TRUE), "\n")
-
-# Test 2: Mantel test for network correlation (if you have distance matrices)
-# This tests whether network dissimilarity correlates with temporal/treatment distance
-
-# Create dissimilarity matrix (1 - Jaccard)
-dissim_matrix <- 1 - jaccard_matrix
-
-# Create temporal distance matrix
-time_dist <- matrix(0, n_conditions, n_conditions,
-                    dimnames = list(names(networks), names(networks)))
-time_order <- c(Feb_ambient = 1, Jun_ambient = 2, Jun_heat = 2, 
-                Aug_ambient = 3, Aug_heat = 3)
-for(i in names(networks)) {
-  for(j in names(networks)) {
-    time_dist[i,j] <- abs(time_order[i] - time_order[j])
-  }
-}
-
-# Mantel test
-mantel_result <- mantel(as.dist(dissim_matrix), as.dist(time_dist), 
-                        method = "pearson", permutations = 999)
-cat("\nMantel test (network dissimilarity ~ temporal distance):\n")
-print(mantel_result)
-
-# ============================================================================
-# 8. VISUALIZATION SUMMARY
-# ============================================================================
-
-# Plot network metrics over time
-metrics_ambient <- network_comparison %>%
-  filter(treatment == "ambient")
-metrics_ambient$timepoint <- factor(metrics_ambient$timepoint, levels = c("Feb", "Jun", "Aug"))
-
-p1 <- ggplot(metrics_ambient, aes(x = timepoint, y = connectance)) +
-  geom_line(group = 1, color = "darkblue", size = 1.2) +
-  geom_point(size = 4, color = "darkblue") +
-  labs(title = "Network Connectance Over Time (Ambient)",
-       x = "Timepoint", y = "Connectance") +
-  theme_minimal(); p1
-
-p2 <- ggplot(metrics_ambient, aes(x = timepoint, y = n_edges)) +
-  geom_line(group = 1, color = "darkgreen", size = 1.2) +
-  geom_point(size = 4, color = "darkgreen") +
-  labs(title = "Number of Edges Over Time (Ambient)",
-       x = "Timepoint", y = "Number of Edges") +
-  theme_minimal();p2
-
-# Treatment comparison at each timepoint
-metrics_jun_aug <- network_comparison %>%
-  filter(timepoint %in% c("Jun", "Aug"))
-
-p3 <- ggplot(metrics_jun_aug, aes(x = timepoint, y = connectance, 
-                                   color = treatment, group = treatment)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 4) +
-  scale_color_manual(values = c("ambient" = "#377EB8", "heat" = "#E41A1C")) +
-  labs(title = "Treatment Effects on Network Connectance",
-       x = "Timepoint", y = "Connectance") +
-  theme_minimal();p3
-
-# ============================================================================
-# 9. EXTRACT SPECIFIC EDGES (CONSERVED, LOST, GAINED)
-# ============================================================================
-
-# Function to extract edge details between two networks
-extract_edge_details <- function(net1, net2, name1, name2, interaction_data) {
-  
-  if(is.null(net1) || is.null(net2)) return(NULL)
-  
-  # Get all nodes
-  all_mirnas <- union(rownames(net1), rownames(net2))
-  all_mrnas <- union(colnames(net1), colnames(net2))
-  
-  # Expand matrices to same dimensions
-  expand_matrix <- function(m, all_rows, all_cols) {
-    new_m <- matrix(0, length(all_rows), length(all_cols),
-                    dimnames = list(all_rows, all_cols))
-    new_m[rownames(m), colnames(m)] <- m
-    return(new_m)
-  }
-  
-  m1 <- expand_matrix(net1, all_mirnas, all_mrnas)
-  m2 <- expand_matrix(net2, all_mirnas, all_mrnas)
-  
-  # Find conserved edges (present in both)
-  conserved_idx <- which(m1 == 1 & m2 == 1, arr.ind = TRUE)
-  conserved_edges <- data.frame(
-    mirna = rownames(m1)[conserved_idx[,1]],
-    mrna = colnames(m1)[conserved_idx[,2]],
-    edge_type = "conserved",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Find lost edges (in net1 but not net2)
-  lost_idx <- which(m1 == 1 & m2 == 0, arr.ind = TRUE)
-  lost_edges <- data.frame(
-    mirna = rownames(m1)[lost_idx[,1]],
-    mrna = colnames(m1)[lost_idx[,2]],
-    edge_type = "lost",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Find gained edges (not in net1 but in net2)
-  gained_idx <- which(m1 == 0 & m2 == 1, arr.ind = TRUE)
-  gained_edges <- data.frame(
-    mirna = rownames(m2)[gained_idx[,1]],
-    mrna = colnames(m2)[gained_idx[,2]],
-    edge_type = "gained",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Combine all edges
-  all_edges <- rbind(conserved_edges, lost_edges, gained_edges)
-  
-  # Add correlation information from original data if available
-  if(!is.null(interaction_data)) {
-    # Get correlations for first condition
-    corr1 <- interaction_data %>%
-      filter(condition == name1) %>%
-      select(mirna, mrna, correlation) %>%
-      rename(correlation_1 = correlation)
-    
-    # Get correlations for second condition
-    corr2 <- interaction_data %>%
-      filter(condition == name2) %>%
-      select(mirna, mrna, correlation) %>%
-      rename(correlation_2 = correlation)
-    
-    # Merge with edge data
-    all_edges <- all_edges %>%
-      left_join(corr1, by = c("mirna", "mrna")) %>%
-      left_join(corr2, by = c("mirna", "mrna"))
-  }
-  
-  return(all_edges)
-}
-
-cat("\n=== DETAILED EDGE ANALYSIS ===\n")
-
-# Extract edges for key comparisons
-edge_comparisons <- list(
-  feb_to_jun = extract_edge_details(networks$Feb_ambient, networks$Jun_ambient, 
-                                     "Feb_ambient", "Jun_ambient", interaction_data),
-  jun_to_aug = extract_edge_details(networks$Jun_ambient, networks$Aug_ambient, 
-                                     "Jun_ambient", "Aug_ambient", interaction_data),
-  feb_to_aug = extract_edge_details(networks$Feb_ambient, networks$Aug_ambient, 
-                                     "Feb_ambient", "Aug_ambient", interaction_data),
-  jun_heat = extract_edge_details(networks$Jun_ambient, networks$Jun_heat, 
-                                   "Jun_ambient", "Jun_heat", interaction_data),
-  aug_heat = extract_edge_details(networks$Aug_ambient, networks$Aug_heat, 
-                                   "Aug_ambient", "Aug_heat", interaction_data)
-)
-
-# Display conserved edges across entire season (Feb to Aug)
-cat("\n--- Edges Conserved Across Full Season (Feb → Aug) ---\n")
-feb_to_aug_conserved <- edge_comparisons$feb_to_aug %>%
-  filter(edge_type == "conserved")
-print(feb_to_aug_conserved)
-
-# Display lost edges in Feb→Jun transition
-cat("\n--- Edges Lost in Feb → Jun Transition (first 10) ---\n")
-feb_to_jun_lost <- edge_comparisons$feb_to_jun %>%
-  filter(edge_type == "lost") %>%
-  arrange(desc(abs(correlation_1)))
-print(head(feb_to_jun_lost, 10))
-
-# Display gained edges in Jun→Aug transition
-cat("\n--- Edges Gained in Jun → Aug Transition (first 10) ---\n")
-jun_to_aug_gained <- edge_comparisons$jun_to_aug %>%
-  filter(edge_type == "gained") %>%
-  arrange(desc(abs(correlation_2)))
-print(head(jun_to_aug_gained, 10))
-
-# Summarize edge changes by miRNA
-cat("\n--- miRNA Activity Across Transitions ---\n")
-mirna_activity <- bind_rows(edge_comparisons) %>%
-  group_by(comparison, mirna, edge_type) %>%
-  summarise(n_edges = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_edges, values_fill = 0) %>%
-  arrange(comparison, desc(conserved + lost + gained))
-
-print(mirna_activity)
-
-# Identify "stable" miRNAs (high conservation) vs "dynamic" miRNAs (high turnover)
-cat("\n--- Stable vs Dynamic miRNAs ---\n")
-mirna_stability <- bind_rows(edge_comparisons) %>%
-  group_by(mirna, edge_type) %>%
-  summarise(n_edges = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_edges, values_fill = 0) %>%
-  mutate(
-    total_edges = conserved + lost + gained,
-    conservation_rate = conserved / total_edges,
-    turnover_rate = (lost + gained) / total_edges
-  ) %>%
-  arrange(desc(conservation_rate))
-
-print(mirna_stability)
-
-# Find miR-7's conserved targets
-mir7_conserved <- bind_rows(edge_comparisons) %>%
-  filter(mirna == "miR-7", edge_type == "conserved") %>%
-  select(mrna, comparison) %>%
-  distinct()
-
-# Function to export edge lists for further analysis
-export_edge_lists <- function(edge_comparison, filename_prefix) {
-  # Export conserved edges
-  conserved <- edge_comparison %>% filter(edge_type == "conserved")
-  if(nrow(conserved) > 0) {
-    write.csv(conserved, paste0(filename_prefix, "_conserved.csv"), row.names = FALSE)
-  }
-  
-  # Export lost edges
-  lost <- edge_comparison %>% filter(edge_type == "lost")
-  if(nrow(lost) > 0) {
-    write.csv(lost, paste0(filename_prefix, "_lost.csv"), row.names = FALSE)
-  }
-  
-  # Export gained edges
-  gained <- edge_comparison %>% filter(edge_type == "gained")
-  if(nrow(gained) > 0) {
-    write.csv(gained, paste0(filename_prefix, "_gained.csv"), row.names = FALSE)
-  }
-  
-  cat("Exported edge lists for", filename_prefix, "\n")
-}
-
-# Uncomment to export files:
-# export_edge_lists(edge_comparisons$feb_to_aug, "Feb_to_Aug")
-# export_edge_lists(edge_comparisons$jun_heat, "Jun_heat_effect")
-
-# ============================================================================
-# 10. GENE-LEVEL ANALYSIS
-# ============================================================================
-
-cat("\n=== GENE-LEVEL TURNOVER ANALYSIS ===\n")
-
-# Which genes (mRNAs) show the most dynamic miRNA regulation?
-gene_dynamics <- bind_rows(edge_comparisons) %>%
-  group_by(mrna, comparison, edge_type) %>%
-  summarise(n_mirnas = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_mirnas, values_fill = 0) %>%
-  mutate(
-    total_interactions = conserved + lost + gained,
-    rewiring_rate = (lost + gained) / total_interactions
-  ) %>%
-  arrange(comparison, desc(total_interactions))
-
-cat("\n--- Genes with Most Dynamic miRNA Regulation ---\n")
-print(head(gene_dynamics, 15))
-
-# Genes with stable regulation (conserved across transitions)
-stable_genes <- bind_rows(edge_comparisons) %>%
-  filter(edge_type == "conserved") %>%
-  group_by(mrna) %>%
-  summarise(
-    n_comparisons_conserved = n(),
-    mirnas_targeting = paste(unique(mirna), collapse = ", ")
-  ) %>%
-  arrange(desc(n_comparisons_conserved))
-
-cat("\n--- Genes with Most Stable miRNA Regulation ---\n")
-print(stable_genes)
-```
-
-This feels like the best framework moving forward. 
-
-
-
-
-
-Lets try this on my data. 
-
-Load data 
-```{r}
-# Load data 
-tp0_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP0amb.csv")
-tp5_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5amb.csv")
-tp5_heat <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP5heat.csv")
-tp7_amb <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7amb.csv")
-tp7_heat <- read.csv("../output/Molecular/interactions/miRNA_mRNA_pcc_miranda_TP7heat.csv")
-```
-
-Format correlation dfs 
-```{r}
-# Function to format a single correlation dataframe
-format_correlation_data <- function(df, condition_name) {
-  formatted <- df %>%
-    dplyr::select(mirna = miRNA, mrna = mRNA, correlation = PCC.cor) %>%
-    mutate(condition = condition_name) %>%
-    # Remove any duplicates (keep first occurrence)
-    distinct(mirna, mrna, .keep_all = TRUE)
-  
-  return(formatted)
-}
-
-# Format each dataframe with the correct condition name
-feb_formatted <- format_correlation_data(tp0_amb, "Feb_ambient")
-jun_amb_formatted <- format_correlation_data(tp5_amb, "Jun_ambient")
-jun_heat_formatted <- format_correlation_data(tp5_heat, "Jun_heat")
-aug_amb_formatted <- format_correlation_data(tp7_amb, "Aug_ambient")
-aug_heat_formatted <- format_correlation_data(tp7_heat, "Aug_heat")
-
-# Combine all conditions into one dataframe
-interaction_data <- bind_rows(
-  feb_formatted,
-  jun_amb_formatted,
-  jun_heat_formatted,
-  aug_amb_formatted,
-  aug_heat_formatted
-)
-
-# Check the formatting
-cat("=== Formatted Interaction Data ===\n")
-cat("Total rows:", nrow(interaction_data), "\n")
-cat("\nSample of data:\n")
-print(head(interaction_data, 10))
-
-cat("\nInteractions per condition:\n")
-print(table(interaction_data$condition))
-
-cat("\nCorrelation summary:\n")
-print(summary(interaction_data$correlation))
-```
-
-QC
-```{r}
-cat("\n=== Quality Checks ===\n")
-
-# Check for any missing values
-cat("Missing values:\n")
-print(colSums(is.na(interaction_data)))
-
-# Check correlation distribution
-cat("\nCorrelation distribution by condition:\n")
-interaction_data %>%
-  group_by(condition) %>%
-  summarise(
-    n_interactions = n(),
-    mean_cor = mean(correlation, na.rm = TRUE),
-    median_cor = median(correlation, na.rm = TRUE),
-    min_cor = min(correlation, na.rm = TRUE),
-    max_cor = max(correlation, na.rm = TRUE),
-    n_negative = sum(correlation < 0, na.rm = TRUE),
-    n_positive = sum(correlation > 0, na.rm = TRUE)
-  ) %>%
-  print()
-
-# Visualize correlation distributions
-library(ggplot2)
-
-p1 <- ggplot(interaction_data, aes(x = correlation, fill = condition)) +
-  geom_histogram(bins = 50, alpha = 0.7) +
-  facet_wrap(~condition, ncol = 2) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Correlation Distribution by Condition",
-       x = "Pearson Correlation (PCC)", y = "Count") +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-print(p1)
-```
-
-Choose correlation threshold
-```{r}
-cat("\n=== Choosing Correlation Threshold ===\n")
-
-# Function to see how many interactions remain at different thresholds
-test_thresholds <- function(data, thresholds = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7)) {
-  results <- data.frame()
-  
-  for(thresh in thresholds) {
-    for(cond in unique(data$condition)) {
-      n_pass <- data %>%
-        filter(condition == cond, abs(correlation) >= thresh) %>%
-        nrow()
-      
-      results <- rbind(results, data.frame(
-        condition = cond,
-        threshold = thresh,
-        n_interactions = n_pass
-      ))
-    }
-  }
-  return(results)
-}
-
-threshold_results <- test_thresholds(interaction_data)
-
-# Visualize threshold effects
-p2 <- ggplot(threshold_results, aes(x = threshold, y = n_interactions, color = condition)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 3) +
-  labs(title = "Number of Interactions at Different Thresholds",
-       x = "Absolute Correlation Threshold",
-       y = "Number of Interactions Retained") +
-  theme_minimal()
-
-print(p2)
-```
-
-Build network
-```{r}
-# Create all combinations (Feb only has ambient)
-conditions <- c("Feb_ambient", "Jun_ambient", "Jun_heat", "Aug_ambient", "Aug_heat")
-
-build_network <- function(data, cond, cor_threshold = 0.9) {
-  df <- data %>%
-    filter(condition == cond, abs(correlation) >= cor_threshold)
-  
-  if(nrow(df) == 0) return(NULL)
-  
-  # Create incidence matrix
-  inc_mat <- table(df$mirna, df$mrna)
-  inc_mat <- ifelse(inc_mat > 0, 1, 0)
-  return(inc_mat)
-}
-
-# Build all networks
-networks <- lapply(conditions, function(c) build_network(interaction_data, c, 0.25))
-names(networks) <- conditions
-
-# Remove any NULL networks
-networks <- networks[!sapply(networks, is.null)]
-
-cat("\n=== Network Sizes ===\n")
-for(cond in names(networks)) {
-  cat(sprintf("%s: %d miRNAs × %d mRNAs = %d edges\n", 
-              cond, nrow(networks[[cond]]), ncol(networks[[cond]]), 
-              sum(networks[[cond]])))
-}
-```
-
-use positive and negative correlations?
-
-Calculate network metrics for each condition
-```{r}
-calculate_metrics <- function(net_matrix, fast_mode = TRUE) {
-  if(is.null(net_matrix)) return(NULL)
-  
-  cat("  Matrix size:", nrow(net_matrix), "×", ncol(net_matrix), "=", sum(net_matrix), "edges\n")
-  
-  if(fast_mode) {
-    # FAST MODE: Skip computationally expensive metrics for large networks
-    cat("  Using fast mode (skipping NODF and betweenness for speed)\n")
-    
-    # Basic network metrics only
-    connectance <- sum(net_matrix) / (nrow(net_matrix) * ncol(net_matrix))
-    
-    # Species-level metrics (degree and specialization only)
-    mirna_metrics <- specieslevel(net_matrix, level = "higher", 
-                                   index = c("degree", "d"))
-    
-    net_metrics <- c(connectance = connectance)
-    
-  } else {
-    # FULL MODE: All metrics (WARNING: very slow for large networks!)
-    cat("  Using full mode (this will be SLOW for large networks!)\n")
-    
-    # Network-level metrics
-    net_metrics <- networklevel(net_matrix, index = c("connectance", "NODF", 
-                                                        "weighted nestedness", 
-                                                        "H2"))
-    
-    # Species-level metrics
-    mirna_metrics <- specieslevel(net_matrix, level = "higher", 
-                                   index = c("degree", "betweenness", "d"))
-  }
-  
-  list(
-    network = net_metrics,
-    mirna_degree_mean = mean(mirna_metrics$degree),
-    mirna_degree_sd = sd(mirna_metrics$degree),
-    mirna_specialization_mean = mean(mirna_metrics$d, na.rm = TRUE)
-  )
-}
-
-all_metrics <- lapply(networks, function(net) {
-  cat("Calculating metrics...\n")
-  calculate_metrics(net, fast_mode = TRUE)  # Use fast mode by default
-})
-
-
-# Compile network-level comparison
-network_comparison <- data.frame(
-  condition = names(all_metrics),
-  timepoint = c("Feb", "Jun", "Jun", "Aug", "Aug"),
-  treatment = c("ambient", "ambient", "heat", "ambient", "heat"),
-  n_mirnas = sapply(networks, nrow),
-  n_mrnas = sapply(networks, ncol),
-  n_edges = sapply(networks, sum),
-  connectance = sapply(all_metrics, function(x) x$network["connectance"]),
-  mirna_degree_mean = sapply(all_metrics, function(x) x$mirna_degree_mean),
-  specialization = sapply(all_metrics, function(x) x$mirna_specialization_mean)
-)
-
-print("\n=== Network Metrics Comparison ===")
-print(network_comparison)
-```
-
-should i return to the PCC and make sure that I have all of the correct interactions for each condition? -- yes i need to do this. Also need to run on server.  
-
-Calculate jaccard 
-```{r}
-# Calculate Jaccard similarity between all network pairs
-calculate_jaccard <- function(net1, net2) {
-  if(is.null(net1) || is.null(net2)) return(NA)
-  
-  # Find common nodes
-  common_mirnas <- intersect(rownames(net1), rownames(net2))
-  common_mrnas <- intersect(colnames(net1), colnames(net2))
-  
-  if(length(common_mirnas) == 0 || length(common_mrnas) == 0) return(0)
-  
-  # Subset to common nodes
-  m1 <- net1[common_mirnas, common_mrnas, drop = FALSE]
-  m2 <- net2[common_mirnas, common_mrnas, drop = FALSE]
-  
-  # Calculate Jaccard
-  intersection <- sum(m1 == 1 & m2 == 1)
-  union <- sum(m1 == 1 | m2 == 1)
-  
-  if(union == 0) return(0)
-  return(intersection / union)
-}
-
-# Create similarity matrix
-n_conditions <- length(networks)
-jaccard_matrix <- matrix(NA, n_conditions, n_conditions,
-                         dimnames = list(names(networks), names(networks)))
-
-for(i in 1:n_conditions) {
-  for(j in 1:n_conditions) {
-    jaccard_matrix[i,j] <- calculate_jaccard(networks[[i]], networks[[j]])
-  }
-}
-
-print("\n=== Network Similarity (Jaccard Index) ===")
-print(round(jaccard_matrix, 3))
-
-# Visualize similarity matrix
-pheatmap(jaccard_matrix, 
-         main = "Network Similarity Across Conditions",
-         display_numbers = TRUE,
-         number_format = "%.2f",
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
-         color = colorRampPalette(c("white", "lightblue", "darkblue"))(50))
-
-```
-
-Calculate network turnover 
-```{r}
-# Calculate edge turnover (gained, lost, conserved)
-calculate_turnover <- function(net1, net2, name1, name2) {
-  if(is.null(net1) || is.null(net2)) return(NULL)
-  
-  # Get all nodes
-  all_mirnas <- union(rownames(net1), rownames(net2))
-  all_mrnas <- union(colnames(net1), colnames(net2))
-  
-  # Expand matrices to same dimensions
-  expand_matrix <- function(m, all_rows, all_cols) {
-    new_m <- matrix(0, length(all_rows), length(all_cols),
-                    dimnames = list(all_rows, all_cols))
-    new_m[rownames(m), colnames(m)] <- m
-    return(new_m)
-  }
-  
-  m1 <- expand_matrix(net1, all_mirnas, all_mrnas)
-  m2 <- expand_matrix(net2, all_mirnas, all_mrnas)
-  
-  conserved <- sum(m1 == 1 & m2 == 1)
-  lost <- sum(m1 == 1 & m2 == 0)
-  gained <- sum(m1 == 0 & m2 == 1)
-  
-  data.frame(
-    from = name1,
-    to = name2,
-    conserved = conserved,
-    lost = lost,
-    gained = gained,
-    total_original = sum(m1),
-    total_new = sum(m2),
-    turnover_rate = (lost + gained) / (conserved + lost + gained)
-  )
-}
-
-turnover_comparisons <- list(
-  # Temporal progression in ambient
-  calculate_turnover(networks$Feb_ambient, networks$Jun_ambient, 
-                     "Feb_ambient", "Jun_ambient"),
-  calculate_turnover(networks$Jun_ambient, networks$Aug_ambient, 
-                     "Jun_ambient", "Aug_ambient"),
-  calculate_turnover(networks$Feb_ambient, networks$Aug_ambient, 
-                     "Feb_ambient", "Aug_ambient"),
-  # Treatment effects
-  calculate_turnover(networks$Jun_ambient, networks$Jun_heat, 
-                     "Jun_ambient", "Jun_heat"),
-  calculate_turnover(networks$Aug_ambient, networks$Aug_heat, 
-                     "Aug_ambient", "Aug_heat")
-)
-
-turnover_df <- bind_rows(turnover_comparisons)
-
-print("\n=== Network Turnover Analysis ===")
-print(turnover_df)
-
-# Visualize turnover
-turnover_long <- turnover_df %>%
-  dplyr::select(from, to, conserved, lost, gained) %>%
-  pivot_longer(cols = c(conserved, lost, gained), 
-               names_to = "edge_type", values_to = "count")
-
-ggplot(turnover_long, aes(x = paste(from, "→", to), y = count, fill = edge_type)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(values = c("conserved" = "#4DAF4A", 
-                                "lost" = "#E41A1C", 
-                                "gained" = "#377EB8")) +
-  labs(title = "Network Edge Turnover",
-       x = "Comparison", y = "Number of Edges", fill = "Edge Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-
-Correlation based turnover analysis
-```{r}
-#Function to analyze correlation changes between conditions
-analyze_correlation_dynamics <- function(data, cond1, cond2, cor_threshold = 0.3) {
-  
-  cat("\n--- Analyzing", cond1, "→", cond2, "---\n")
-  
-  # Get interactions for both conditions
-  df1 <- data %>%
-    dplyr::filter(condition == cond1, abs(correlation) >= cor_threshold) %>%
-    dplyr::select(mirna, mrna, correlation) %>%
-    dplyr::rename(cor1 = correlation)
-  
-  df2 <- data %>%
-    dplyr::filter(condition == cond2, abs(correlation) >= cor_threshold) %>%
-    dplyr::select(mirna, mrna, correlation) %>%
-    dplyr::rename(cor2 = correlation)
-  
-  # Full join to get all possible pairs
-  merged <- full_join(df1, df2, by = c("mirna", "mrna"))
-  
-  # Classify each pair
-  merged <- merged %>%
-    mutate(
-      # Determine edge status
-      edge_status = case_when(
-        !is.na(cor1) & !is.na(cor2) ~ "conserved",
-        !is.na(cor1) & is.na(cor2) ~ "lost",
-        is.na(cor1) & !is.na(cor2) ~ "gained",
-        TRUE ~ "none"
-      ),
-      
-      # For conserved edges, determine correlation dynamics
-      cor_dynamics = case_when(
-        edge_status != "conserved" ~ edge_status,
-        
-        # Sign changes
-        cor1 > 0 & cor2 < 0 ~ "pos_to_neg",
-        cor1 < 0 & cor2 > 0 ~ "neg_to_pos",
-        
-        # Same sign but magnitude changes
-        #cor1 > 0 & cor2 > 0 & abs(cor2 - cor1) > 0.2 ~ 
-        #  ifelse(cor2 > cor1, "pos_strengthened", "pos_weakened"),
-        #cor1 < 0 & cor2 < 0 & abs(cor2 - cor1) > 0.2 ~ 
-        #  ifelse(cor2 < cor1, "neg_strengthened", "neg_weakened"),
-        
-        # Stable
-        TRUE ~ "stable"
-      ),
-      
-      # Calculate correlation change
-      cor_change = cor2 - cor1,
-      abs_cor_change = abs(cor_change)
-    )
-  
-  # Summary statistics
-  summary_stats <- merged %>%
-    group_by(cor_dynamics) %>%
-    summarise(
-      n_edges = n(),
-      mean_cor1 = mean(cor1, na.rm = TRUE),
-      mean_cor2 = mean(cor2, na.rm = TRUE),
-      mean_cor_change = mean(cor_change, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    arrange(desc(n_edges))
-  
-  cat("\nCorrelation Dynamics Summary:\n")
-  print(summary_stats)
-  
-  # Count sign changes specifically
-  sign_changes <- merged %>%
-    filter(cor_dynamics %in% c("pos_to_neg", "neg_to_pos"))
-  
-  cat("\nSign Changes:\n")
-  cat("  Positive → Negative:", 
-      sum(merged$cor_dynamics == "pos_to_neg", na.rm = TRUE), "\n")
-  cat("  Negative → Positive:", 
-      sum(merged$cor_dynamics == "neg_to_pos", na.rm = TRUE), "\n")
-  cat("  Total sign flips:", nrow(sign_changes), 
-      sprintf("(%.1f%% of conserved edges)\n", 
-              100 * nrow(sign_changes) / sum(merged$edge_status == "conserved")))
-  
-  # Return detailed results
-  list(
-    comparison = paste(cond1, "to", cond2),
-    detailed_edges = merged,
-    summary = summary_stats,
-    sign_changes = sign_changes
-  )
-}
-
-# Analyze correlation dynamics for all key comparisons
-cor_dynamics_results <- list(
-  feb_to_jun = analyze_correlation_dynamics(interaction_data, 
-                                             "Feb_ambient", "Jun_ambient", 0.25),
-  jun_to_aug = analyze_correlation_dynamics(interaction_data, 
-                                             "Jun_ambient", "Aug_ambient", 0.25),
-  feb_to_aug = analyze_correlation_dynamics(interaction_data, 
-                                             "Feb_ambient", "Aug_ambient", 0.25),
-  jun_heat = analyze_correlation_dynamics(interaction_data, 
-                                           "Jun_ambient", "Jun_heat", 0.25),
-  aug_heat = analyze_correlation_dynamics(interaction_data, 
-                                           "Aug_ambient", "Aug_heat", 0.25)
-)
-```
-
-Correlation visualization
-```{r}
-# Function to create correlation change scatterplot
-plot_correlation_changes <- function(cor_result, title) {
-  
-  data <- cor_result$detailed_edges %>%
-    filter(edge_status == "conserved")
-  
-  p <- ggplot(data, aes(x = cor1, y = cor2)) +
-    geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
-                color = "gray50", size = 0.8) +
-    geom_hline(yintercept = 0, linetype = "solid", color = "black", alpha = 0.3) +
-    geom_vline(xintercept = 0, linetype = "solid", color = "black", alpha = 0.3) +
-    geom_point(aes(color = cor_dynamics), alpha = 0.6, size = 2) +
-    scale_color_manual(
-      values = c(
-        "stable" = "gray60",
-        "pos_to_neg" = "#E41A1C",
-        "neg_to_pos" = "#377EB8",
-        "pos_strengthened" = "#FF7F00",
-        "pos_weakened" = "#FFEDA0",
-        "neg_strengthened" = "#4DAF4A",
-        "neg_weakened" = "#A6D96A"
-      ),
-      name = "Correlation Change"
-    ) +
-    labs(
-      title = title,
-      x = "Correlation (Condition 1)",
-      y = "Correlation (Condition 2)",
-      caption = "Dashed line = no change; Points above line = strengthened"
-    ) +
-    coord_fixed() +
-    theme_minimal() +
-    theme(legend.position = "right")
-  
-  return(p)
-}
-
-# Create plots for key comparisons
-p_feb_jun <- plot_correlation_changes(
-  cor_dynamics_results$feb_to_jun, 
-  "Feb → Jun: Correlation Dynamics"
-)
-print(p_feb_jun)
-
-p_jun_aug <- plot_correlation_changes(
-  cor_dynamics_results$jun_to_aug, 
-  "Jun → Aug: Correlation Dynamics"
-)
-print(p_jun_aug)
-
-p_jun_heat <- plot_correlation_changes(
-  cor_dynamics_results$jun_heat, 
-  "Jun Ambient → Heat: Correlation Dynamics"
-)
-print(p_jun_heat)
-
-# Summary bar plot of correlation dynamics across all comparisons
-all_dynamics <- bind_rows(lapply(names(cor_dynamics_results), function(name) {
-  cor_dynamics_results[[name]]$summary %>%
-    mutate(comparison = cor_dynamics_results[[name]]$comparison)
-}))
-
-p_summary <- ggplot(all_dynamics %>% 
-                     filter(cor_dynamics != "lost" & cor_dynamics != "gained"),
-                   aes(x = comparison, y = n_edges, fill = cor_dynamics)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(
-    values = c(
-      "stable" = "gray60",
-      "pos_to_neg" = "#E41A1C",
-      "neg_to_pos" = "#377EB8",
-      "pos_strengthened" = "#FF7F00",
-      "pos_weakened" = "#FFEDA0",
-      "neg_strengthened" = "#4DAF4A",
-      "neg_weakened" = "#A6D96A"
-    ),
-    name = "Correlation Dynamics"
-  ) +
-  labs(
-    title = "Correlation Dynamics of Conserved Edges",
-    x = "Comparison",
-    y = "Number of Edges"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-print(p_summary)
-```
-
-Find genes that flip correlation
-```{r}
-# Extract all sign-flipping edges
-sign_flip_edges <- bind_rows(lapply(names(cor_dynamics_results), function(name) {
-  cor_dynamics_results[[name]]$sign_changes %>%
-    mutate(comparison = cor_dynamics_results[[name]]$comparison)
-}))
-
-cat("\nTotal sign-flipping edges across all comparisons:", nrow(sign_flip_edges), "\n")
-
-if(nrow(sign_flip_edges) > 0) {
-  cat("\nTop 20 sign-flipping edges by absolute correlation change:\n")
-  top_flips <- sign_flip_edges %>%
-    arrange(desc(abs_cor_change)) %>%
-    dplyr::select(comparison, mirna, mrna, cor1, cor2, cor_change, cor_dynamics) %>%
-    head(20)
-  print(top_flips)
-  
-  # Find miRNAs with most sign flips
-  mirna_flip_counts <- sign_flip_edges %>%
-    group_by(mirna) %>%
-    summarise(
-      n_sign_flips = n(),
-      mean_cor_change = mean(abs_cor_change),
-      .groups = "drop"
-    ) %>%
-    arrange(desc(n_sign_flips))
-  
-  cat("\nmiRNAs with most sign-flipping edges:\n")
-  print(head(mirna_flip_counts, 10))
-  
-  # Find genes with most sign flips
-  gene_flip_counts <- sign_flip_edges %>%
-    group_by(mrna) %>%
-    summarise(
-      n_sign_flips = n(),
-      mean_cor_change = mean(abs_cor_change),
-      .groups = "drop"
-    ) %>%
-    arrange(desc(n_sign_flips))
-  
-  cat("\nGenes with most sign-flipping regulation:\n")
-  print(head(gene_flip_counts, 10))
-}
-
-# Export sign-flipping edges
-# Uncomment to save:
-# write.csv(sign_flip_edges, "sign_flipping_edges.csv", row.names = FALSE)
-
-# Visualize turnover
-turnover_long <- turnover_df %>%
-  dplyr::select(from, to, conserved, lost, gained) %>%
-  pivot_longer(cols = c(conserved, lost, gained), 
-               names_to = "edge_type", values_to = "count")
-
-ggplot(turnover_long, aes(x = paste(from, "→", to), y = count, fill = edge_type)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(values = c("conserved" = "#4DAF4A", 
-                                "lost" = "#E41A1C", 
-                                "gained" = "#377EB8")) +
-  labs(title = "Network Edge Turnover",
-       x = "Comparison", y = "Number of Edges", fill = "Edge Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-```
-
-Turnover plot with sign flips
-```{r}
-# Function to get detailed turnover including sign flips
-get_detailed_turnover <- function(cor_result) {
-  
-  detailed <- cor_result$detailed_edges
-  
-  # Count each category
-  n_conserved_stable <- sum(detailed$cor_dynamics == "stable", na.rm = TRUE)
-  n_conserved_changed <- sum(detailed$cor_dynamics %in% 
-                               c("pos_strengthened", "pos_weakened", 
-                                 "neg_strengthened", "neg_weakened"), 
-                             na.rm = TRUE)
-  n_sign_flips <- sum(detailed$cor_dynamics %in% c("pos_to_neg", "neg_to_pos"), 
-                      na.rm = TRUE)
-  n_lost <- sum(detailed$edge_status == "lost", na.rm = TRUE)
-  n_gained <- sum(detailed$edge_status == "gained", na.rm = TRUE)
-  
-  data.frame(
-    comparison = cor_result$comparison,
-    conserved_stable = n_conserved_stable,
-    #conserved_magnitude_change = n_conserved_changed,
-    conserved_sign_flip = n_sign_flips,
-    lost = n_lost,
-    gained = n_gained
-  )
-}
-
-# Get detailed turnover for all comparisons
-detailed_turnover <- bind_rows(lapply(cor_dynamics_results, get_detailed_turnover))
-
-print("\nDetailed Turnover with Sign Flips:")
-print(detailed_turnover)
-
-# Reshape for plotting
-detailed_turnover_long <- detailed_turnover %>%
-  pivot_longer(
-    cols = c(conserved_stable, 
-             conserved_sign_flip, lost, gained),
-    names_to = "edge_category",
-    values_to = "count"
-  ) %>%
-  mutate(
-    edge_category = factor(edge_category, 
-                          levels = c("lost", "conserved_stable", 
-                                    #"conserved_magnitude_change",
-                                    "conserved_sign_flip", "gained"),
-                          labels = c("Lost", "Conserved (Stable)", 
-                                    #"Conserved (Magnitude Change)",
-                                    "Conserved (Sign Flip)", "Gained"))
-  )
-
-# Create enhanced turnover plot
-p_enhanced_turnover <- ggplot(detailed_turnover_long, 
-                               aes(x = comparison, y = count, fill = edge_category)) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_manual(
-    values = c(
-      "Lost" = "#E41A1C",
-      "Conserved (Stable)" = "#4DAF4A",
-      #"Conserved (Magnitude Change)" = "#FFD92F",
-      "Conserved (Sign Flip)" = "#E78AC3",
-      "Gained" = "#377EB8"
-    ),
-    name = "Edge Category"
-  ) +
-  labs(
-    title = "Network Edge Dynamics with Sign Flip Detail",
-    subtitle = "Conserved edges split by stability and sign flip",
-    x = "Comparison",
-    y = "Number of Edges"
-  ) +
-  theme_minimal() +
+library(stringr)
+library(scales)
+
+# Ensure consistent season factor levels for network metrics
+seasonal_network_metrics <- seasonal_network_metrics %>%
+  mutate(condition = factor(condition, 
+                           levels = c("TP0_Acclimation", "TP5_Ambient", "TP7_Ambient")),
+         season = recode(condition, 
+                        "TP0_Acclimation" = "February", 
+                        "TP5_Ambient" = "June", 
+                        "TP7_Ambient" = "August"),
+         season = factor(season, levels = c("February", "June", "August")))
+
+# ==========================================
+# 1. COMPACT NETWORK VIOLIN PLOTS (TOP ROW A,B,C)
+# ==========================================
+
+# Degree violin plot 
+degree_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = degree, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  theme_linedraw(base_size = 14) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "right"
-  )
-
-print(p_enhanced_turnover)
-
-# Calculate percentages for each comparison
-detailed_turnover_pct <- detailed_turnover %>%
-  mutate(
-    total_edges = conserved_stable + 
-                  #conserved_magnitude_change + 
-                  conserved_sign_flip + lost + gained,
-    pct_conserved_stable = 100 * conserved_stable / total_edges,
-    #pct_conserved_magnitude = 100 * conserved_magnitude_change / total_edges,
-    pct_sign_flip = 100 * conserved_sign_flip / total_edges,
-    pct_lost = 100 * lost / total_edges,
-    pct_gained = 100 * gained / total_edges
-  )
-
-cat("\nPercentage Breakdown:\n")
-print(detailed_turnover_pct %>% 
-        dplyr::select(comparison, pct_conserved_stable, 
-               pct_sign_flip, pct_lost, pct_gained))
-
-# Create percentage version of plot
-p_enhanced_turnover_pct <- ggplot(detailed_turnover_long, 
-                                   aes(x = comparison, y = count, fill = edge_category)) +
-  geom_bar(stat = "identity", position = "fill") +
-  scale_fill_manual(
-    values = c(
-      "Lost" = "#E41A1C",
-      "Conserved (Stable)" = "#4DAF4A",
-      #"Conserved (Magnitude Change)" = "#FFD92F",
-      "Conserved (Sign Flip)" = "#E78AC3",
-      "Gained" = "#377EB8"
-    ),
-    name = "Edge Category"
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
   ) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(
-    title = "Network Edge Dynamics (Proportional)",
-    subtitle = "Showing relative proportions of each edge category",
-    x = "Comparison",
-    y = "Proportion of Edges"
-  ) +
-  theme_minimal() +
+  labs(x = "", y = "Degree\n(# mRNA targets)")
+
+# Betweenness violin plot 
+betweenness_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = betweenness, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  scale_y_log10(labels = label_number()) +
+  theme_linedraw(base_size = 14) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "right"
-  )
-
-print(p_enhanced_turnover_pct)
-
-# Summary statistics about sign flips
-cat("\n=== Sign Flip Statistics ===\n")
-sign_flip_summary <- detailed_turnover %>%
-  mutate(
-    total_conserved = conserved_stable + conserved_sign_flip,
-    pct_flips_of_conserved = 100 * conserved_sign_flip / total_conserved
-  ) %>%
-  dplyr::select(comparison, conserved_sign_flip, total_conserved, pct_flips_of_conserved)
-
-print(sign_flip_summary)
-
-cat("\nInterpretation:\n")
-cat("- High % sign flips = regulatory logic is changing even for 'conserved' edges\n")
-cat("- Low % sign flips = edges maintain direction, only magnitude changes\n")
-cat("- Compare temporal vs treatment to see where logic rewiring occurs\n")
-```
-
-Subsetting genes based on sign flip, lost, gained, etc
-```{r}
-# Gene Extraction Functions for miRNA-mRNA Network Analysis
-# Use these functions to extract gene lists for functional analysis
-
-# ============================================================================
-# MAIN FUNCTION: Extract genes by category from a comparison
-# ============================================================================
-
-extract_genes_by_category <- function(cor_result, category = "all") {
-  
-  detailed <- cor_result$detailed_edges
-  comparison_name <- cor_result$comparison
-  
-  if(category == "sign_flip") {
-    # Genes with sign-flipping regulation (pos→neg OR neg→pos)
-    genes <- detailed %>%
-      filter(cor_dynamics %in% c("pos_to_neg", "neg_to_pos")) %>%
-      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
-      distinct()
-    
-  } else if(category == "pos_to_neg") {
-    # Specifically positive to negative
-    genes <- detailed %>%
-      filter(cor_dynamics == "pos_to_neg") %>%
-      dplyr::select(mrna, mirna, cor1, cor2, cor_change) %>%
-      distinct()
-    
-  } else if(category == "neg_to_pos") {
-    # Specifically negative to positive
-    genes <- detailed %>%
-      filter(cor_dynamics == "neg_to_pos") %>%
-      dplyr::select(mrna, mirna, cor1, cor2, cor_change) %>%
-      distinct()
-    
-  } else if(category == "lost") {
-    # Genes that lost miRNA regulation
-    genes <- detailed %>%
-      filter(edge_status == "lost") %>%
-      dplyr::select(mrna, mirna, cor1) %>%
-      distinct()
-    
-  } else if(category == "gained") {
-    # Genes that gained miRNA regulation
-    genes <- detailed %>%
-      filter(edge_status == "gained") %>%
-      dplyr::select(mrna, mirna, cor2) %>%
-      distinct()
-    
-  } else if(category == "conserved_stable") {
-    # Genes with stable miRNA regulation
-    genes <- detailed %>%
-      filter(cor_dynamics == "stable") %>%
-      dplyr::select(mrna, mirna, cor1, cor2) %>%
-      distinct()
-    
-  } else if(category == "strengthened") {
-    # Genes with strengthened regulation (more negative or more positive)
-    genes <- detailed %>%
-      filter(cor_dynamics %in% c("neg_strengthened", "pos_strengthened")) %>%
-      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
-      distinct()
-    
-  } else if(category == "weakened") {
-    # Genes with weakened regulation
-    genes <- detailed %>%
-      filter(cor_dynamics %in% c("neg_weakened", "pos_weakened")) %>%
-      dplyr::select(mrna, mirna, cor1, cor2, cor_dynamics, cor_change) %>%
-      distinct()
-    
-  } else if(category == "all") {
-    # All genes in this comparison
-    genes <- detailed %>%
-      dplyr::select(mrna, mirna, cor1, cor2, edge_status, cor_dynamics) %>%
-      distinct()
-    
-  } else {
-    stop("Invalid category. Choose from: sign_flip, pos_to_neg, neg_to_pos, 
-         lost, gained, conserved_stable, strengthened, weakened, all")
-  }
-  
-  cat("\nExtracted", nrow(genes), "miRNA-gene pairs\n")
-  cat("Unique genes:", length(unique(genes$mrna)), "\n")
-  cat("Unique miRNAs:", length(unique(genes$mirna)), "\n")
-  
-  return(genes)
-}
-
-# ============================================================================
-# EXPORT FUNCTION: Save gene lists for GO/pathway analysis
-# ============================================================================
-
-export_gene_lists <- function(cor_result, output_prefix) {
-  
-  categories <- c("sign_flip", "pos_to_neg", "neg_to_pos", 
-                  "lost", "gained", "conserved_stable", 
-                  "strengthened", "weakened")
-  
-  cat("\n=== Exporting gene lists for", cor_result$comparison, "===\n")
-  
-  for(cat in categories) {
-    genes <- extract_genes_by_category(cor_result, category = cat)
-    
-    if(nrow(genes) > 0) {
-      # Save full details (includes miRNA, correlations, etc.)
-      filename_detailed <- paste0(output_prefix, "_", cat, "_detailed.csv")
-      write.csv(genes, filename_detailed, row.names = FALSE)
-      
-      # Save just unique gene IDs (for GO analysis)
-      gene_ids <- unique(genes$mrna)
-      filename_genes <- paste0(output_prefix, "_", cat, "_genes.txt")
-      write.table(gene_ids, filename_genes,
-                  row.names = FALSE, col.names = FALSE, quote = FALSE)
-      
-      cat("  ", cat, ":", length(gene_ids), "genes →", 
-          filename_detailed, "&", filename_genes, "\n")
-    } else {
-      cat("  ", cat, ": No genes in this category\n")
-    }
-  }
-  
-  cat("\nExport complete!\n")
-}
-
-# ============================================================================
-# HELPER FUNCTION: Compare gene lists across categories
-# ============================================================================
-
-compare_gene_categories <- function(cor_result) {
-  
-  categories <- c("sign_flip", "pos_to_neg", "neg_to_pos", 
-                  "lost", "gained", "conserved_stable", 
-                  "strengthened", "weakened")
-  
-  results <- data.frame()
-  
-  for(cat in categories) {
-    genes <- extract_genes_by_category(cor_result, category = cat)
-    
-    results <- rbind(results, data.frame(
-      comparison = cor_result$comparison,
-      category = cat,
-      n_genes = length(unique(genes$mrna)),
-      n_mirnas = length(unique(genes$mirna)),
-      n_interactions = nrow(genes)
-    ))
-  }
-  
-  return(results)
-}
-
-# ============================================================================
-# HELPER FUNCTION: Find overlap between gene lists
-# ============================================================================
-
-find_gene_overlap <- function(cor_result1, cor_result2, category = "sign_flip") {
-  
-  genes1 <- extract_genes_by_category(cor_result1, category)
-  genes2 <- extract_genes_by_category(cor_result2, category)
-  
-  genes1_ids <- unique(genes1$mrna)
-  genes2_ids <- unique(genes2$mrna)
-  
-  overlap <- intersect(genes1_ids, genes2_ids)
-  unique1 <- setdiff(genes1_ids, genes2_ids)
-  unique2 <- setdiff(genes2_ids, genes1_ids)
-  
-  cat("\n=== Gene Overlap Analysis ===\n")
-  cat("Comparison 1:", cor_result1$comparison, "-", length(genes1_ids), "genes\n")
-  cat("Comparison 2:", cor_result2$comparison, "-", length(genes2_ids), "genes\n")
-  cat("\nShared genes:", length(overlap), "\n")
-  cat("Unique to comparison 1:", length(unique1), "\n")
-  cat("Unique to comparison 2:", length(unique2), "\n")
-  
-  return(list(
-    shared = overlap,
-    unique_to_1 = unique1,
-    unique_to_2 = unique2
-  ))
-}
-
-# ============================================================================
-# EXAMPLES
-# ============================================================================
-
-cat("=== Gene Extraction Functions Loaded ===\n\n")
-
-cat("USAGE EXAMPLES:\n\n")
-
-cat("1. Extract genes from a specific comparison and category:\n")
-cat("   genes <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'sign_flip')\n\n")
-
-cat("2. Get just the unique gene IDs:\n")
-cat("   gene_ids <- unique(genes$mrna)\n\n")
-
-cat("3. Export all categories for a comparison:\n")
-cat("   export_gene_lists(cor_dynamics_results$jun_heat, 'June_heat_effect')\n\n")
-
-cat("4. Compare gene counts across categories:\n")
-cat("   summary <- compare_gene_categories(cor_dynamics_results$feb_to_jun)\n\n")
-
-cat("5. Find overlap between two comparisons:\n")
-cat("   overlap <- find_gene_overlap(cor_dynamics_results$jun_heat, \n")
-cat("                                cor_dynamics_results$aug_heat, \n")
-cat("                                'sign_flip')\n\n")
-
-cat("AVAILABLE COMPARISONS:\n")
-cat("  - cor_dynamics_results$feb_to_jun\n")
-cat("  - cor_dynamics_results$jun_to_aug\n")
-cat("  - cor_dynamics_results$feb_to_aug\n")
-cat("  - cor_dynamics_results$jun_heat\n")
-cat("  - cor_dynamics_results$aug_heat\n\n")
-
-cat("AVAILABLE CATEGORIES:\n")
-cat("  - sign_flip       : All sign-flipping genes\n")
-cat("  - pos_to_neg      : Positive → Negative only\n")
-cat("  - neg_to_pos      : Negative → Positive only\n")
-cat("  - lost            : Lost miRNA regulation\n")
-cat("  - gained          : Gained miRNA regulation\n")
-cat("  - conserved_stable: Stable regulation\n")
-cat("  - strengthened    : Stronger regulation\n")
-cat("  - weakened        : Weaker regulation\n")
-cat("  - all             : All genes\n\n")
-
-# ============================================================================
-# QUICK START EXAMPLE WITH YOUR DATA
-# ============================================================================
-
-cat("=== QUICK START ===\n\n")
-cat("After running the main network analysis, try:\n\n")
-
-cat("# Example 1: Get sign-flipping genes from June heat treatment\n")
-cat("jun_heat_flips <- extract_genes_by_category(cor_dynamics_results$jun_heat, 'sign_flip')\n")
-cat("head(jun_heat_flips)\n\n")
-
-cat("# Example 2: Export all gene categories for Feb→Jun transition\n")
-cat("export_gene_lists(cor_dynamics_results$feb_to_jun, 'Feb_to_Jun')\n\n")
-
-cat("# Example 3: Compare sign-flipping genes between timepoints\n")
-cat("temporal_overlap <- find_gene_overlap(\n")
-cat("  cor_dynamics_results$feb_to_jun,\n")
-cat("  cor_dynamics_results$jun_to_aug,\n")
-cat("  'sign_flip'\n")
-cat(")\n\n")
-
-cat("# Example 4: Look at genes with strongest correlation changes\n")
-cat("jun_heat_flips %>%\n")
-cat("  arrange(desc(abs(cor_change))) %>%\n")
-cat("  head(20)\n\n")
-
-genes <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'sign_flip')
-
-```
-
-Are the genes that are lost, gained, and conserved (ie stable, sign flip, magnitude change) across the comparisons the same for all comparisons or different?
-
-
-Hub conservation 
-```{r}
-# Identify hubs (miRNAs with high degree) and track across conditions
-get_hubs <- function(net_matrix, top_n = 3) {
-  if(is.null(net_matrix)) return(NULL)
-  
-  degrees <- rowSums(net_matrix)
-  hub_mirnas <- names(sort(degrees, decreasing = TRUE)[1:min(top_n, length(degrees))])
-  
-  data.frame(
-    mirna = hub_mirnas,
-    degree = degrees[hub_mirnas]
-  )
-}
-
-# Get hubs for each condition
-hubs_list <- lapply(names(networks), function(cond) {
-  hubs <- get_hubs(networks[[cond]], top_n = 3)
-  if(!is.null(hubs)) {
-    hubs$condition <- cond
-    hubs$timepoint <- ifelse(grepl("Feb", cond), "Feb",
-                             ifelse(grepl("Jun", cond), "Jun", "Aug"))
-    hubs$treatment <- ifelse(grepl("heat", cond), "heat", "ambient")
-  }
-  return(hubs)
-})
-
-hubs_df <- bind_rows(hubs_list)
-
-print("\n=== Hub miRNAs Across Conditions ===")
-print(hubs_df)
-
-# Visualize hub conservation
-hub_matrix <- hubs_df %>%
-  dplyr::select(mirna, condition, degree) %>%
-  pivot_wider(names_from = condition, values_from = degree, values_fill = 0)
-
-print("\n=== Hub Degree Matrix ===")
-print(hub_matrix)
-```
-
-Stats
-```{r}
-# Test 1: Are timepoint differences larger than treatment differences?
-# Compare Jaccard similarities
-
-# Ambient temporal changes
-temporal_similarities <- c(
-  jaccard_matrix["Feb_ambient", "Jun_ambient"],
-  jaccard_matrix["Jun_ambient", "Aug_ambient"]
-)
-
-# Treatment effects within timepoints
-treatment_similarities <- c(
-  jaccard_matrix["Jun_ambient", "Jun_heat"],
-  jaccard_matrix["Aug_ambient", "Aug_heat"]
-)
-
-cat("\nMean Jaccard - Temporal (ambient):", mean(temporal_similarities, na.rm = TRUE), "\n")
-cat("Mean Jaccard - Treatment effects:", mean(treatment_similarities, na.rm = TRUE), "\n")
-
-# Test 2: Mantel test for network correlation (if you have distance matrices)
-# This tests whether network dissimilarity correlates with temporal/treatment distance
-
-# Create dissimilarity matrix (1 - Jaccard)
-dissim_matrix <- 1 - jaccard_matrix
-
-# Create temporal distance matrix
-time_dist <- matrix(0, n_conditions, n_conditions,
-                    dimnames = list(names(networks), names(networks)))
-time_order <- c(Feb_ambient = 1, Jun_ambient = 2, Jun_heat = 2, 
-                Aug_ambient = 3, Aug_heat = 3)
-for(i in names(networks)) {
-  for(j in names(networks)) {
-    time_dist[i,j] <- abs(time_order[i] - time_order[j])
-  }
-}
-
-# Mantel test
-mantel_result <- mantel(as.dist(dissim_matrix), as.dist(time_dist), 
-                        method = "pearson", permutations = 999)
-cat("\nMantel test (network dissimilarity ~ temporal distance):\n")
-print(mantel_result)
-```
-
-Visualize 
-```{r}
-# Plot network metrics over time
-metrics_ambient <- network_comparison %>%
-  filter(treatment == "ambient")
-metrics_ambient$timepoint <- factor(metrics_ambient$timepoint, levels = c("Feb", "Jun", "Aug"))
-
-p1 <- ggplot(metrics_ambient, aes(x = timepoint, y = connectance)) +
-  geom_line(group = 1, color = "darkblue", size = 1.2) +
-  geom_point(size = 4, color = "darkblue") +
-  labs(title = "Network Connectance Over Time (Ambient)",
-       x = "Timepoint", y = "Connectance") +
-  theme_minimal(); p1
-
-p2 <- ggplot(metrics_ambient, aes(x = timepoint, y = n_edges)) +
-  geom_line(group = 1, color = "darkgreen", size = 1.2) +
-  geom_point(size = 4, color = "darkgreen") +
-  labs(title = "Number of Edges Over Time (Ambient)",
-       x = "Timepoint", y = "Number of Edges") +
-  theme_minimal();p2
-
-# Treatment comparison at each timepoint
-metrics_jun_aug <- network_comparison %>%
-  filter(timepoint %in% c("Jun", "Aug"))
-
-p3 <- ggplot(metrics_jun_aug, aes(x = timepoint, y = connectance, 
-                                   color = treatment, group = treatment)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 4) +
-  scale_color_manual(values = c("ambient" = "#377EB8", "heat" = "#E41A1C")) +
-  labs(title = "Treatment Effects on Network Connectance",
-       x = "Timepoint", y = "Connectance") +
-  theme_minimal();p3
-```
-
-Look at specific edges
-```{r}
-# Function to extract edge details between two networks
-extract_edge_details <- function(net1, net2, name1, name2, interaction_data) {
-  
-  if(is.null(net1) || is.null(net2)) return(NULL)
-  
-  # Get all nodes
-  all_mirnas <- union(rownames(net1), rownames(net2))
-  all_mrnas <- union(colnames(net1), colnames(net2))
-  
-  # Expand matrices to same dimensions
-  expand_matrix <- function(m, all_rows, all_cols) {
-    new_m <- matrix(0, length(all_rows), length(all_cols),
-                    dimnames = list(all_rows, all_cols))
-    new_m[rownames(m), colnames(m)] <- m
-    return(new_m)
-  }
-  
-  m1 <- expand_matrix(net1, all_mirnas, all_mrnas)
-  m2 <- expand_matrix(net2, all_mirnas, all_mrnas)
-  
-  # Find conserved edges (present in both)
-  conserved_idx <- which(m1 == 1 & m2 == 1, arr.ind = TRUE)
-  conserved_edges <- data.frame(
-    mirna = rownames(m1)[conserved_idx[,1]],
-    mrna = colnames(m1)[conserved_idx[,2]],
-    edge_type = "conserved",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Find lost edges (in net1 but not net2)
-  lost_idx <- which(m1 == 1 & m2 == 0, arr.ind = TRUE)
-  lost_edges <- data.frame(
-    mirna = rownames(m1)[lost_idx[,1]],
-    mrna = colnames(m1)[lost_idx[,2]],
-    edge_type = "lost",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Find gained edges (not in net1 but in net2)
-  gained_idx <- which(m1 == 0 & m2 == 1, arr.ind = TRUE)
-  gained_edges <- data.frame(
-    mirna = rownames(m2)[gained_idx[,1]],
-    mrna = colnames(m2)[gained_idx[,2]],
-    edge_type = "gained",
-    comparison = paste(name1, "to", name2)
-  )
-  
-  # Combine all edges
-  all_edges <- rbind(conserved_edges, lost_edges, gained_edges)
-  
-  # Add correlation information from original data if available
-  if(!is.null(interaction_data)) {
-    # Get correlations for first condition
-    corr1 <- interaction_data %>%
-      filter(condition == name1) %>%
-      select(mirna, mrna, correlation) %>%
-      rename(correlation_1 = correlation)
-    
-    # Get correlations for second condition
-    corr2 <- interaction_data %>%
-      filter(condition == name2) %>%
-      select(mirna, mrna, correlation) %>%
-      rename(correlation_2 = correlation)
-    
-    # Merge with edge data
-    all_edges <- all_edges %>%
-      left_join(corr1, by = c("mirna", "mrna")) %>%
-      left_join(corr2, by = c("mirna", "mrna"))
-  }
-  
-  return(all_edges)
-}
-
-cat("\n=== DETAILED EDGE ANALYSIS ===\n")
-
-# Extract edges for key comparisons
-edge_comparisons <- list(
-  feb_to_jun = extract_edge_details(networks$Feb_ambient, networks$Jun_ambient, 
-                                     "Feb_ambient", "Jun_ambient", interaction_data),
-  jun_to_aug = extract_edge_details(networks$Jun_ambient, networks$Aug_ambient, 
-                                     "Jun_ambient", "Aug_ambient", interaction_data),
-  feb_to_aug = extract_edge_details(networks$Feb_ambient, networks$Aug_ambient, 
-                                     "Feb_ambient", "Aug_ambient", interaction_data),
-  jun_heat = extract_edge_details(networks$Jun_ambient, networks$Jun_heat, 
-                                   "Jun_ambient", "Jun_heat", interaction_data),
-  aug_heat = extract_edge_details(networks$Aug_ambient, networks$Aug_heat, 
-                                   "Aug_ambient", "Aug_heat", interaction_data)
-)
-
-# Display conserved edges across entire season (Feb to Aug)
-cat("\n--- Edges Conserved Across Full Season (Feb → Aug) ---\n")
-feb_to_aug_conserved <- edge_comparisons$feb_to_aug %>%
-  filter(edge_type == "conserved")
-print(feb_to_aug_conserved)
-
-# Display lost edges in Feb→Jun transition
-cat("\n--- Edges Lost in Feb → Jun Transition (first 10) ---\n")
-feb_to_jun_lost <- edge_comparisons$feb_to_jun %>%
-  filter(edge_type == "lost") %>%
-  arrange(desc(abs(correlation_1)))
-print(head(feb_to_jun_lost, 10))
-
-# Display gained edges in Jun→Aug transition
-cat("\n--- Edges Gained in Jun → Aug Transition (first 10) ---\n")
-jun_to_aug_gained <- edge_comparisons$jun_to_aug %>%
-  filter(edge_type == "gained") %>%
-  arrange(desc(abs(correlation_2)))
-print(head(jun_to_aug_gained, 10))
-
-# Summarize edge changes by miRNA
-cat("\n--- miRNA Activity Across Transitions ---\n")
-mirna_activity <- bind_rows(edge_comparisons) %>%
-  group_by(comparison, mirna, edge_type) %>%
-  summarise(n_edges = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_edges, values_fill = 0) %>%
-  arrange(comparison, desc(conserved + lost + gained))
-
-print(mirna_activity)
-
-# Identify "stable" miRNAs (high conservation) vs "dynamic" miRNAs (high turnover)
-cat("\n--- Stable vs Dynamic miRNAs ---\n")
-mirna_stability <- bind_rows(edge_comparisons) %>%
-  group_by(mirna, edge_type) %>%
-  summarise(n_edges = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_edges, values_fill = 0) %>%
-  mutate(
-    total_edges = conserved + lost + gained,
-    conservation_rate = conserved / total_edges,
-    turnover_rate = (lost + gained) / total_edges
-  ) %>%
-  arrange(desc(conservation_rate))
-
-print(mirna_stability)
-
-# Find miR-7's conserved targets
-mir7_conserved <- bind_rows(edge_comparisons) %>%
-  filter(mirna == "miR-7", edge_type == "conserved") %>%
-  select(mrna, comparison) %>%
-  distinct()
-
-# Function to export edge lists for further analysis
-export_edge_lists <- function(edge_comparison, filename_prefix) {
-  # Export conserved edges
-  conserved <- edge_comparison %>% filter(edge_type == "conserved")
-  if(nrow(conserved) > 0) {
-    write.csv(conserved, paste0(filename_prefix, "_conserved.csv"), row.names = FALSE)
-  }
-  
-  # Export lost edges
-  lost <- edge_comparison %>% filter(edge_type == "lost")
-  if(nrow(lost) > 0) {
-    write.csv(lost, paste0(filename_prefix, "_lost.csv"), row.names = FALSE)
-  }
-  
-  # Export gained edges
-  gained <- edge_comparison %>% filter(edge_type == "gained")
-  if(nrow(gained) > 0) {
-    write.csv(gained, paste0(filename_prefix, "_gained.csv"), row.names = FALSE)
-  }
-  
-  cat("Exported edge lists for", filename_prefix, "\n")
-}
-
-# Uncomment to export files:
-# export_edge_lists(edge_comparisons$feb_to_aug, "Feb_to_Aug")
-# export_edge_lists(edge_comparisons$jun_heat, "Jun_heat_effect")
-```
-
-Stable v dynamic genes
-```{r}
-# Which genes (mRNAs) show the most dynamic miRNA regulation?
-gene_dynamics <- bind_rows(edge_comparisons) %>%
-  group_by(mrna, comparison, edge_type) %>%
-  summarise(n_mirnas = n(), .groups = "drop") %>%
-  pivot_wider(names_from = edge_type, values_from = n_mirnas, values_fill = 0) %>%
-  mutate(
-    total_interactions = conserved + lost + gained,
-    rewiring_rate = (lost + gained) / total_interactions
-  ) %>%
-  arrange(comparison, desc(total_interactions))
-
-cat("\n--- Genes with Most Dynamic miRNA Regulation ---\n")
-print(head(gene_dynamics, 15))
-
-# Genes with stable regulation (conserved across transitions)
-stable_genes <- bind_rows(edge_comparisons) %>%
-  filter(edge_type == "conserved") %>%
-  group_by(mrna) %>%
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(x = "", y = "Betweenness\n(log scale)")
+
+# d' violin plot 
+dprime_violin <- ggplot(seasonal_network_metrics, aes(x = season, y = dprime, fill = season)) +
+  geom_violin(alpha = 0.7, trim = FALSE, width = 0.8) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.alpha = 0) +
+  scale_fill_manual(values = c("February" = "#E69F00", "June" = "#56B4E9", "August" = "#009E73")) +
+  theme_linedraw(base_size = 14) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+    axis.text.y = element_text(size = 14, colour = "black"),
+    axis.title = element_text(size = 14, colour = "black"),
+    plot.title = element_text(size = 16, face = "bold", colour = "black", hjust = 0.5),
+    panel.grid.minor = element_blank()
+  ) +
+  labs(x = "", y = "d'\n(specialization)")
+
+# Compact top row (A,B,C)
+network_row <- degree_violin + betweenness_violin + dprime_violin + 
+  plot_layout(widths = c(1, 1, 1), heights = 1) &
+  theme(plot.margin = margin(10, 5, 15, 5))
+
+# ==========================================
+# 2. TRAJECTORY + GO PLOTS (BOTTOM SECTION D)
+# ==========================================
+
+# Individual trajectories
+trajectory_long <- pair_trajectories %>%
+  left_join(features %>% select(pair_id), by = "pair_id") %>%
+  pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
+  mutate(season = recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
+  mutate(season = factor(season, levels = c("February", "June", "August")))
+
+# Cluster means and SE
+cluster_stats <- trajectory_long %>%
+  group_by(cluster, season) %>%
   summarise(
-    n_comparisons_conserved = n(),
-    mirnas_targeting = paste(unique(mirna), collapse = ", ")
-  ) %>%
-  arrange(desc(n_comparisons_conserved))
-
-cat("\n--- Genes with Most Stable miRNA Regulation ---\n")
-print(stable_genes)
-```
-
-Look at overlap between transitions 
-```{r}
-# Function to create overlap matrix for a specific category across all comparisons
-create_gene_overlap_matrix <- function(cor_dynamics_list, category = "sign_flip") {
-  
-  cat("\n--- Analyzing", category, "genes across all comparisons ---\n\n")
-  
-  # Extract gene lists from all comparisons
-  comparison_names <- names(cor_dynamics_list)
-  gene_lists <- list()
-  
-  for(comp in comparison_names) {
-    genes <- extract_genes_by_category(cor_dynamics_list[[comp]], category)
-    gene_lists[[comp]] <- unique(genes$mrna)
-  }
-  
-  # Create overlap matrix
-  n_comp <- length(comparison_names)
-  overlap_matrix <- matrix(0, n_comp, n_comp, 
-                           dimnames = list(comparison_names, comparison_names))
-  
-  for(i in 1:n_comp) {
-    for(j in 1:n_comp) {
-      if(i == j) {
-        overlap_matrix[i,j] <- length(gene_lists[[i]])
-      } else {
-        overlap_matrix[i,j] <- length(intersect(gene_lists[[i]], gene_lists[[j]]))
-      }
-    }
-  }
-  
-  cat("Gene counts per comparison:\n")
-  for(comp in comparison_names) {
-    cat(sprintf("  %s: %d genes\n", comp, length(gene_lists[[comp]])))
-  }
-  
-  cat("\nOverlap matrix (number of shared genes):\n")
-  print(overlap_matrix)
-  
-  # Calculate Jaccard similarity for overlaps
-  jaccard_matrix <- matrix(0, n_comp, n_comp,
-                           dimnames = list(comparison_names, comparison_names))
-  
-  for(i in 1:n_comp) {
-    for(j in 1:n_comp) {
-      if(i == j) {
-        jaccard_matrix[i,j] <- 1.0
-      } else {
-        intersection <- length(intersect(gene_lists[[i]], gene_lists[[j]]))
-        union <- length(union(gene_lists[[i]], gene_lists[[j]]))
-        jaccard_matrix[i,j] <- ifelse(union > 0, intersection / union, 0)
-      }
-    }
-  }
-  
-  cat("\nJaccard similarity (proportion of shared genes):\n")
-  print(round(jaccard_matrix, 3))
-  
-  return(list(
-    gene_lists = gene_lists,
-    overlap_matrix = overlap_matrix,
-    jaccard_matrix = jaccard_matrix
-  ))
-}
-
-# Function to visualize gene overlap across comparisons
-visualize_gene_overlap <- function(overlap_result, category_name) {
-  
-  library(ggplot2)
-  library(reshape2)
-  library(pheatmap)
-  
-  # Heatmap of overlap counts
-  overlap_long <- melt(overlap_result$overlap_matrix)
-  
-  p1 <- ggplot(overlap_long, aes(x = Var1, y = Var2, fill = value)) +
-    geom_tile(color = "white") +
-    geom_text(aes(label = value), color = "black", size = 3) +
-    scale_fill_gradient(low = "white", high = "darkblue") +
-    labs(title = paste("Gene Overlap:", category_name),
-         x = "", y = "", fill = "Shared Genes") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  print(p1)
-  
-  # Heatmap of Jaccard similarity
-  jaccard_long <- melt(overlap_result$jaccard_matrix)
-  
-  p2 <- ggplot(jaccard_long, aes(x = Var1, y = Var2, fill = value)) +
-    geom_tile(color = "white") +
-    geom_text(aes(label = round(value, 2)), color = "black", size = 3) +
-    scale_fill_gradient(low = "white", high = "darkred") +
-    labs(title = paste("Gene Overlap (Jaccard):", category_name),
-         x = "", y = "", fill = "Jaccard Index") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  print(p2)
-  
-  # UpSet-style analysis of unique/shared genes
-  gene_lists <- overlap_result$gene_lists
-  all_genes <- unique(unlist(gene_lists))
-  
-  # Create presence/absence matrix
-  presence_matrix <- matrix(0, length(all_genes), length(gene_lists),
-                           dimnames = list(all_genes, names(gene_lists)))
-  
-  for(comp in names(gene_lists)) {
-    presence_matrix[gene_lists[[comp]], comp] <- 1
-  }
-  
-  # Count intersection patterns
-  pattern_counts <- as.data.frame(presence_matrix) %>%
-    group_by(across(everything())) %>%
-    summarise(n_genes = n(), .groups = "drop") %>%
-    arrange(desc(n_genes))
-  
-  cat("\nTop 10 intersection patterns:\n")
-  cat("(1 = present in comparison, 0 = absent)\n")
-  print(head(pattern_counts, 10))
-  
-  return(list(p1 = p1, p2 = p2, patterns = pattern_counts))
-}
-
-# Function to identify genes unique to specific comparisons or shared across all
-analyze_gene_sharing_patterns <- function(overlap_result, category_name) {
-  
-  gene_lists <- overlap_result$gene_lists
-  comparison_names <- names(gene_lists)
-  
-  cat("\n=== Gene Sharing Patterns for", category_name, "===\n\n")
-  
-  # Genes unique to each comparison
-  cat("Genes UNIQUE to each comparison:\n")
-  for(comp in comparison_names) {
-    others <- setdiff(comparison_names, comp)
-    other_genes <- unique(unlist(gene_lists[others]))
-    unique_genes <- setdiff(gene_lists[[comp]], other_genes)
-    cat(sprintf("  %s: %d unique genes (%.1f%%)\n", 
-                comp, length(unique_genes), 
-                100 * length(unique_genes) / length(gene_lists[[comp]])))
-  }
-  
-  # Genes shared across ALL comparisons
-  shared_all <- Reduce(intersect, gene_lists)
-  cat(sprintf("\nGenes shared across ALL comparisons: %d\n", length(shared_all)))
-  if(length(shared_all) > 0) {
-    cat("These genes:\n")
-    print(head(shared_all, 20))
-  }
-  
-  # Genes shared between temporal transitions only
-  temporal_comps <- c("feb_to_jun", "jun_to_aug", "feb_to_aug")
-  temporal_available <- temporal_comps[temporal_comps %in% comparison_names]
-  
-  if(length(temporal_available) > 1) {
-    temporal_genes <- Reduce(intersect, gene_lists[temporal_available])
-    cat(sprintf("\nGenes shared across temporal transitions: %d\n", 
-                length(temporal_genes)))
-  }
-  
-  # Genes shared between treatment effects only
-  treatment_comps <- c("jun_heat", "aug_heat")
-  treatment_available <- treatment_comps[treatment_comps %in% comparison_names]
-  
-  if(length(treatment_available) > 1) {
-    treatment_genes <- Reduce(intersect, gene_lists[treatment_available])
-    cat(sprintf("\nGenes shared across heat treatments: %d\n", 
-                length(treatment_genes)))
-    
-    # Genes specific to heat (not in temporal)
-    if(length(temporal_available) > 0) {
-      temporal_union <- unique(unlist(gene_lists[temporal_available]))
-      heat_specific <- setdiff(treatment_genes, temporal_union)
-      cat(sprintf("  Heat-specific (not in temporal): %d\n", length(heat_specific)))
-    }
-  }
-  
-  return(list(
-    shared_all = shared_all,
-    unique_per_comparison = lapply(comparison_names, function(comp) {
-      others <- setdiff(comparison_names, comp)
-      other_genes <- unique(unlist(gene_lists[others]))
-      setdiff(gene_lists[[comp]], other_genes)
-    })
-  ))
-}
-
-# Comprehensive comparison function for all categories
-compare_all_categories <- function(cor_dynamics_list) {
-  
-  categories <- c("sign_flip", "lost", "gained", "conserved_stable", 
-                  "strengthened", "weakened")
-  
-  results_summary <- data.frame()
-  
-  for(cat in categories) {
-    cat("\n", rep("=", 70), "\n", sep = "")
-    cat("CATEGORY:", toupper(cat), "\n")
-    cat(rep("=", 70), "\n")
-    
-    overlap_result <- create_gene_overlap_matrix(cor_dynamics_list, cat)
-    
-    # Calculate some summary stats
-    gene_lists <- overlap_result$gene_lists
-    n_genes_per_comp <- sapply(gene_lists, length)
-    shared_all <- Reduce(intersect, gene_lists)
-    
-    mean_jaccard <- mean(overlap_result$jaccard_matrix[
-      lower.tri(overlap_result$jaccard_matrix)])
-    
-    results_summary <- rbind(results_summary, data.frame(
-      category = cat,
-      mean_genes_per_comparison = mean(n_genes_per_comp),
-      sd_genes_per_comparison = sd(n_genes_per_comp),
-      genes_shared_all = length(shared_all),
-      mean_jaccard = mean_jaccard
-    ))
-    
-    # Visualize
-    vis <- visualize_gene_overlap(overlap_result, cat)
-    
-    # Analyze patterns
-    patterns <- analyze_gene_sharing_patterns(overlap_result, cat)
-  }
-  
-  cat("\n", rep("=", 70), "\n")
-  cat("SUMMARY ACROSS ALL CATEGORIES\n")
-  cat(rep("=", 70), "\n\n")
-  print(results_summary)
-  
-  return(results_summary)
-}
-
-# ============================================================================
-# EXAMPLE USAGE
-# ============================================================================
-
-cat("\n=== CROSS-COMPARISON ANALYSIS FUNCTIONS LOADED ===\n\n")
-
-cat("USAGE:\n\n")
-
-cat("1. Analyze overlap for a specific category:\n")
-cat("   overlap_result <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')\n\n")
-overlap_result <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')
-
-cat("2. Visualize the overlap:\n")
-cat("   visualize_gene_overlap(overlap_result, 'Sign-Flipping Genes')\n\n")
-visualize_gene_overlap(overlap_result, 'Sign-Flipping Genes')
-
-cat("3. Identify sharing patterns:\n")
-cat("   patterns <- analyze_gene_sharing_patterns(overlap_result, 'sign_flip')\n\n")
-patterns <- analyze_gene_sharing_patterns(overlap_result, 'sign_flip')
-
-cat("4. Run complete analysis for all categories:\n")
-cat("   summary <- compare_all_categories(cor_dynamics_results)\n\n")
-summary <- compare_all_categories(cor_dynamics_results)
-
-cat("EXAMPLE: Are Feb→Jun gained genes the same as Feb→Aug gained genes?\n\n")
-cat("# Method 1: Quick overlap check\n")
-cat("feb_jun_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'gained')\n")
-feb_jun_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, 'gained')
-cat("feb_aug_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, 'gained')\n")
-feb_aug_gained <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, 'gained')
-cat("feb_jun_ids <- unique(feb_jun_gained$mrna)\n")
-feb_jun_ids <- unique(feb_jun_gained$mrna)
-cat("feb_aug_ids <- unique(feb_aug_gained$mrna)\n")
-feb_aug_ids <- unique(feb_aug_gained$mrna)
-cat("shared <- intersect(feb_jun_ids, feb_aug_ids)\n")
-shared <- intersect(feb_jun_ids, feb_aug_ids)
-cat("cat('Shared genes:', length(shared), '/', length(feb_jun_ids), '\\n')\n\n")
-cat('Shared genes:', length(shared), '/', length(feb_jun_ids), '\n')
-
-cat("# Method 2: Complete overlap analysis\n")
-cat("gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'gained')\n")
-gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'gained')
-cat("# This shows overlap across ALL comparisons\n\n")
-
-cat("Ready to analyze cross-comparison gene overlap!\n")
-```
-
-Are Feb-->June gained genes the same as Feb-->Aug gained genes 
-```{r}
-# Analyze all gained genes across all comparisons
-gained_overlap <- create_gene_overlap_matrix(cor_dynamics_results, 'sign_flip')
-
-# Visualize it
-visualize_gene_overlap(gained_overlap, 'Gained Genes')
-
-# Get specific patterns
-gained_patterns <- analyze_gene_sharing_patterns(gained_overlap, 'sign_flip')
-
-# See which genes are unique to Feb→Jun vs shared with Feb→Aug
-```
-
-Seasonal genes
-```{r}
-# FUNCTION: Analyze seasonal gene overlap for a specific category
-# ============================================================================
-
-analyze_seasonal_genes <- function(cor_dynamics_results, category = "gained") {
-  
-  cat("\n", rep("=", 80), "\n", sep = "")
-  cat("SEASONAL ANALYSIS:", toupper(category), "GENES\n")
-  cat(rep("=", 80), "\n\n")
-  
-  # Extract gene lists from the three temporal transitions
-  feb_jun <- extract_genes_by_category(cor_dynamics_results$feb_to_jun, category)
-  jun_aug <- extract_genes_by_category(cor_dynamics_results$jun_to_aug, category)
-  feb_aug <- extract_genes_by_category(cor_dynamics_results$feb_to_aug, category)
-  
-  # Get unique gene IDs
-  feb_jun_genes <- unique(feb_jun$mrna)
-  jun_aug_genes <- unique(jun_aug$mrna)
-  feb_aug_genes <- unique(feb_aug$mrna)
-  
-  cat("Gene counts per transition:\n")
-  cat(sprintf("  Feb → Jun: %d genes\n", length(feb_jun_genes)))
-  cat(sprintf("  Jun → Aug: %d genes\n", length(jun_aug_genes)))
-  cat(sprintf("  Feb → Aug: %d genes\n", length(feb_aug_genes)))
-  
-  # Calculate overlaps
-  all_three <- Reduce(intersect, list(feb_jun_genes, jun_aug_genes, feb_aug_genes))
-  feb_jun_only <- setdiff(feb_jun_genes, union(jun_aug_genes, feb_aug_genes))
-  jun_aug_only <- setdiff(jun_aug_genes, union(feb_jun_genes, feb_aug_genes))
-  feb_aug_only <- setdiff(feb_aug_genes, union(feb_jun_genes, jun_aug_genes))
-  
-  feb_jun_and_feb_aug <- setdiff(intersect(feb_jun_genes, feb_aug_genes), jun_aug_genes)
-  feb_jun_and_jun_aug <- setdiff(intersect(feb_jun_genes, jun_aug_genes), feb_aug_genes)
-  jun_aug_and_feb_aug <- setdiff(intersect(jun_aug_genes, feb_aug_genes), feb_jun_genes)
-  
-  cat("\n=== OVERLAP PATTERNS ===\n\n")
-  cat(sprintf("Shared across ALL three transitions: %d genes\n", length(all_three)))
-  cat(sprintf("  → These are 'core seasonal %s' genes\n\n", category))
-  
-  cat(sprintf("Unique to Feb → Jun: %d genes\n", length(feb_jun_only)))
-  cat(sprintf("Unique to Jun → Aug: %d genes\n", length(jun_aug_only)))
-  cat(sprintf("Unique to Feb → Aug: %d genes\n", length(feb_aug_only)))
-  cat("\n")
-  
-  cat(sprintf("Shared between Feb→Jun & Feb→Aug only: %d genes\n", length(feb_jun_and_feb_aug)))
-  cat(sprintf("Shared between Feb→Jun & Jun→Aug only: %d genes\n", length(feb_jun_and_jun_aug)))
-  cat(sprintf("Shared between Jun→Aug & Feb→Aug only: %d genes\n", length(jun_aug_and_feb_aug)))
-  
-  # Calculate percentages
-  cat("\n=== PERCENTAGES ===\n\n")
-  total_unique <- length(unique(c(feb_jun_genes, jun_aug_genes, feb_aug_genes)))
-  cat(sprintf("Total unique genes across all transitions: %d\n\n", total_unique))
-  
-  cat(sprintf("Core seasonal (all three): %.1f%%\n", 100 * length(all_three) / total_unique))
-  cat(sprintf("Feb→Jun specific: %.1f%%\n", 100 * length(feb_jun_only) / total_unique))
-  cat(sprintf("Jun→Aug specific: %.1f%%\n", 100 * length(jun_aug_only) / total_unique))
-  cat(sprintf("Feb→Aug specific: %.1f%%\n", 100 * length(feb_aug_only) / total_unique))
-  
-  # Create result object
-  result <- list(
-    category = category,
-    feb_jun_genes = feb_jun_genes,
-    jun_aug_genes = jun_aug_genes,
-    feb_aug_genes = feb_aug_genes,
-    shared_all_three = all_three,
-    feb_jun_only = feb_jun_only,
-    jun_aug_only = jun_aug_only,
-    feb_aug_only = feb_aug_only,
-    feb_jun_and_feb_aug = feb_jun_and_feb_aug,
-    feb_jun_and_jun_aug = feb_jun_and_jun_aug,
-    jun_aug_and_feb_aug = jun_aug_and_feb_aug
+    mean_cor = mean(cor),
+    se_cor = sd(cor) / sqrt(n()),
+    .groups = "drop"
   )
-  
-  return(result)
-}
 
-# ============================================================================
-# FUNCTION: Visualize seasonal overlap with Venn diagram
-# ============================================================================
-
-plot_seasonal_venn <- function(seasonal_result) {
-  
-  category <- seasonal_result$category
-  
-  # Create Venn diagram
-  venn_plot <- venn.diagram(
-    x = list(
-      "Feb→Jun" = seasonal_result$feb_jun_genes,
-      "Jun→Aug" = seasonal_result$jun_aug_genes,
-      "Feb→Aug" = seasonal_result$feb_aug_genes
-    ),
-    category.names = c("Feb→Jun", "Jun→Aug", "Feb→Aug"),
-    filename = NULL,
-    output = TRUE,
-    
-    # Appearance
-    fill = c("#E41A1C", "#377EB8", "#4DAF4A"),
-    alpha = 0.5,
-    cex = 1.5,
-    cat.cex = 1.5,
-    cat.fontface = "bold",
-    
-    main = paste(toupper(category), "Genes: Seasonal Overlap"),
-    main.cex = 1.8
+# Get top N GO terms per cluster
+top_n_terms <- 10
+go_data_plot <- seasonal_functions %>%
+  filter(ontology == "Biological Processes") %>%
+  group_by(cluster) %>%
+  arrange(Fisher) %>%
+  slice_head(n = top_n_terms) %>%
+  ungroup() %>%
+  mutate(
+    Term_short = str_trunc(Term, width = 50, side = "right"),
+    neglog10p = -log10(Fisher)
   )
-  
-  grid::grid.newpage()
-  grid::grid.draw(venn_plot)
-  
-  return(venn_plot)
-}
 
-# ============================================================================
-# FUNCTION: Create summary bar plot
-# ============================================================================
-
-plot_seasonal_summary <- function(seasonal_result) {
+# Trajectory plots for each cluster (publication styling)
+trajectory_plots <- lapply(unique(cluster_stats$cluster), function(clust) {
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
   
-  summary_data <- data.frame(
-    pattern = c("All three", "Feb→Jun only", "Jun→Aug only", "Feb→Aug only",
-                "Feb→Jun & Feb→Aug", "Feb→Jun & Jun→Aug", "Jun→Aug & Feb→Aug"),
-    n_genes = c(
-      length(seasonal_result$shared_all_three),
-      length(seasonal_result$feb_jun_only),
-      length(seasonal_result$jun_aug_only),
-      length(seasonal_result$feb_aug_only),
-      length(seasonal_result$feb_jun_and_feb_aug),
-      length(seasonal_result$feb_jun_and_jun_aug),
-      length(seasonal_result$jun_aug_and_feb_aug)
-    ),
-    type = c("Core", "Unique", "Unique", "Unique", "Pairwise", "Pairwise", "Pairwise")
-  )
-  
-  summary_data$pattern <- factor(summary_data$pattern, 
-                                  levels = summary_data$pattern)
-  
-  p <- ggplot(summary_data, aes(x = pattern, y = n_genes, fill = type)) +
-    geom_bar(stat = "identity") +
-    geom_text(aes(label = n_genes), vjust = -0.5, size = 4) +
-    scale_fill_manual(values = c("Core" = "#4DAF4A", 
-                                  "Unique" = "#E41A1C", 
-                                  "Pairwise" = "#377EB8")) +
-    labs(
-      title = paste("Seasonal Overlap Pattern:", toupper(seasonal_result$category)),
-      x = "Overlap Pattern",
-      y = "Number of Genes",
-      fill = "Pattern Type"
-    ) +
-    theme_minimal() +
+  ggplot() +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    geom_line(data = traj_data, aes(x = season, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    geom_ribbon(data = stat_data, aes(x = season, y = mean_cor,
+                                      ymin = mean_cor - se_cor, 
+                                      ymax = mean_cor + se_cor, group = 1), 
+                fill = "red3", alpha = 0.2) +
+    geom_line(data = stat_data, aes(x = season, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    geom_point(data = stat_data, aes(x = season, y = mean_cor), 
+               color = "red3", size = 3) +
+    labs(title = paste0("Cluster ", clust), x = "", y = "Spearman correlation") +
+    theme_bw(base_size = 14) +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 11),
-      plot.title = element_text(size = 14, face = "bold")
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 14, colour = "black"),
+      axis.title = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank()
     )
-  
-  print(p)
-  return(p)
-}
+})
 
-# ============================================================================
-# FUNCTION: Export seasonal gene lists
-# ============================================================================
+# GO enrichment plots for each cluster (publication styling)
+go_plots <- lapply(unique(go_data_plot$cluster), function(clust) {
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  ggplot(go_data, aes(x = neglog10p, y = reorder(Term_short, neglog10p), size = Significant)) + 
+    geom_point(alpha = 0.8, colour = "black") + 
+    labs(x = expression(-log[10](italic(Fisher))), y = "", size = "Gene Count",
+         title = paste("Cluster", clust)) +
+    scale_size_continuous(range = c(3, 10)) + 
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 12, colour = "black"),
+      axis.text.x = element_text(size = 14, colour = "black"),
+      axis.title.x = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+    )
+})
 
-export_seasonal_gene_lists <- function(seasonal_result, output_dir = ".") {
-  
-  category <- seasonal_result$category
-  
-  cat("\n=== EXPORTING GENE LISTS ===\n")
-  cat("Output directory:", output_dir, "\n\n")
-  
-  # Create output directory if it doesn't exist
-  if(!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE)
-  }
-  
-  # Helper function to write gene list
-  write_gene_list <- function(genes, filename, description) {
-    if(length(genes) > 0) {
-      filepath <- file.path(output_dir, filename)
-      write.table(genes, filepath, 
-                  row.names = FALSE, col.names = FALSE, quote = FALSE)
-      cat(sprintf("  ✓ %s: %d genes → %s\n", description, length(genes), filename))
-    } else {
-      cat(sprintf("  ✗ %s: No genes to export\n", description))
-    }
-  }
-  
-  # Export all gene sets
-  prefix <- paste0("seasonal_", category)
-  
-  write_gene_list(seasonal_result$shared_all_three, 
-                  paste0(prefix, "_CORE_all_three.txt"),
-                  "Core seasonal (all 3 transitions)")
-  
-  write_gene_list(seasonal_result$feb_jun_only,
-                  paste0(prefix, "_UNIQUE_Feb_to_Jun.txt"),
-                  "Unique to Feb→Jun")
-  
-  write_gene_list(seasonal_result$jun_aug_only,
-                  paste0(prefix, "_UNIQUE_Jun_to_Aug.txt"),
-                  "Unique to Jun→Aug")
-  
-  write_gene_list(seasonal_result$feb_aug_only,
-                  paste0(prefix, "_UNIQUE_Feb_to_Aug.txt"),
-                  "Unique to Feb→Aug")
-  
-  write_gene_list(seasonal_result$feb_jun_and_feb_aug,
-                  paste0(prefix, "_SHARED_FebJun_and_FebAug.txt"),
-                  "Shared: Feb→Jun & Feb→Aug")
-  
-  write_gene_list(seasonal_result$feb_jun_and_jun_aug,
-                  paste0(prefix, "_SHARED_FebJun_and_JunAug.txt"),
-                  "Shared: Feb→Jun & Jun→Aug")
-  
-  write_gene_list(seasonal_result$jun_aug_and_feb_aug,
-                  paste0(prefix, "_SHARED_JunAug_and_FebAug.txt"),
-                  "Shared: Jun→Aug & Feb→Aug")
-  
-  # Also export full gene lists per transition
-  write_gene_list(seasonal_result$feb_jun_genes,
-                  paste0(prefix, "_ALL_Feb_to_Jun.txt"),
-                  "All Feb→Jun genes")
-  
-  write_gene_list(seasonal_result$jun_aug_genes,
-                  paste0(prefix, "_ALL_Jun_to_Aug.txt"),
-                  "All Jun→Aug genes")
-  
-  write_gene_list(seasonal_result$feb_aug_genes,
-                  paste0(prefix, "_ALL_Feb_to_Aug.txt"),
-                  "All Feb→Aug genes")
-  
-  cat("\nExport complete!\n")
-}
+# Combine trajectory + GO for each cluster
+n_clusters <- length(unique(cluster_stats$cluster))
+cluster_combined <- lapply(1:n_clusters, function(i) {
+  trajectory_plots[[i]] + go_plots[[i]] + plot_layout(widths = c(1, 1.2))
+})
 
-# ============================================================================
-# FUNCTION: Run complete seasonal analysis for all categories
-# ============================================================================
+# Combine ALL clusters vertically  
+cluster_row <- wrap_plots(cluster_combined, ncol = 1, heights = rep(1, n_clusters))
 
-run_complete_seasonal_analysis <- function(cor_dynamics_results, 
-                                          categories = c("gained", "lost", "sign_flip",
-                                                        "conserved_stable", "strengthened", 
-                                                        "weakened"),
-                                          export = TRUE,
-                                          output_dir = "seasonal_gene_lists") {
-  
-  results_list <- list()
-  summary_table <- data.frame()
-  
-  for(cat in categories) {
-    cat("\n\n")
-    cat(rep("#", 80), "\n", sep = "")
-    cat("ANALYZING:", toupper(cat), "\n")
-    cat(rep("#", 80), "\n")
-    
-    # Analyze
-    result <- analyze_seasonal_genes(cor_dynamics_results, cat)
-    results_list[[cat]] <- result
-    
-    # Visualize
-    plot_seasonal_venn(result)
-    plot_seasonal_summary(result)
-    
-    # Export
-    if(export) {
-      export_seasonal_gene_lists(result, output_dir)
-    }
-    
-    # Add to summary table
-    total_unique <- length(unique(c(result$feb_jun_genes, 
-                                    result$jun_aug_genes, 
-                                    result$feb_aug_genes)))
-    
-    summary_table <- rbind(summary_table, data.frame(
-      category = cat,
-      total_unique_genes = total_unique,
-      core_all_three = length(result$shared_all_three),
-      pct_core = 100 * length(result$shared_all_three) / total_unique,
-      feb_jun_only = length(result$feb_jun_only),
-      jun_aug_only = length(result$jun_aug_only),
-      feb_aug_only = length(result$feb_aug_only)
-    ))
-  }
-  
-  cat("\n\n")
-  cat(rep("=", 80), "\n", sep = "")
-  cat("SUMMARY ACROSS ALL CATEGORIES\n")
-  cat(rep("=", 80), "\n\n")
-  print(summary_table)
-  
-  return(list(
-    results = results_list,
-    summary = summary_table
-  ))
-}
+# ==========================================
+# 3. FINAL PUBLICATION FIGURE WITH A,B,C,D
+# ==========================================
 
-# 1. Analyze the key categories for your seasonal story
-gained_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'gained')
-lost_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'lost')
-signflip_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'sign_flip')
+final_plot <- network_row / cluster_row + 
+  plot_layout(heights = c(0.6, 2.2)) +
+  plot_annotation(
+    tag_levels = "A")
 
-# 2. Export for GO analysis
-#export_seasonal_gene_lists(gained_seasonal, 'GO_analysis/gained')
-#export_seasonal_gene_lists(lost_seasonal, 'GO_analysis/lost')
-#export_seasonal_gene_lists(signflip_seasonal, 'GO_analysis/signflip')
 
-# 3. Look at the core seasonal genes
-core_gained <- gained_seasonal$shared_all_three
-core_lost <- lost_seasonal$shared_all_three
-core_signflip <- signflip_seasonal$shared_all_three
+print(final_plot)
 
-# 4. Look at transition-specific genes
-jun_aug_specific_gained <- gained_seasonal$jun_aug_only
+# Save high-quality publication versions
+ggsave("../output/Molecular/interactions/networks/seasonal_network_analysis.pdf", 
+       final_plot, width = 16, height = 3.5 + 4 * n_clusters, limitsize = FALSE, dpi = 600)
+ggsave("../output/Molecular/interactions/networks/seasonal_network_analysis.png", 
+       final_plot, width = 16, height = 3.5 + 4 * n_clusters, limitsize = FALSE, dpi = 600)
 ```
 
 
-Look at categories
-```{r}
-## GAINED
-# Analyze gained genes across the three seasonal transitions
-gained_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'gained')
-
-# Visualize with Venn diagram
-plot_seasonal_venn(gained_seasonal)
-
-# Bar plot showing all overlap patterns
-plot_seasonal_summary(gained_seasonal)
-
-# Export all gene lists for GO enrichment
-export_seasonal_gene_lists(gained_seasonal, 'seasonal_gained_genes')
-
-## LOST
-# Analyze gained genes across the three seasonal transitions
-lost_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'lost')
-
-# Visualize with Venn diagram
-plot_seasonal_venn(lost_seasonal)
-
-# Bar plot showing all overlap patterns
-plot_seasonal_summary(lost_seasonal)
-
-# Export all gene lists for GO enrichment
-export_seasonal_gene_lists(lost_seasonal, 'seasonal_lost_genes')
-
-## SIGN FLIP
-# Analyze gained genes across the three seasonal transitions
-sign_flip_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'sign_flip')
-
-# Visualize with Venn diagram
-plot_seasonal_venn(sign_flip_seasonal)
-
-# Bar plot showing all overlap patterns
-plot_seasonal_summary(sign_flip_seasonal)
-
-# Export all gene lists for GO enrichment
-export_seasonal_gene_lists(sign_flip_seasonal, 'seasonal_sign_flip_genes')
-
-## STABLE
-# Analyze gained genes across the three seasonal transitions
-stable_seasonal <- analyze_seasonal_genes(cor_dynamics_results, 'conserved_stable')
-
-# Visualize with Venn diagram
-plot_seasonal_venn(stable_seasonal)
-
-# Bar plot showing all overlap patterns
-plot_seasonal_summary(stable_seasonal)
-
-# Export all gene lists for GO enrichment
-export_seasonal_gene_lists(stable_seasonal, 'seasonal_stable_genes')
-```
 

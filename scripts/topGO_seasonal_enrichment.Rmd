@@ -45,7 +45,7 @@ feb_all_unique <- feb_all %>%
   distinct(gene_id)
 ```
 
-Read in gene2go information (generated in `topGO.Rmd` file)
+Read in gene2go information (generated in `Network_analysis.Rmd` file)
 ```{r}
 ast_gene2go <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
 ```

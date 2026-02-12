@@ -29,7 +29,7 @@ Read in data. Positive LFC = upregulated in TP5 amb treatment. Negative LFC = up
 june_deg<- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
 ```
 
-Read in gene2go information (generated in `topGO.Rmd` file)
+Read in gene2go information (generated in `Network_analysis.Rmd` file)
 ```{r}
 go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
 ```
