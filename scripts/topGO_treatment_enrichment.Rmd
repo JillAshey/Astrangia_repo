@@ -270,7 +270,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -404,14 +404,14 @@ ggsave(filename = "../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expre
 Look at any overlaps between June ambient and heat 
 ```{r}
 june_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_amb_expressed_genes.csv") %>%
-    filter(ontology != "Cellular Components")
+    filter(ontology == "Biological Processes")
 length(unique(june_amb_genes$Term))
 blah <- june_amb_genes %>%
   group_by(ontology) %>%
   summarise(gene_count = n_distinct(Term)) 
 
 june_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_heat_expressed_genes.csv")%>%
-    filter(ontology != "Cellular Components")
+    filter(ontology == "Biological Processes")
 length(unique(june_heat_genes$Term))
 blah2 <- june_heat_genes %>%
   group_by(ontology) %>%
@@ -805,14 +805,14 @@ ggsave(filename = "../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_heat_expres
 Look at any overlaps between August ambient and heat 
 ```{r}
 aug_amb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_amb_expressed_genes.csv") %>%
-   filter(ontology != "Cellular Components")
+   filter(ontology == "Biological Processes")
 length(unique(aug_amb_genes$Term))
 blah <- aug_amb_genes %>%
    group_by(Term,ontology) %>%
    summarise(gene_count = n_distinct(mRNA))
 
 aug_heat_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_Aug_heat_expressed_genes.csv") %>%
-   filter(ontology != "Cellular Components")
+   filter(ontology == "Biological Processes")
 length(unique(aug_heat_genes$Term))
 blah2 <- aug_heat_genes %>%
     group_by(ontology) %>%

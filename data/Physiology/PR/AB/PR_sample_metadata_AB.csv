@@ -1,6 +1,0 @@
-﻿Date,colony_id,Chamber.Channel,Chamber ,Run,Temp.Cat,Treatment,Chamber.Vol.L,Surface.Area.cm2,Notes
-20210709,MPAS-t01,4,4,1,20.15,Fiber,0.63,25,NA
-20210709,MPAS-t04,7,7,1,20.15,Sphere,0.63,25,NA
-20210709,MPAS-t05,5,5,1,20.15,Control,0.63,25,NA
-20210709,MPAS-t08,2,2,1,20.15,ReefRoid,0.6,25,NA
-20210709,MPBK-t01,8,8,1,20.15,NA,0.64,NA,NA
