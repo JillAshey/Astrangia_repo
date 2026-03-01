@@ -16,7 +16,7 @@ library(pheatmap)
 library(lme4)
 library(tidyverse)
 library(car)
-
+library(vegan)
 library(genefilter)
 library(DESeq2)
 library(pheatmap)
@@ -27,19 +27,12 @@ library(gplots)
 library(wesanderson)
 library(cowplot)
 library(gridExtra)
+library(pairwiseAdonis)
 ```
 
-Talked with Zoe about the various issues I was running into We agreed that there is an issue with TP0 only have one 'treatment'. We discussed a couple of different options moving forward:
+## Prep data 
 
-- 1) Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
-- 2) Remove TP0 and only analyze TP5 Amb v Heat and TP7 Amb v Heat. Then run DESeq2 so the design is ~Timepoint + Treatment + Timepoint:Treatment OR Timepoint * Treatment 
-- 3) Remove TP5 and TP7 Amb samples and only keep TP0, TP5 Heat and TP7 Heat. Then run DESeq2 so the design is ~Timepoint + Treatment + Timepoint:Treatment OR Timepoint * Treatment 
-- 4) Remove Heat samples from TP5 and TP7 and only analyze the Amb samples for TP0, TP5, and TP7. The DESeq2 design would be ~Timepoint 
-
-I'm going to do all of these iterations and see where that leaves me. Also need to discuss w/ Hollie what the best way forward might be. 
-
-## Prep data for all iterations 
-Let's try to run some DESeq2 with the bowtie data. Read in counts. 
+Read in counts. 
 ```{r}
 bowtie_matrix <- read_csv("../data/Molecular/mRNA/Apoc_gene_count_matrix_bowtie.csv")
 bowtie_matrix <- as.data.frame(bowtie_matrix)
@@ -113,7 +106,7 @@ meta <- meta %>%
 all(rownames(meta$ID) %in% colnames(filt_outrm_poa)) # must come out TRUE
 ```
 
-## 1) Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
+## Merge the Treatment and Timepoint columns together into one column called 'Condition'. Then run DESeq2 so the design is ~Condition
 
 Merge Treatment and Timepoint into a single column 
 ```{r}
@@ -128,7 +121,68 @@ dds <- DESeq(data)
 resultsNames(dds)
 ```
 
-Look at contrasts
+### Run PERMANOVA
+
+Normalize counts and verify correct order
+```{r}
+vsd <- vst(dds, blind = FALSE)
+vst_mat <- assay(vsd)
+vst_mat <- t(vst_mat) # Transpose: Samples as rows, Genes as columns
+
+# Ensure the metadata rows exactly match the transformed matrix rows
+meta_sub <- as.data.frame(colData(dds))
+all(rownames(vst_mat) == rownames(meta_sub)) # Should be TRUE
+```
+
+Run PERMANOVA on Condition
+```{r}
+# 'by = "terms"' tests the significance of the model terms
+permanova_result <- adonis2(vst_mat ~ Condition, 
+                            data = meta_sub, 
+                            method = "euclidean", 
+                            permutations = 999)
+
+print(permanova_result)
+```
+
+Run pairwise permanova
+```{r}
+# use the vst_mat (samples as rows) and the Condition column
+pairwise_results <- pairwise.adonis2(vst_mat ~ Condition, 
+                                     data = meta_sub, 
+                                     method = "euclidean", 
+                                     nperm = 999)
+
+# View the results
+print(pairwise_results)
+```
+
+Remove TP0 and rerun permanova
+```{r}
+# Identify samples that are NOT TP0
+keep_samples <- rownames(meta_sub)[meta_sub$Timepoint != "TP0"]
+
+# Subset the metadata and the VST matrix
+meta_filtered <- meta_sub[keep_samples, ]
+vst_filtered <- vst_mat[keep_samples, ]
+
+# Drop the unused 'TP0' level from the factors
+meta_filtered$Timepoint <- droplevels(meta_filtered$Timepoint)
+meta_filtered$Condition <- droplevels(meta_filtered$Condition)
+
+# Run PERMANOVA with two factors
+# Treatment * Timepoint looks at the main effects AND their interaction
+res_filtered <- adonis2(vst_filtered ~ Treatment * Timepoint, 
+                        data = meta_filtered, 
+                        method = "euclidean", 
+                        permutations = 999)
+
+print(res_filtered)
+```
+
+No significant differences when TP0 is removed. 
+
+### Look at contrasts
 
 TP0 v TP5 Ambient
 ```{r}

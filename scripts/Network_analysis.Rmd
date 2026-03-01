@@ -24,6 +24,12 @@ library(parallel)
 library(plotly)
 library(broom)
 library(topGO)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(scales)
 ```
 
 ## Read in data and normalize 
@@ -1479,13 +1485,6 @@ ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_fu
 
 Add the network plots at the top
 ```{r}
-library(ggplot2)
-library(patchwork)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(scales)
-
 # Ensure consistent season factor levels for network metrics
 seasonal_network_metrics <- seasonal_network_metrics %>%
   mutate(condition = factor(condition, 
