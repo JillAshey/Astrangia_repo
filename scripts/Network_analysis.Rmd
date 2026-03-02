@@ -615,6 +615,8 @@ network_metrics <- rbind(df_TP0, df_TP5_amb, df_TP7_amb, df_TP5_heat, df_TP7_hea
 write.csv(network_metrics, "../output/Molecular/interactions/networks/network_metrics.csv")
 ```
 
+# Seasonal analysis 
+
 ## Seasonal network metrics 
 
 Subset network metrics by season
@@ -741,6 +743,13 @@ Filter correlation data for seasonal
 seasonal_all_correlations_high_miRNA <- all_correlations_high_miRNA %>%
   filter(timepoint %in% c("TP0", "TP5", "TP7")) %>%
   filter(treatment %in% c("Acclimation", "Ambient"))
+
+timepoint_summary <- seasonal_all_correlations_high_miRNA %>%
+  group_by(timepoint) %>%
+  summarise(
+    unique_miRNAs = n_distinct(miRNA),
+    unique_mRNAs = n_distinct(mRNA),
+    unique_pairs = n_distinct(pair_id))
 ```
 
 Reshape df for trajectory calculations
@@ -801,6 +810,10 @@ features$cluster <- as.factor(clusters$cluster)
 # Join with pair trajectories df 
 pair_trajectories <- pair_trajectories %>%
   left_join(features %>% select(pair_id, cluster), by = "pair_id")
+
+cluster_summary <- pair_trajectories %>%
+  group_by(cluster) %>%
+  summarise(unique_pairs = n_distinct(pair_id))
 ```
 
 Plot trajectories 
@@ -809,7 +822,7 @@ Plot trajectories
 trajectory_long <- pair_trajectories %>%
   left_join(features %>% select(pair_id), by = "pair_id") %>%
   pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
-  mutate(season = recode(timepoint, "TP0" = "Feb", "TP5" = "June", "TP7" = "Aug"))
+  mutate(season = case_match(timepoint, "TP0" ~ "Feb", "TP5" ~ "June", "TP7" ~ "Aug", .default = timepoint))
 
 # Stats for mean ± SE
 cluster_stats <- trajectory_long %>%
@@ -899,7 +912,11 @@ return(allScore < 0.05)}
 Subset by Cluster 1 and select only negative correlations for TP0 and TP7 
 ```{r}
 subset_cluster1 <- pair_trajectories %>%
-  filter(cluster == 1, TP0 < 0, TP5 > 0, TP7 < 0)
+  dplyr::filter(cluster == "1", TP0 < 0, TP5 > 0, TP7 < 0)
+
+length(unique(subset_cluster1$miRNA))
+length(unique(subset_cluster1$mRNA))
+length(unique(subset_cluster1$pair_id))
 ```
 
 Make list of genes for input to topGO
@@ -929,7 +946,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -980,6 +997,10 @@ Subset by Cluster 2 and select only negative correlations for TP0
 ```{r}
 subset_cluster2 <- pair_trajectories %>%
   filter(cluster == 2, TP0 < 0)
+
+length(unique(subset_cluster2$miRNA))
+length(unique(subset_cluster2$mRNA))
+length(unique(subset_cluster2$pair_id))
 ```
 
 Make list of genes for input to topGO
@@ -1009,7 +1030,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -1060,6 +1081,10 @@ Subset by Cluster 3 and select only negative correlations for TP7
 ```{r}
 subset_cluster3 <- pair_trajectories %>%
   filter(cluster == 3, TP7 < 0)
+
+length(unique(subset_cluster3$miRNA))
+length(unique(subset_cluster3$mRNA))
+length(unique(subset_cluster3$pair_id))
 ```
 
 Make list of genes for input to topGO
@@ -1140,6 +1165,10 @@ Subset by Cluster 4 and select only negative correlations for TP5, positive corr
 ```{r}
 subset_cluster4 <- pair_trajectories %>%
   filter(cluster == 4, TP0 > 0, TP5 < 0, TP7 > 0)
+
+length(unique(subset_cluster4$miRNA))
+length(unique(subset_cluster4$mRNA))
+length(unique(subset_cluster4$pair_id))
 ```
 
 Make list of genes for input to topGO
@@ -1220,6 +1249,10 @@ Subset by Cluster 5 and select only negative correlations for all timepoints
 ```{r}
 subset_cluster5 <- pair_trajectories %>%
   filter(cluster == 5, TP0 < 0, TP5 < 0, TP7 < 0)
+
+length(unique(subset_cluster5$miRNA))
+length(unique(subset_cluster5$mRNA))
+length(unique(subset_cluster5$pair_id))
 ```
 
 Make list of genes for input to topGO
@@ -1249,7 +1282,7 @@ GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
 
 Generate results table 
 ```{r}
-GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 150)
 ```
 
 Filter by significant results
@@ -1299,6 +1332,9 @@ write.csv(cluster5_seasonal_functional, "../output/Molecular/interactions/networ
 Bind functional results from all clusters 
 ```{r}
 seasonal_functions <- rbind(cluster1_seasonal_functional, cluster2_seasonal_functional, cluster3_seasonal_functional, cluster4_seasonal_functional, cluster5_seasonal_functional)
+
+# Save as csv 
+write.csv(seasonal_functions, "../output/Molecular/interactions/networks/seasonal_clusters_functional.csv")
 ```
 
 Plot w/ trajectory plots 
@@ -1322,7 +1358,7 @@ library(tidytext)
 trajectory_long <- pair_trajectories %>%
   left_join(features %>% select(pair_id), by = "pair_id") %>%
   pivot_longer(cols = starts_with("TP"), names_to = "timepoint", values_to = "cor") %>%
-  mutate(season = recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
+  mutate(season = dplyr::recode(timepoint, "TP0" = "February", "TP5" = "June", "TP7" = "August")) %>%
   mutate(season = factor(season, 
                            levels = c("February", "June", "August")))
 
@@ -1479,6 +1515,112 @@ ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_fu
        limitsize = FALSE)
 ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.png", 
        combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(patchwork)
+
+# 1. Get unique cluster IDs to ensure alignment
+all_clusters <- as.character(unique(cluster_stats$cluster))
+
+# 2. Create Trajectory Plots (Named List)
+trajectory_plots <- lapply(all_clusters, function(clust) {
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
+  
+  ggplot() +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    geom_line(data = traj_data, aes(x = season, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    geom_ribbon(data = stat_data, aes(x = season, y = mean_cor,
+                                      ymin = mean_cor - se_cor, 
+                                      ymax = mean_cor + se_cor, group = 1), 
+                fill = "red3", alpha = 0.2) +
+    geom_line(data = stat_data, aes(x = season, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    geom_point(data = stat_data, aes(x = season, y = mean_cor), 
+               color = "red3", size = 3) +
+    labs(title = paste0("Cluster ", clust), x = "", y = "Spearman correlation") +
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 14, colour = "black"),
+      axis.title = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank()
+    )
+})
+names(trajectory_plots) <- all_clusters
+
+# 3. Create GO enrichment plots (Named List)
+# We iterate over the same 'all_clusters' to maintain order/placeholders
+all_cluster_ids <- unique(cluster_stats$cluster)
+
+go_plots <- lapply(all_cluster_ids, function(clust) {
+  
+  # Filter data for this cluster
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  # CHECK: If there are no GO terms, return a placeholder to avoid "out of bounds"
+  if (nrow(go_data) == 0) {
+    return(
+      ggplot() + 
+        annotate("text", x = 0.5, y = 0.5, label = "No significant\nBP terms found") +
+        theme_void() +
+        labs(title = paste("Cluster", clust)) +
+        theme(plot.title = element_text(face = "bold", size = 16, hjust = 0.5))
+    )
+  }
+  
+  # If data exists, create the dot plot
+  ggplot(go_data, aes(x = neglog10p, y = reorder(Term_short, neglog10p), size = Significant)) + 
+    geom_point(alpha = 0.8, colour = "black") + 
+    labs(x = expression(-log[10](italic(Fisher))), y = "", size = "Gene Count",
+         title = paste("Cluster", clust)) +
+    scale_size_continuous(range = c(3, 10)) + 
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.y = element_text(size = 11, colour = "black"),
+      axis.text.x = element_text(size = 14, colour = "black"),
+      axis.title.x = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+    )
+})
+
+# Name the lists so they can be accessed by Cluster ID string
+names(go_plots) <- all_cluster_ids
+names(trajectory_plots) <- all_cluster_ids
+
+# 4. Combine trajectory + GO for each cluster into a list of "rows"
+cluster_combined <- lapply(all_clusters, function(clust) {
+  trajectory_plots[[clust]] + go_plots[[clust]] + plot_layout(widths = c(1, 1.2))
+})
+
+# 5. Final Assembly
+# tag_levels = 'A' automatically adds A, B, C... to the subplots
+cluster_combined <- lapply(all_cluster_ids, function(clust) {
+  trajectory_plots[[as.character(clust)]] + go_plots[[as.character(clust)]] + 
+    plot_layout(widths = c(1, 1.2))
+})
+
+# Wrap everything into one vertical column
+# tag_levels = 'A' will label the trajectory/GO pairs as A, B, C, D, E...
+final_plot <- wrap_plots(cluster_combined, ncol = 1) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(face = "bold", size = 20))
+
+# Save
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.pdf", 
+       final_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+ggsave("../output/Molecular/interactions/networks/seasonal_cluster_trajectory_functional.png", 
+       final_plot, 
        width = 16, height = 4 * n_clusters, 
        limitsize = FALSE)
 ```
@@ -1662,5 +1804,111 @@ ggsave("../output/Molecular/interactions/networks/seasonal_network_analysis.png"
        final_plot, width = 16, height = 3.5 + 4 * n_clusters, limitsize = FALSE, dpi = 600)
 ```
 
+# Treatment analysis 
 
+## Treatment network metrics 
 
+Read in network metrics data again if needed
+```{r}
+network_metrics <- read.csv("../output/Molecular/interactions/networks/network_metrics.csv")
+```
+
+Subset network metrics by treatment
+```{r}
+treatment_network_metrics <- network_metrics %>%
+  filter(condition %in% c("TP5_Ambient", "TP5_Heat", "TP7_Ambient", "TP7_Heat"))
+```
+
+Make PCA of treatment network metrics 
+```{r}
+# Make PCA 
+metrics <- treatment_network_metrics[, c("degree", "betweenness", "dprime")]
+pca <- prcomp(metrics, center = TRUE, scale. = TRUE)
+
+# Extract scores 
+scores <- as.data.frame(pca$x)
+scores$condition <- treatment_network_metrics$condition
+scores$miRNA <- treatment_network_metrics$miRNA
+
+# Calculate variance explained
+var_explained <- pca$sdev^2 / sum(pca$sdev^2)
+pc1_lab <- paste0("PC1 (", round(var_explained[1] * 100, 1), "%)")
+pc2_lab <- paste0("PC2 (", round(var_explained[2] * 100, 1), "%)")
+
+# Plot
+ggplot(scores, aes(PC1, PC2, color = condition)) +
+  geom_point(size = 2, alpha = 0.8) +
+  scale_color_brewer(palette = "Set1") +
+  labs(x = pc1_lab, y = pc2_lab, color = "Condition") +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_line(color = "grey90"),
+    legend.position = "right")
+```
+
+Make violin plots for treatment network metrics 
+```{r}
+# Ensure condition is ordered chronologically
+treatment_network_metrics <- treatment_network_metrics %>%
+  mutate(condition = factor(condition, 
+                           levels = c("TP5_Ambient", "TP5_Heat", "TP7_Ambient", "TP7_Heat")))
+
+# Degree plot 
+degree_treatment_violin <- ggplot(treatment_network_metrics, aes(x = condition, y = degree, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "Degree (number of mRNA targets)",
+       title = "miRNA degree distribution across treatment timepoints"); degree_treatment_violin
+
+# Betweenness plot 
+betweenness_treatment_violin <- ggplot(treatment_network_metrics, aes(x = condition, y = betweenness, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "Betweenness",
+       title = "miRNA betweenness distribution across treatment timepoints"); betweenness_treatment_violin
+
+# dprime plot 
+dprime_treatment_violin <- ggplot(treatment_network_metrics, aes(x = condition, y = dprime, fill = condition)) +
+  geom_violin(alpha = 0.7, trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", outlier.alpha = 0) +
+  theme_linedraw(base_size = 12) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Condition", 
+       y = "d'",
+       title = "miRNA d' distribution across treatment timepoints"); dprime_treatment_violin
+```
+
+Test for differences in degree, betweenness and dprime by season
+```{r}
+# KRUSKAL-WALLIS TESTS (non-parametric)
+# Define the specific comparisons we want to make
+comparisons <- list(
+  TP5 = c("TP5_Ambient", "TP5_Heat"),
+  TP7 = c("TP7_Ambient", "TP7_Heat")
+)
+
+# Function to run Wilcoxon for each metric within a timepoint
+run_comparisons <- function(df, timepoint_levels) {
+  df_filtered <- df %>% filter(condition %in% timepoint_levels)
+  
+  data.frame(
+    degree_p = wilcox.test(degree ~ condition, data = df_filtered)$p.value,
+    betweenness_p = wilcox.test(betweenness ~ condition, data = df_filtered)$p.value,
+    dprime_p = wilcox.test(dprime ~ condition, data = df_filtered)$p.value
+  )
+}
+
+# Apply the function to each comparison
+results <- map_df(comparisons, ~run_comparisons(treatment_network_metrics, .x), .id = "timepoint")
+
+print(results)
+```
