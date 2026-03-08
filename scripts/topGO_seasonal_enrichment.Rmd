@@ -773,7 +773,7 @@ overlapping_terms_feb_aug <- intersect(feb_terms, aug_terms)
 overlapping_terms_june_aug <- intersect(june_terms, aug_terms)
 
 # Terms shared between Feb, June and August 
-common_terms <- Reduce(intersect, list(feb_terms, june_terms, aug_terms)) # 1 common term
+common_terms <- Reduce(intersect, list(feb_terms, june_terms, aug_terms)) # none
 
 # Terms unique to Feb 
 feb_unique_terms <- setdiff(feb_terms, union(june_terms, aug_terms))
@@ -805,150 +805,242 @@ aug_genes_shared <- aug_genes %>%
   filter(Term %in% overlapping_terms_june_aug)
 ```
 
-Make an upset plot
+Make upset plot with GO terms enriched 
 ```{r}
-sets_list <- list(
-  February = feb_terms,
-  June     = june_terms,
-  August   = aug_terms
+# ── 1. Load & prep data ────────────────────────────────────────────────────────
+feb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_February_expressed_genes.csv") %>%
+  filter(ontology == "Biological Processes")
+
+june_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_expressed_genes.csv") %>%
+  filter(ontology == "Biological Processes")
+
+aug_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_August_expressed_genes.csv") %>%
+  filter(ontology == "Biological Processes")
+
+feb_terms  <- unique(feb_genes$Term)
+june_terms <- unique(june_genes$Term)
+aug_terms  <- unique(aug_genes$Term)
+
+# ── 2. Define overlap groups ───────────────────────────────────────────────────
+groups <- list(
+  "February Only"        = setdiff(feb_terms,  union(june_terms, aug_terms)),
+  "June Only"            = setdiff(june_terms, union(feb_terms,  aug_terms)),
+  "August Only"          = setdiff(aug_terms,  union(feb_terms,  june_terms)),
+  "February-June Shared" = setdiff(intersect(feb_terms, june_terms), aug_terms),
+  "February-Aug Shared"  = setdiff(intersect(feb_terms, aug_terms),  june_terms),
+  "June-August Shared"   = setdiff(intersect(june_terms, aug_terms), feb_terms),
+  "All Three"            = Reduce(intersect, list(feb_terms, june_terms, aug_terms))
 )
 
-upset_data <- fromList(sets_list)
+# Remove empty groups
+groups <- groups[sapply(groups, length) > 0]
 
-png("../output/Molecular/mRNA/enrichment/seasonal_upset_plot_BP.png", width = 8, height = 6, units = "in", res = 600)
-upset(upset_data,
-      sets = c("February", "June", "August"),
-      order.by = "freq",
-      sets.bar.color = c("#009E73", "#56B4E9", "#E69F00"), # <-- custom colors
-      main.bar.color = c("black"),
-      matrix.color = "black",
-      mb.ratio = c(0.7, 0.3),
-      show.numbers = "yes",
-      text.scale = 1.6,
-      point.size = 4,
-      line.size = 1)
-dev.off()
-```
+# Order: single timepoints first (sorted by count desc), then shared groups (sorted by count desc)
+single_groups <- c("February Only", "June Only", "August Only")
+shared_groups <- c("February-June Shared", "February-Aug Shared", "June-August Shared", "All Three")
 
-Make a custom upset plot that includes custom labels of enriched terms 
-```{r}
-# Reconstruct data with a factor for sorting
-plot_data <- tibble(
-  Intersection = c(
-    rep("February", 103),
-    rep("August", 88),
-    rep("August-June", 63),
-    rep("June", 49),
-    rep("February-June", 11)
+bar_data_raw <- tibble(
+  group = names(groups),
+  count = sapply(groups, length)
+)
+
+singles <- bar_data_raw %>% filter(group %in% single_groups) %>% arrange(desc(count))
+shareds <- bar_data_raw %>% filter(group %in% shared_groups) %>% arrange(desc(count))
+
+# Bar order (bottom to top in horizontal chart): shared first (bottom), then singles (top)
+bar_order <- c(rev(shareds$group), rev(singles$group))
+
+bar_data <- bind_rows(singles, shareds) %>%
+  mutate(group = factor(group, levels = rev(bar_order)))
+
+# ── 3. UpSet dot matrix data ───────────────────────────────────────────────────
+months_in_group <- function(g) {
+  list(
+    February = g %in% c("February Only", "February-June Shared",
+                         "February-Aug Shared", "All Three"),
+    June     = g %in% c("June Only", "February-June Shared",
+                         "June-August Shared", "All Three"),
+    August   = g %in% c("August Only", "February-Aug Shared",
+                         "June-August Shared", "All Three")
   )
-) %>%
-  # Convert to list format required by ggupset
-  mutate(Intersection_List = str_split(Intersection, "-"))
+}
 
-# Labels data (Count_Num for the text, Count_Box for the label position)
-labels_data <- tibble(
-  Intersection_List = list(
-    c("February"), c("August"), c("August", "June"), 
-    c("June"), c("February", "June")
-  ),
-  Count_Num = c(103, 88, 63, 49, 11),
-  Label = c(
-    "Protein quality control,\nHsp90 deacetylation,\nComplement activation",
-    "Immune system process,\nChitin catabolic process,\nECM organization",
-    "Skeletal development,\nCollagen organization,\nTGF-beta signaling",
-    "Meiosis I regulation,\nActin depolymerization,\nTranscription initiation",    
-    "Myoblast differentiation,\nMacrophage chemotaxis,\nPremature senescence")
+dot_data <- expand.grid(
+  group = levels(bar_data$group),
+  month = c("August", "June", "February"),
+  stringsAsFactors = FALSE
 ) %>%
-  mutate(Text_Pos = Count_Num + 5,    # Position for the raw number
-         Box_Pos = Count_Num + 22)   # Position for the box
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(
+    active = switch(month,
+      February = group %in% c("February Only","February-June Shared","February-Aug Shared","All Three"),
+      June     = group %in% c("June Only","February-June Shared","June-August Shared","All Three"),
+      August   = group %in% c("August Only","February-Aug Shared","June-August Shared","All Three")
+    )
+  ) %>%
+  ungroup()
 
-# Create the Set Size Inset Data
-set_size_data <- tibble(
-  Month = factor(c("February", "June", "August"), 
-                 levels = c("February", "June", "August")),
-  Total = c(
-    103 + 11, # Feb unique + Feb-June intersection
-    49 + 63 + 11, # June unique + both intersections
-    88 + 63  # Aug unique + Aug-June intersection
-  ),
-  Color = c("#009E73", "#E69F00", "#56B4E9")
+dot_data$group <- factor(dot_data$group, levels = levels(bar_data$group))
+dot_data$month <- factor(dot_data$month, levels = c("August", "June", "February"))
+
+# Draw connecting lines for active months within each group
+line_data <- dot_data %>%
+  filter(active) %>%
+  group_by(group) %>%
+  filter(n() > 1) %>%
+  summarise(
+    ymin = min(as.numeric(month)),
+    ymax = max(as.numeric(month)),
+    .groups = "drop"
+  )
+
+# ── 4. Top 5 GO terms per group by p-value ────────────────────────────────────
+get_top5 <- function(term_list, group_name) {
+  all_data <- bind_rows(
+    feb_genes  %>% mutate(source = "February"),
+    june_genes %>% mutate(source = "June"),
+    aug_genes  %>% mutate(source = "August")
+  )
+  all_data %>%
+    filter(Term %in% term_list) %>%
+    group_by(Term) %>%
+    summarise(min_pval = min(Fisher, na.rm = TRUE), .groups = "drop") %>%
+    arrange(min_pval) %>%
+    slice_head(n = 5) %>%
+    mutate(
+      group       = group_name,
+      neg_log_p   = -log10(min_pval)
+    )
+}
+
+top_terms <- bind_rows(
+  mapply(get_top5, groups, names(groups), SIMPLIFY = FALSE)
 )
 
-# Build the Inset Plot
-inset_plot <- ggplot(set_size_data, aes(y = Month, x = Total, fill = Month)) +
-  geom_col(color = "black", fill = "grey80", width = 0.7, show.legend = FALSE) +
-  #scale_fill_manual(values = c("February" = "#009E73", "August" = "#E69F00", "June" = "#56B4E9")) +
-  geom_text(aes(label = Total), hjust = -0.2, size = 3) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.3))) +
-  labs(x = "Total Terms", y = "") +
-  theme_classic() +
+top_terms$group <- factor(top_terms$group, levels = levels(bar_data$group))
+
+# Shared x-axis limits
+x_lim <- c(0, max(top_terms$neg_log_p, na.rm = TRUE) * 1.05)
+
+# ── 5. Colour palette ──────────────────────────────────────────────────────────
+group_colors <- c(
+  "February Only"        = "#4E79A7",
+  "June Only"            = "#F28E2B",
+  "August Only"          = "#E15759",
+  "February-June Shared" = "#76B7B2",
+  "February-Aug Shared"  = "#A0CBE8",
+  "June-August Shared"   = "#FFBE7D",
+  "All Three"            = "#B07AA1"
+)
+
+# ── 6. Bar plot ────────────────────────────────────────────────────────────────
+p_bar <- ggplot(bar_data, aes(x = count, y = group, fill = group)) +
+  geom_col(width = 0.6, color = "black", linewidth = 0.3) +
+  geom_text(aes(label = count), hjust = -0.2, size = 7, fontface = "plain") +
+  scale_fill_manual(values = group_colors) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.15)), limits = c(0, 160)) +
+  labs(x = "Total Terms", y = NULL) +
+  theme_classic(base_size = 20) +
   theme(
-    panel.grid = element_blank(),
-    axis.text.y = element_text(size = 9, color = "black"),
-    axis.text.x = element_blank(),
-    axis.title.x = element_text(size = 9, color = "black"),
-    plot.background = element_rect(fill = "white", color = "black") # Subtle border
-  ); inset_plot
+    legend.position  = "none",
+    axis.text.y      = element_blank(),
+    axis.ticks.y     = element_blank(),
+    axis.title.x     = element_text(size = 19),
+    axis.text.x      = element_text(size = 18),
+    plot.margin      = margin(5, 5, 0, 5)
+  )
 
-
-
-# Plot
-seasonal_go <- ggplot(plot_data, aes(x = Intersection_List)) +
-  # Bars with black outlines, ordered by size (decreasing)
-  geom_bar(fill = "grey50", color = "black", width = 0.6) + 
-  
-  # UpSet Matrix Configuration
-  scale_x_upset(order_by = "freq") + # "freq" sorts high to low automatically
-  
-  # Add the Count Value (e.g., 103) above the bar
-  geom_text(data = labels_data, 
-            aes(x = Intersection_List, y = Text_Pos, label = Count_Num),
-            size = 4) +
-  
-  # Add the Term Boxes above the numbers
-  geom_label(data = labels_data,
-             aes(x = Intersection_List, y = Box_Pos, label = Label),
-             size = 4, lineheight = 0.85,
-             label.size = 0.4, fill = "white", label.padding = unit(0.3, "lines")) +
-  
-  # Y-axis with ticks every 25
-  scale_y_continuous(breaks = seq(0, 150, by = 25), 
-                     limits = c(0, 160), 
-                     expand = c(0, 0)) +
-  
-  labs(x = "", y = "Number of Enriched BP Terms") +
-  
-  theme_classic() +
+# ── 7. Dot matrix — to the LEFT of the bars ───────────────────────────────────
+# Shown as a vertical panel with month labels, y-axis aligned with bars
+p_dot <- ggplot() +
+  geom_point(data = dot_data,
+             aes(x = group, y = month, color = active, size = active)) +
+  geom_segment(data = line_data,
+               aes(x = group, xend = group,
+                   y = ymin, yend = ymax),
+               color = "black", linewidth = 1.5) +
+  scale_color_manual(values = c("TRUE" = "black", "FALSE" = "grey80")) +
+  scale_size_manual(values  = c("TRUE" = 4, "FALSE" = 3)) +
+  scale_x_discrete(limits = levels(bar_data$group)) +
+  coord_flip() +
+  labs(x = NULL, y = NULL) +
+  theme_classic(base_size = 20) +
   theme(
-    axis.title.y = element_text(size = 18),
-    axis.text.y = element_text(color = "black", size = 15),
-    # Coloring the month labels to match your requested palette
-    # February = #009E73, June = #56B4E9, August = #E69F00
-    axis.text.x = element_text(color = c("#009E73", "#E69F00", "#56B4E9")),
-    plot.margin = margin(t = 20, r = 10, b = 10, l = 10)
-  ); seasonal_go
+    legend.position    = "none",
+    axis.text.y        = element_blank(),   # bar labels come from p_bar
+    axis.ticks.y       = element_blank(),
+    axis.line.y        = element_blank(),
+    axis.text.x        = element_text(size = 18, angle = 90, hjust = 1, vjust = 0.5),
+    plot.margin        = margin(5, 0, 5, 5),
+    panel.grid.major.x = element_line(color = "grey92")
+  )
 
-# Combine using patchwork
-final_plot <- seasonal_go + 
-  inset_element(inset_plot, 
-                left = 0.65,   # Start at 65% of width
-                bottom = 0.65, # Start at 65% of height
-                right = 0.98,  # End near the edge
-                top = 0.98,    # End near the top
-                align_to = "panel");final_plot
+# ── 8. GO term dot plots — ALL on the RIGHT, ordered top-to-bottom = bar order ─
+# Bar order (top → bottom): February Only, August Only, June Only, then shared by count
+# levels() gives bottom→top, so rev() gives top→bottom
+go_order <- rev(levels(bar_data$group))
 
-# Save only seasonal go plot without inset 
-ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_plot_labeled_BP.pdf", 
-       seasonal_go, width = 12, height = 7, limitsize = FALSE, dpi = 300)
-ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_plot_labeled_BP.png", 
-       seasonal_go, width = 12, height = 7, limitsize = FALSE, dpi = 300)
+make_go_panel <- function(grp) {
+  d <- top_terms %>% filter(group == grp) %>%
+    mutate(Term_short = str_trunc(Term, 50))
 
-# Save plot with inset 
-ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_plot_with_inset_BP.png", 
-       final_plot, width = 12, height = 7, dpi = 300)
+  if (nrow(d) == 0) return(NULL)
+
+  ggplot(d, aes(x = neg_log_p,
+                y = reorder(Term_short, neg_log_p),
+                color = group)) +
+    geom_segment(aes(xend = 0, yend = reorder(Term_short, neg_log_p)),
+                 color = "grey70", linewidth = 0.6) +
+    geom_point(size = 6) +
+    scale_color_manual(values = group_colors) +
+    scale_x_continuous(limits = x_lim) +
+    labs(x = NULL, y = NULL, title = grp) +
+    theme_classic(base_size = 18) +
+    theme(
+      legend.position  = "none",
+      plot.title       = element_text(size = 18, face = "bold", color = group_colors[grp]),
+      axis.text.y      = element_text(size = 16),
+      axis.text.x      = element_text(size = 16),
+      plot.margin      = margin(3, 8, 3, 8)
+    )
+}
+
+go_panels <- lapply(go_order, make_go_panel)
+go_panels <- go_panels[!sapply(go_panels, is.null)]
+
+# Add x-axis label only to the bottom (last) GO panel
+n_panels <- length(go_panels)
+go_panels[[n_panels]] <- go_panels[[n_panels]] +
+  labs(x = expression(-log[10](Fisher))) +
+  theme(axis.title.x = element_text(size = 18, face = "plain"))
+
+go_stack <- wrap_plots(go_panels, ncol = 1)
+
+# ── 9. Combine dot matrix (left) + bar plot (right) ───────────────────────────
+left_panel <- wrap_plots(p_dot, p_bar, ncol = 2, widths = c(1, 2.5))
+
+# ── 10. Final layout: [dot matrix | bars] | [all GO panels] ───────────────────
+final_plot <- wrap_plots(left_panel, go_stack, ncol = 2, widths = c(1.8, 2.2)) +
+  plot_annotation(
+    theme    = theme(
+      plot.title    = element_text(size = 22, face = "bold"),
+      plot.subtitle = element_text(size = 18, color = "grey40")
+    )
+  )
+
+# ── 11. Save ──────────────────────────────────────────────────────────────────
+ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.png",
+       final_plot,
+       width  = 20,
+       height = 14,
+       dpi    = 300,
+       bg     = "white")
+ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.pdf",
+       final_plot,
+       width  = 20,
+       height = 14,
+       dpi    = 300,
+       bg     = "white")
 ```
-
-
-
-
 

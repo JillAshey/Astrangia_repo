@@ -2508,7 +2508,595 @@ ggsave("../output/Molecular/interactions/networks/june_trt_cluster_trajectory_fu
        limitsize = FALSE)
 ```
 
+## Treatment correlation trajectories 
 
+### August ambient v. heat 
 
+Filter correlation data for August ambient and heat samples 
+```{r}
+aug_trt_all_correlations_high_miRNA <- all_correlations_high_miRNA %>%
+  filter(timepoint %in% c("TP7")) %>%
+  filter(treatment %in% c("Ambient", "Heat"))
 
+aug_summary <- aug_trt_all_correlations_high_miRNA %>%
+  group_by(timepoint, treatment) %>%
+  summarise(
+    unique_miRNAs = n_distinct(miRNA),
+    unique_mRNAs = n_distinct(mRNA),
+    unique_pairs = n_distinct(pair_id))
+```
 
+Reshape df for trajectory calculations
+```{r}
+aug_trajectories <- aug_trt_all_correlations_high_miRNA %>%
+  dplyr::select(pair_id, miRNA, mRNA, timepoint, treatment, cor_value) %>%
+  dplyr::group_by(pair_id, miRNA, mRNA, timepoint, treatment) %>%
+  dplyr::summarise(cor_value = mean(cor_value, na.rm = TRUE), .groups = "drop") %>%
+  # Drop time_num here, keep only what's needed for pivot
+  #select(-time_num) %>%
+  pivot_wider(names_from = treatment, values_from = cor_value, 
+              values_fill = NA, values_fn = mean) %>%
+  # Add back complete trajectory filter
+  filter(!is.na(Ambient), !is.na(Heat))
+```
+
+Fit trajectories
+```{r}
+fit_pair_trajectory <- function(row) {
+  # We only have two points, so we use a linear model (degree 1)
+  df <- data.frame(treatment = c(1, 2), cor = c(row$Ambient, row$Heat))
+  mod <- lm(cor ~ treatment, data = df) # Simple linear model
+  
+  broom::tidy(mod) %>%
+    filter(term != "(Intercept)") %>%
+    mutate(
+      pair_id = row$pair_id,
+      miRNA = row$miRNA, 
+      mRNA = row$mRNA
+    ) %>%
+    dplyr::select(pair_id, miRNA, mRNA, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate)
+}
+
+aug_pair_fits <- aug_trajectories %>%
+  rowwise() %>%
+  do(fit_pair_trajectory(.)) %>%
+  ungroup()
+```
+
+Cluster trajectories 
+```{r}
+# Calculate the 'trajectory' features for two points
+features <- aug_trajectories %>%
+  mutate(
+    slope = Heat - Ambient,      # Direction and magnitude of change
+    intercept = Ambient          # Starting point (Baseline)
+  ) %>%
+  dplyr::select(pair_id, slope, intercept)
+
+# Standardize to ensure slope and intercept are weighted equally
+features_scaled <- scale(features[, c("slope", "intercept")])
+
+# Run K-means with the chosen k
+set.seed(123)
+k_opt <- 3 
+clusters <- kmeans(features_scaled, centers = k_opt, nstart = 100)
+features$cluster <- as.factor(clusters$cluster)
+
+# Join with pair trajectories df 
+aug_trajectories <- aug_trajectories %>%
+  left_join(features %>% dplyr::select(pair_id, cluster), by = "pair_id")
+
+cluster_summary <- aug_trajectories %>%
+  group_by(cluster) %>%
+  summarise(unique_pairs = n_distinct(pair_id),
+            unique_miRNAs = n_distinct(miRNA),
+            unique_mRNAs = n_distinct(mRNA))
+```
+
+Plot trajectories 
+```{r}
+# Prepare long format data (same as before)
+aug_treatment_long <- aug_trajectories %>%
+  left_join(features %>% dplyr::select(pair_id, cluster), by = "pair_id") %>%
+  # Pivot Ambient and Heat into one column
+  pivot_longer(cols = c(Ambient, Heat), 
+               names_to = "treatment", 
+               values_to = "cor") %>%
+  # Ensure Ambient comes first on the x-axis
+  mutate(treatment = factor(treatment, levels = c("Ambient", "Heat")))
+
+# Calculate Stats (Mean ± SE) per cluster and treatment
+cluster_stats <- aug_treatment_long %>%
+  group_by(cluster, treatment) %>%
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    se_cor = sd(cor, na.rm = TRUE) / sqrt(n()),
+    n_pairs = n(),
+    .groups = "drop"
+  )
+
+p_faceted <- ggplot() +
+  # Faint individual reaction norms (slopes) for each pair
+  geom_line(data = aug_treatment_long, 
+            aes(x = treatment, y = cor, group = pair_id), 
+            alpha = 0.08, color = "grey60", linewidth = 0.4) +
+  
+  # Mean trajectory per cluster (The "Average" response)
+  geom_line(data = cluster_stats, 
+            aes(x = treatment, y = mean_cor, group = cluster), 
+            color = "red3", linewidth = 1.3) +
+  
+  # Error bars or ribbons for the mean
+  geom_errorbar(data = cluster_stats,
+                aes(x = treatment, ymin = mean_cor - se_cor, ymax = mean_cor + se_cor),
+                width = 0.1, color = "red3", linewidth = 1) +
+  
+  geom_point(data = cluster_stats, 
+             aes(x = treatment, y = mean_cor), 
+             color = "red3", size = 2.8) +
+  
+  # Facet by cluster
+  facet_wrap(~ cluster, scales = "free_y", ncol = 5) +
+  
+  labs(x = "Treatment", 
+       y = "Correlation (miRNA-mRNA)",
+       title = "Thermal Response of miRNA-mRNA Pairs by Cluster",
+       subtitle = "August Timepoint: Ambient vs. Heat Stress") +
+  theme_bw(base_size = 12) +
+  theme(
+    strip.text = element_text(face = "bold", size = 11),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  );p_faceted
+```
+
+## Enrichment of August treatment clusters 
+
+Read in gene2go information (generated above)
+```{r}
+go_ast <- read.delim("../data/Molecular/Ast_gene2go.tab", sep = "\t")
+```
+
+Read in gene-to-go-mappings
+```{r}
+gene2go_topgo <- readMappings("../data/Molecular/Ast_gene2go.tab", IDsep=";")
+```
+
+Set function to select genes of interest (ie those that have pvalue < 0.05)
+```{r}
+topDiffGenes <- function(allScore) {
+return(allScore < 0.05)}
+```
+
+### Cluster 1 - August treatment 
+
+Subset by Cluster 1 and select only negative correlations for Ambient and positive correlations for Heat 
+```{r}
+subset_cluster1 <- aug_trajectories %>%
+  dplyr::filter(cluster == "1", Ambient < 0, Heat > 0)
+
+length(unique(subset_cluster1$miRNA))
+length(unique(subset_cluster1$mRNA))
+length(unique(subset_cluster1$pair_id))
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster1$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+```
+
+#### Biological Processes - cluster 1 August treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 175)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "1"
+```
+
+#### Molecular Functions - cluster 1 August treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "1"
+```
+
+#### Bind functional results for cluster 1 and save as csv
+
+```{r}
+cluster1_aug_trt_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster1_aug_trt_functional, "../output/Molecular/interactions/networks/aug_trt_cluster1_functional.csv")
+```
+
+### Cluster 2 - August treatment 
+
+Subset by Cluster 2 and select only negative correlations for Heat and positive correlations for Ambient 
+```{r}
+subset_cluster2 <- aug_trajectories %>%
+  dplyr::filter(cluster == "2", Heat < 0, Ambient > 0)
+
+length(unique(subset_cluster2$miRNA))
+length(unique(subset_cluster2$mRNA))
+length(unique(subset_cluster2$pair_id))
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster2$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 2 August treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 175)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "2"
+```
+
+#### Molecular Functions - cluster 2 August treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "2"
+```
+
+#### Bind functional results for cluster 2 and save as csv
+
+```{r}
+cluster2_aug_trt_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster2_aug_trt_functional, "../output/Molecular/interactions/networks/aug_trt_cluster2_functional.csv")
+```
+
+### Cluster 3 - August treatment 
+
+Subset by Cluster 3 and select only negative correlations for both Ambient and Heat
+```{r}
+subset_cluster3 <- aug_trajectories %>%
+  dplyr::filter(cluster == "3", Heat < 0, Ambient < 0)
+
+length(unique(subset_cluster3$miRNA))
+length(unique(subset_cluster3$mRNA))
+length(unique(subset_cluster3$pair_id))
+```
+
+Make list of genes for input to topGO
+```{r}
+# Genes of interest 
+clust_genes <- as.character(unique(subset_cluster3$mRNA))
+
+# All genes 
+all_genes <- as.character(go_ast$mRNA)
+
+# Apply 1 or 0 if gene is gene of interest 
+GeneList <- factor(as.integer(all_genes %in% clust_genes))
+names(GeneList) <- all_genes
+``` 
+
+#### Biological Processes - cluster 3 June treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_BP <-new("topGOdata", ontology="BP", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_BP_FE <- runTest(GO_BP, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_BP_En <- GenTable(GO_BP, Fisher = GO_BP_FE, orderBy = "Fisher", numChar = 51, topNodes = 200)
+```
+
+Filter by significant results
+```{r}
+GO_BP_En$Fisher<-as.numeric(GO_BP_En$Fisher)
+GO_BP_En_sig<-GO_BP_En[GO_BP_En$Fisher<0.05,]
+GO_BP_En_sig$ontology <- "Biological Processes"
+GO_BP_En_sig$cluster <- "3"
+```
+
+#### Molecular Functions - cluster 3 June treatment
+
+Create `topGOdata` object, which is required for topGO analysis
+```{r, include=F}
+GO_MF <-new("topGOdata", ontology="MF", gene2GO=gene2go_topgo, allGenes=GeneList, annot = annFUN.gene2GO, geneSel=topDiffGenes)
+```
+
+Run GO enrichment test 
+```{r, include=F}
+GO_MF_FE <- runTest(GO_MF, algorithm="weight01", statistic="fisher")
+```
+
+Generate results table 
+```{r}
+GO_MF_En <- GenTable(GO_MF, Fisher = GO_MF_FE, orderBy = "Fisher", numChar = 51, topNodes = 100)
+```
+
+Filter by significant results
+```{r}
+GO_MF_En$Fisher<-as.numeric(GO_MF_En$Fisher)
+GO_MF_En_sig<-GO_MF_En[GO_MF_En$Fisher<0.05,]
+GO_MF_En_sig$ontology <- "Molecular Functions"
+GO_MF_En_sig$cluster <- "3"
+```
+
+#### Bind functional results for cluster 3 and save as csv
+
+```{r}
+cluster3_aug_trt_functional <- rbind(GO_BP_En_sig, GO_MF_En_sig)
+
+# Save as csv 
+write.csv(cluster3_aug_trt_functional, "../output/Molecular/interactions/networks/aug_trt_cluster3_functional.csv")
+```
+
+## Plot August treatment functional results 
+
+Bind functional results from all clusters 
+```{r}
+aug_trt_functions <- rbind(cluster1_aug_trt_functional, cluster2_aug_trt_functional, cluster3_aug_trt_functional)
+
+# Save as csv 
+write.csv(aug_trt_functions, "../output/Molecular/interactions/networks/aug_trt_clusters_functional.csv")
+```
+
+Plot with trajectory and GO enrichment plots for each cluster 
+```{r}
+# ==========================================
+# STEP 1: Prepare August Treatment Data
+# ==========================================
+
+# Individual trajectories comparing Ambient vs Heat for June
+trajectory_long <- aug_trajectories %>%
+  left_join(features %>% dplyr::select(pair_id), by = "pair_id") %>%
+  # Pivot the specific treatment columns
+  pivot_longer(cols = c(Ambient, Heat), 
+               names_to = "treatment", 
+               values_to = "cor") %>%
+  # Ensure Ambient is the baseline on the left of the plot
+  mutate(treatment = factor(treatment, levels = c("Ambient", "Heat")))
+
+# Cluster means and SE for the two treatments
+cluster_stats <- trajectory_long %>%
+  dplyr::select(pair_id, miRNA, mRNA, timepoint, cluster, treatment, cor) %>%
+  group_by(cluster, treatment) %>%
+  summarise(
+    mean_cor = mean(cor, na.rm = TRUE),
+    se_cor = sd(cor, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# ==========================================
+# STEP 3: Create trajectory plots (Ambient vs Heat)
+# ==========================================
+
+all_clusters <- as.character(unique(cluster_stats$cluster))
+
+trajectory_plots <- lapply(all_clusters, function(clust) {
+  
+  traj_data <- trajectory_long %>% filter(cluster == clust)
+  stat_data <- cluster_stats %>% filter(cluster == clust)
+  
+  ggplot() +
+    # Horizontal line at zero
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", linewidth = 0.5) +
+    
+    # Individual reaction norms (faint lines connecting Amb to Heat)
+    geom_line(data = traj_data, 
+              aes(x = treatment, y = cor, group = pair_id), 
+              alpha = 0.08, color = "grey60", linewidth = 0.3) +
+    
+    # Mean ± SE Ribbon (Note: group=1 is required for ribbons/lines with factors)
+    geom_ribbon(data = stat_data, 
+                aes(x = treatment, ymin = mean_cor - se_cor, 
+                    ymax = mean_cor + se_cor, group = 1), 
+                fill = "red3", alpha = 0.2) +
+    
+    # Mean Trajectory Line
+    geom_line(data = stat_data, 
+              aes(x = treatment, y = mean_cor, group = 1), 
+              color = "red3", linewidth = 1.2) +
+    
+    # Mean Points
+    geom_point(data = stat_data, 
+               aes(x = treatment, y = mean_cor), 
+               color = "red3", size = 3) +
+    
+    labs(
+      title = paste0("Cluster ", clust), 
+      x = "Treatment (August)", 
+      y = "Spearman correlation"
+    ) +
+    
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5, colour = "black"),
+      axis.text.x = element_text(size = 14, colour = "black"),
+      axis.text.y = element_text(size = 14, colour = "black"),
+      axis.title = element_text(size = 14, colour = "black"),
+      panel.grid.minor = element_blank()
+    )
+})
+names(trajectory_plots) <- all_clusters
+
+# ==========================================
+# STEP 4: Create GO enrichment plots for each cluster
+# ==========================================
+# Get top N GO terms per cluster from your new June treatment results
+top_n_terms <- 10  
+
+go_data_plot <- aug_trt_functions %>%
+  # Filter for BP if you have other ontologies in the file
+  filter(ontology == "Biological Processes") %>%
+  group_by(cluster) %>%
+  # Ensure Fisher is numeric for sorting
+  mutate(Fisher = as.numeric(Fisher)) %>%
+  arrange(Fisher) %>%
+  slice_head(n = top_n_terms) %>%
+  ungroup() %>%
+  mutate(
+    # Clean up term names for the y-axis
+    Term_short = str_trunc(Term, width = 50, side = "right"),
+    # Calculate -log10 p-value
+    neglog10p = -log10(Fisher),
+    # Ensure terms are ordered by significance within each cluster facet
+    Term_ordered = reorder_within(Term_short, neglog10p, cluster)
+  )
+
+go_plots <- lapply(all_clusters, function(clust) {
+  
+  go_data <- go_data_plot %>% filter(cluster == clust)
+  
+  if (nrow(go_data) == 0) {
+    return(ggplot() + annotate("text", x=0.5, y=0.5, label="No enrichment") + theme_void())
+  }
+  
+  ggplot(go_data, aes(x = neglog10p, y = Term_ordered, size = Significant)) + 
+    geom_point(alpha = 0.8, color = "black") + 
+    # Use tidytext's scale_y_reordered to handle the reorder_within
+    scale_y_reordered() +
+    scale_size_continuous(range = c(3, 8)) +
+    labs(
+      x = expression(-log[10](italic(P))), 
+      y = "", 
+      size = "Gene Count",
+      title = paste("Cluster", clust, "Functions")
+    ) +
+    theme_bw(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+      axis.text.y = element_text(size = 10),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+    )
+})
+names(go_plots) <- all_clusters
+
+# ==========================================
+# STEP 5: Combine plots using patchwork
+# ==========================================
+
+# Function to combine trajectory + GO for one cluster
+combine_cluster_plots <- function(i) {
+  trajectory_plots[[i]] + go_plots[[i]] + 
+    plot_layout(widths = c(1, 1.2))  # GO plot slightly wider for term names
+}
+
+# Combine all clusters vertically
+n_clusters <- length(unique(cluster_stats$cluster))
+
+combined_plot <- wrap_plots(
+  lapply(1:n_clusters, combine_cluster_plots),
+  ncol = 1) #+
+#   plot_annotation(
+#     title = "Seasonal miRNA-mRNA regulatory dynamics by cluster",
+#     theme = theme(
+#       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+#       plot.subtitle = element_text(size = 12, hjust = 0.5)
+#     )
+#   )
+
+print(combined_plot)
+
+# Save
+ggsave("../output/Molecular/interactions/networks/aug_trt_cluster_trajectory_functional.pdf", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+ggsave("../output/Molecular/interactions/networks/aug_trt_cluster_trajectory_functional.png", 
+       combined_plot, 
+       width = 16, height = 4 * n_clusters, 
+       limitsize = FALSE)
+```
