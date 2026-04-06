@@ -1,0 +1,715 @@
+---
+title: "Physiology plots"
+author: "Jill Ashey"
+date: "2026-04-05"
+output: html_document
+---
+
+Script for making physiology plots pretty for publication. All stats can be found in the metric-specific scripts. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+```
+
+## Photosynthesis 
+
+Read in data
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+
+photo_exp <- exp %>%
+  filter(Light_Value > 0)
+```
+
+Set dates as timepoints
+```{r}
+photo_exp <- photo_exp %>%
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7"))
+```
+
+Remove outliers using IQR method
+```{r}
+# Look for outliers visually
+ggplot(photo_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(photo_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(photo_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+photo_exp_filtered <- photo_exp[photo_exp$micromol.cm2.h >= lower_bound & photo_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(photo_exp)
+dim(photo_exp_filtered)
+```
+
+Assign month to TPs
+```{r}
+photo_exp_filtered <- photo_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February",
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+photo_exp_filtered <- photo_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = factor(Treatment, levels = c("Acclimation", "Ambient", "Heat")))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+photo_summary <- photo_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_photo = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_photo = sd(micromol.cm2.h, na.rm = TRUE),
+    se_photo = sd(micromol.cm2.h, na.rm = T) / sqrt(length(micromol.cm2.h)),
+    .groups = "drop"
+  )
+```
+
+Plot photo data 
+```{r}
+# Set Month as factor 
+photo_summary$Month <- factor(photo_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+photo_dot <- ggplot(photo_summary, aes(x = Month, y = mean_photo, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_photo - se_photo, 
+                    ymax = mean_photo + se_photo),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+annotate("text", x = Inf, y = -Inf, label = "Time point p<0.001", 
+         hjust = 1.1, vjust = -1.1, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Net Photosynthesis ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    #legend.title = element_text(size = 35, face = "bold"),
+    #legend.text = element_text(size = 25),
+    legend.position = "none"
+    #legend.key.size = unit(1.5, "cm"),
+    #legend.spacing.y = unit(0.5, "cm")
+  );photo_dot
+```
+
+## Respiration
+
+Read in data
+```{r}
+exp <- read_csv(file = "../output/Physiology/PR/PR_rates.csv")
+
+resp_exp <- exp %>%
+  filter(Light_Value == 0)
+```
+
+Set dates as timepoints
+```{r}
+resp_exp <- resp_exp %>%
+  mutate(Timepoint = case_when(
+    Date == "2021-02-04" ~ "TP0",
+    Date == "2021-03-04" ~ "TP1",
+    Date == "2021-04-01" ~ "TP2",
+    Date == "2021-04-29" ~ "TP3",
+    Date == "2021-05-27" ~ "TP4",
+    Date == "2021-06-24" ~ "TP5",
+    Date == "2021-07-22" ~ "TP6",
+    Date == "2021-08-19" ~ "TP7"))
+```
+
+Remove outliers using IQR method
+```{r}
+# Look for outliers visually
+ggplot(resp_exp, aes(x = Treatment, y = micromol.cm2.h)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(resp_exp$micromol.cm2.h, 0.25)
+Q3 <- quantile(resp_exp$micromol.cm2.h, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+resp_exp_filtered <- resp_exp[resp_exp$micromol.cm2.h >= lower_bound & resp_exp$micromol.cm2.h <= upper_bound, ]
+
+# Check dimensions before and after
+dim(resp_exp)
+dim(resp_exp_filtered)
+```
+
+Assign month to TPs
+```{r}
+resp_exp_filtered <- resp_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February",
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+resp_exp_filtered <- resp_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = factor(Treatment, levels = c("Acclimation", "Ambient", "Heat")))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+resp_summary <- resp_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_resp = mean(micromol.cm2.h, na.rm = TRUE),
+    sd_resp = sd(micromol.cm2.h, na.rm = TRUE),
+    se_resp = sd(micromol.cm2.h, na.rm = T) / sqrt(length(micromol.cm2.h)),
+    .groups = "drop"
+  )
+```
+
+Plot resp data 
+```{r}
+# Set Month as factor 
+resp_summary$Month <- factor(resp_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+resp_dot <- ggplot(resp_summary, aes(x = Month, y = mean_resp, color = Treatment)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, 
+                    ymax = mean_resp + se_resp),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  annotate("text", x = 5, y = -Inf, label = "Time point p<0.001;\nTreatment x Time point p=0.036", 
+         hjust = 1.1, vjust = -0.5, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab(expression(bold('Repsiration ('*mu~ 'mol' ~cm^-2*~ h^-1*')'))) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    #legend.title = element_text(size = 35, face = "bold"),
+    #legend.text = element_text(size = 25),
+    legend.position = "none"
+    #legend.key.size = unit(1.5, "cm"),
+    #legend.spacing.y = unit(0.5, "cm")
+  );resp_dot
+```
+
+## Chl-a
+
+Read in chl data
+```{r}
+chl <- read.csv("../output/Physiology/Chlorophyll/Chlorophyll.csv")
+```
+
+Remove outliers using IQR method
+```{r}
+# Remove field data for now 
+chl_exp <- chl %>%
+  filter(!Treatment == "Field")
+
+# Look for outliers visually
+ggplot(chl_exp, aes(x = Treatment, y = chla.ug.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(chl_exp$chla.ug.cm2, 0.25)
+Q3 <- quantile(chl_exp$chla.ug.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+chl_exp_filtered <- chl_exp[chl_exp$chla.ug.cm2 >= lower_bound & chl_exp$chla.ug.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(chl_exp)
+dim(chl_exp_filtered)
+```
+
+Assign months to TPs
+```{r}
+# Assign month to TPs 
+chl_exp_filtered <- chl_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+chl_exp_filtered <- chl_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+chla_summary <- chl_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_chla = mean(chla.ug.cm2, na.rm = TRUE),
+    sd_chla = sd(chla.ug.cm2, na.rm = TRUE),
+    sem_chla = sd_chla / sqrt(n),  # SEM formula
+    sem_chla_offset = mean_chla + sem_chla + 0.2,
+    .groups = "drop"
+  )
+```
+
+Plot
+```{r}
+# Set Month as factor 
+chla_summary$Month <- factor(chla_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+chla_dot <- ggplot(chla_summary, aes(x = Month, y = mean_chla, color = Treatment)) +
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_chla - sem_chla, 
+                    ymax = mean_chla + sem_chla),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  annotate("text", x = Inf, y = -Inf, label = "Time point p=0.047", 
+         hjust = 1.1, vjust = -1.1, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  labs(y = expression(bold(Chlorophyll-a~(µg~cm^{-2})), x = "")) +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    #legend.title = element_text(size = 35, face = "bold"),
+    #legend.text = element_text(size = 25),
+    legend.position = "none"
+    #legend.key.size = unit(1.5, "cm"),
+    #legend.spacing.y = unit(0.5, "cm")
+  );chla_dot
+```
+
+## Protein
+
+Load data 
+```{r}
+prot <- read.csv("../output/Physiology/SolubleProtein/SolubleProtein.csv")
+
+# Remove field data for now 
+prot_exp <- prot %>%
+  filter(!Treatment == "Field")
+```
+
+Remove outliers 
+```{r}
+# Look for outliers visually
+ggplot(prot_exp, aes(x = Treatment, y = prot_mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(prot_exp$prot_mg.cm2, 0.25)
+Q3 <- quantile(prot_exp$prot_mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+prot_exp_filtered <- prot_exp[prot_exp$prot_mg.cm2 >= lower_bound & prot_exp$prot_mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(prot_exp)
+dim(prot_exp_filtered)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+prot_exp_filtered <- prot_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+prot_exp_filtered <- prot_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+prot_summary <- prot_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_prot = mean(prot_mg.cm2, na.rm = TRUE),
+    sd_prot = sd(prot_mg.cm2, na.rm = TRUE),
+    sem_prot = sd_prot / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot
+```{r}
+# Set Month as factor 
+prot_summary$Month <- factor(prot_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+prot_dot <- ggplot(prot_summary, aes(x = Month, y = mean_prot, color = Treatment)) +
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_prot - sem_prot, 
+                    ymax = mean_prot + sem_prot),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  annotate("text", x = 4, y = -Inf, label = "Time point p<0.001", 
+         hjust = 1.1, vjust = -1.1, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab("Soluble Protein (mg/cm²)") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    #legend.title = element_text(size = 35, face = "bold"),
+    #legend.text = element_text(size = 25),
+    legend.position = "none"
+    #legend.key.size = unit(1.5, "cm"),
+    #legend.spacing.y = unit(0.5, "cm")
+  );prot_dot
+```
+
+## Carbs 
+
+Read in data
+```{r}
+carb <- read.csv("../output/Physiology/Carbohydrates/Carbohydrates.csv")
+```
+
+Remove outliers based on IQR
+```{r}
+# Look for outliers visually
+ggplot(carb, aes(x = Treatment, y = Carb.mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(carb$Carb.mg.cm2, 0.25)
+Q3 <- quantile(carb$Carb.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+carb_exp_filtered <- carb[carb$Carb.mg.cm2 >= lower_bound & carb$Carb.mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(carb)
+dim(carb_exp_filtered)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+carb_exp_filtered <- carb_exp_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+carb_exp_filtered <- carb_exp_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+carb_summary <- carb_exp_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_carb = mean(Carb.mg.cm2, na.rm = TRUE),
+    sd_carb = sd(Carb.mg.cm2, na.rm = TRUE),
+    sem_carb = sd_carb / sqrt(n),  # SEM formula
+    sem_carb_offset = mean_carb + sem_carb + 0.2,
+    .groups = "drop"
+  )
+```
+
+Plot
+```{r}
+# Set Month as factor 
+carb_summary$Month <- factor(carb_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+carb_dot <- ggplot(carb_summary, aes(x = Month, y = mean_carb, color = Treatment)) +
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_carb - sem_carb, 
+                    ymax = mean_carb + sem_carb),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  annotate("text", x = 4, y = -Inf, label = "Treatment p=0.043", 
+         hjust = 1.1, vjust = -1.1, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab("Carbohydrates (mg/cm²)") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    #legend.title = element_text(size = 35, face = "bold"),
+    #legend.text = element_text(size = 25),
+    legend.position = "none"
+    #legend.key.size = unit(1.5, "cm"),
+    #legend.spacing.y = unit(0.5, "cm")
+  ); carb_dot
+```
+
+## AFDW 
+
+Read in data and subset host 
+```{r}
+biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
+
+biomass_host <- biomass %>%
+  #dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  dplyr::mutate(Treatment = as.factor(Treatment)) %>%
+  dplyr::filter(Fraction == "Host") %>%
+  na.omit()
+```
+
+Remove outliers based on IQR
+```{r}
+# Look for outliers visually
+ggplot(biomass_host, aes(x = Treatment, y = AFDW.mg.cm2)) + 
+  geom_boxplot(outlier.color = "red", outlier.shape = 16) +
+  theme_minimal()
+
+# Calculate IQR
+Q1 <- quantile(biomass_host$AFDW.mg.cm2, 0.25)
+Q3 <- quantile(biomass_host$AFDW.mg.cm2, 0.75)
+IQR_val <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+# Filter dataset to remove outliers
+biomass_host_filtered <- biomass_host[biomass_host$AFDW.mg.cm2 >= lower_bound & biomass_host$AFDW.mg.cm2 <= upper_bound, ]
+
+# Check dimensions before and after
+dim(biomass_host)
+dim(biomass_host_filtered)
+```
+
+Format data for plotting 
+```{r}
+# Assign month to TPs 
+biomass_host_filtered <- biomass_host_filtered %>% 
+  mutate(Month = case_when(
+    Timepoint == "TP0" ~ "February", 
+    Timepoint == "TP1" ~ "March", 
+    Timepoint == "TP2" ~ "Early April", 
+    Timepoint == "TP3" ~ "Late April", 
+    Timepoint == "TP4" ~ "May", 
+    Timepoint == "TP5" ~ "June", 
+    Timepoint == "TP6" ~ "July", 
+    Timepoint == "TP7" ~ "August")) 
+
+# Update to Acclimation for plotting purposes 
+biomass_host_filtered <- biomass_host_filtered %>%
+  mutate(Treatment = ifelse(Month == "February", "Acclimation", as.character(Treatment))) %>%
+  mutate(Treatment = as.factor(Treatment))
+```
+
+Calculate mean, sd and sem of each group for plotting 
+```{r}
+biomass_host_summary <- biomass_host_filtered %>%
+  group_by(Treatment, Month) %>%
+  dplyr::summarize(
+    n = n(),  # Count observations per group
+    mean_host = mean(AFDW.mg.cm2, na.rm = TRUE),
+    sd_host = sd(AFDW.mg.cm2, na.rm = TRUE),
+    sem_host = sd_host / sqrt(n),  # SEM formula
+    .groups = "drop"
+  )
+```
+
+Plot
+```{r}
+# Set Month as factor 
+biomass_host_summary$Month <- factor(biomass_host_summary$Month, levels = c("February", "March", "Early April", "Late April", "May", "June", "July", "August"))
+
+# sem
+host_dot <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color = Treatment)) +
+  #geom_hline(yintercept = 0, color = "black", linetype = "dotted", linewidth = 1)+
+  geom_line(aes(group = Treatment), linewidth = 4) +
+  geom_errorbar(aes(ymin = mean_host - sem_host, 
+                    ymax = mean_host + sem_host),
+                linewidth = 2,  # Thicker error bars
+                width = 0.5) +
+  geom_point(size = 10, aes(fill = Treatment), 
+             shape = 21, color = "black", stroke = 2) +  # Thicker point borders
+  annotate("text", x = Inf, y = -Inf, label = "ns", 
+         hjust = 1.1, vjust = -1.1, size = 8, fontface = "bold") +
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8",
+                               "Heat" = "#E41A1C")) +
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C")) +
+  xlab("") +
+  ylab("Host Tissue Biomass (mg/cm²)") +
+  theme_classic() +  # Increased base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 30, color = "black"),
+    axis.title.y = element_text(size = 35, face = "bold", margin = margin(r = 10)),
+    axis.ticks.x = element_line(size = 1, color = "black"),
+    axis.ticks.length = unit(0.3, "cm"),
+    # legend.title = element_text(size = 35, face = "bold"),
+    # legend.text = element_text(size = 25),
+    legend.position = "none"
+    # legend.key.size = unit(1.5, "cm"),
+    # legend.spacing.y = unit(0.5, "cm")
+  ); host_dot
+```
+
+## Create multi-panel phys figure and save 
+```{r}
+# 1. Combine the plots
+phys_final <- ((chla_dot | photo_dot | resp_dot) / 
+                (prot_dot | carb_dot | host_dot)) 
+
+# 2. Apply global formatting
+phys_final <- phys_final +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A') & 
+  # Use & to force a single legend and color mapping
+  scale_color_manual(values = c("Acclimation" = "grey60", 
+                               "Ambient" = "#377EB8", 
+                               "Heat" = "#E41A1C"),
+                     limits = c("Acclimation", "Ambient", "Heat")) &
+  scale_fill_manual(values = c("Acclimation" = "grey80", 
+                              "Ambient" = "#377EB8", 
+                              "Heat" = "#E41A1C"),
+                    limits = c("Acclimation", "Ambient", "Heat")) &
+  theme(
+    legend.position = "right", 
+    legend.title = element_text(size = 35, face = "bold"),
+    legend.text = element_text(size = 30, face = "plain"), 
+    legend.key.size = unit(2.5, "cm"),
+    plot.tag = element_text(size = 50, face = "bold"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20)
+  )
+
+# 3. Save with adjusted dimensions
+ggsave("../output/Physiology/Physiology_panels.png", plot = phys_final, 
+       width = 40, height = 20, units = "in", dpi = 300)
+ggsave("../output/Physiology/Physiology_panels.pdf", plot = phys_final, 
+       width = 40, height = 20, units = "in", dpi = 300)
+```
+
+
+
