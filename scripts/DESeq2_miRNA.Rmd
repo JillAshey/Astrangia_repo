@@ -155,12 +155,21 @@ meta_filtered$Condition <- droplevels(meta_filtered$Condition)
 
 # Run PERMANOVA with two factors
 # Treatment * Timepoint looks at the main effects AND their interaction
-res_filtered <- adonis2(vst_filtered ~ Treatment * Timepoint, 
+res_filtered <- adonis2(vst_filtered ~ Condition, 
                         data = meta_filtered, 
                         method = "euclidean", 
                         permutations = 999)
 
 print(res_filtered)
+
+# use the vst_mat (samples as rows) and the Condition column
+pairwise_results <- pairwise.adonis2(vst_filtered ~ Condition, 
+                                     data = meta_filtered, 
+                                     method = "euclidean", 
+                                     nperm = 999)
+
+# View the results
+print(pairwise_results)
 ```
 
 TP0 v TP5 Ambient
