@@ -23,6 +23,7 @@ library(ggraph)
 library(UpSetR)
 library(ggupset)
 library(patchwork)
+library(cowplot)
 ```
 
 ## Feb DEGs
@@ -1023,21 +1024,23 @@ left_panel <- wrap_plots(p_dot, p_bar, ncol = 2, widths = c(1, 2.5))
 # ── 10. Final layout: [dot matrix | bars] | [all GO panels] ───────────────────
 final_plot <- wrap_plots(left_panel, go_stack, ncol = 2, widths = c(1.8, 2.2)) +
   plot_annotation(
-    theme    = theme(
+    theme = theme(
       plot.title    = element_text(size = 22, face = "bold"),
-      plot.subtitle = element_text(size = 18, color = "grey40")
-    )
-  )
+      plot.subtitle = element_text(size = 18, color = "grey40"),
+      plot.margin   = margin(t = 40, r = 10, b = 10, l = 10)))
+final_output <- ggdraw(final_plot) +
+  draw_label("A", x = 0.02, y = 0.96, fontface = "bold", size = 40) +
+  draw_label("B", x = 0.46, y = 0.96, fontface = "bold", size = 40)
 
 # ── 11. Save ──────────────────────────────────────────────────────────────────
 ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.png",
-       final_plot,
+       final_output,
        width  = 20,
        height = 14,
        dpi    = 300,
        bg     = "white")
 ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.pdf",
-       final_plot,
+       final_output,
        width  = 20,
        height = 14,
        dpi    = 300,

@@ -5,16 +5,18 @@ date: "2024-05-20"
 output: html_document
 ---
 
-Script for plotting PCAs for differential expression of mRNAs, miRNAs, and lncRNAs
+Script for plotting PCAs for differential expression of mRNAs and miRNAs
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(DESeq2)
+library(patchwork)
 ```
 
 ### mRNA
+
 Read in counts data for differentially expressed genes 
 ```{r}
 mrna_de <- read.csv("../output/Molecular/mRNA/Unique_DEGs.csv")
@@ -71,12 +73,12 @@ percentVar <- round(100 * attr(pca_data, "percentVar"))
 # Assign month for TPs
 pca_data <- pca_data %>% 
   mutate(Month = case_when(
-    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP0" ~ "February", 
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP7" ~ "August")) 
 
 # Set levels
-pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August"))
+pca_data$Month <- factor(pca_data$Month, levels = c("February", "June", "August"))
 
 # Plot with ggplot2
 mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
@@ -103,8 +105,8 @@ mrna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = M
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); mrna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 10, height = 8)
-ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 10, height = 8)
+#ggsave("../output/Molecular/mRNA/pca_plot_DEGs.pdf", mrna_plot, width = 10, height = 8)
+#ggsave("../output/Molecular/mRNA/pca_plot_DEGs.png", mrna_plot, width = 10, height = 8)
 ```
 
 
@@ -169,12 +171,12 @@ percentVar <- round(100 * attr(pca_data, "percentVar"))
 # Assign month for TPs
 pca_data <- pca_data %>% 
   mutate(Month = case_when(
-    Timepoint == "TP0" ~ "Febuary", 
+    Timepoint == "TP0" ~ "February", 
     Timepoint == "TP5" ~ "June", 
     Timepoint == "TP7" ~ "August")) 
 
 # Set levels
-pca_data$Month <- factor(pca_data$Month, levels = c("Febuary", "June", "August"))
+pca_data$Month <- factor(pca_data$Month, levels = c("February", "June", "August"))
 
 # Plot with ggplot2
 mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = Month)) +
@@ -201,11 +203,22 @@ mirna_plot <- ggplot(pca_data, aes(x = PC1, y = PC2, color = Treatment, shape = 
                                     margin = margin(t = 0, r = 20, b = 0, l = 0))); mirna_plot 
 
 # Save plots 
-ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.pdf", mirna_plot, width = 10, height = 8)
-ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.png", mirna_plot, width = 10, height = 8)
+#ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.pdf", mirna_plot, width = 10, height = 8)
+#ggsave("../output/Molecular/smRNA/shortstack/pca_plot_DEMs.png", mirna_plot, width = 10, height = 8)
 ```
 
+## Plot together and save 
 
+```{r}
+combined_plot <- mrna_plot + mirna_plot + 
+  plot_layout(guides = "collect") + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(
+    plot.tag = element_text(size = 40, face = "bold"),
+    plot.margin = margin(t = 20, r = 20, b = 20, l = 20)); combined_plot
 
+# Save
+ggsave("../output/Molecular/pca_plot_deg_dem.pdf", combined_plot, width = 15, height = 8)
+ggsave("../output/Molecular/pca_plot_deg_dem.png", combined_plot, width = 15, height = 8)
+```
 
-### lncRNA

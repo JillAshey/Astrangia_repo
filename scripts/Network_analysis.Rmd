@@ -1916,6 +1916,13 @@ print(results)
 
 ## Treatment correlation trajectories 
 
+Read in correlation data from above 
+```{r}
+all_correlations <- read.csv("../output/Molecular/interactions/networks/all_spearman_correlations_by_conditions.csv")
+all_correlations_high_miRNA <- all_correlations %>%
+  filter(mean_expr_miRNA > mean_expr_mRNA)
+```
+
 ### June ambient v. heat 
 
 Filter correlation data for June ambient and heat samples 
@@ -2004,7 +2011,7 @@ Plot trajectories
 ```{r}
 # Prepare long format data (same as before)
 june_treatment_long <- june_trajectories %>%
-  left_join(features %>% dplyr::select(pair_id, cluster), by = "pair_id") %>%
+  left_join(features %>% dplyr::select(pair_id, cluster), by = c("pair_id", "cluster")) %>%
   # Pivot Ambient and Heat into one column
   pivot_longer(cols = c(Ambient, Heat), 
                names_to = "treatment", 
@@ -2338,6 +2345,11 @@ june_trt_functions <- rbind(cluster1_june_trt_functional, cluster2_june_trt_func
 write.csv(june_trt_functions, "../output/Molecular/interactions/networks/june_trt_clusters_functional.csv")
 ```
 
+Read in functional info if needed for plotting 
+```{r}
+june_trt_functions <- read.csv("../output/Molecular/interactions/networks/june_trt_clusters_functional.csv")
+```
+
 Plot with trajectory and GO enrichment plots for each cluster 
 ```{r}
 # ==========================================
@@ -2356,8 +2368,7 @@ trajectory_long <- june_trajectories %>%
 
 # Cluster means and SE for the two treatments
 cluster_stats <- trajectory_long %>%
-  dplyr::select(pair_id, miRNA, mRNA, timepoint, cluster.x, treatment, cor) %>%
-  dplyr::rename(cluster = cluster.x) %>%
+  dplyr::select(pair_id, miRNA, mRNA, timepoint, cluster, treatment, cor) %>%
   group_by(cluster, treatment) %>%
   summarise(
     mean_cor = mean(cor, na.rm = TRUE),
@@ -2486,14 +2497,9 @@ n_clusters <- length(unique(cluster_stats$cluster))
 
 combined_plot <- wrap_plots(
   lapply(1:n_clusters, combine_cluster_plots),
-  ncol = 1) #+
-#   plot_annotation(
-#     title = "Seasonal miRNA-mRNA regulatory dynamics by cluster",
-#     theme = theme(
-#       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-#       plot.subtitle = element_text(size = 12, hjust = 0.5)
-#     )
-#   )
+  ncol = 1) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(face = "bold", size = 20))
 
 print(combined_plot)
 
@@ -2598,7 +2604,7 @@ Plot trajectories
 ```{r}
 # Prepare long format data (same as before)
 aug_treatment_long <- aug_trajectories %>%
-  left_join(features %>% dplyr::select(pair_id, cluster), by = "pair_id") %>%
+  left_join(features %>% dplyr::select(pair_id, cluster), by = c("pair_id", "cluster")) %>%
   # Pivot Ambient and Heat into one column
   pivot_longer(cols = c(Ambient, Heat), 
                names_to = "treatment", 
@@ -2932,6 +2938,11 @@ aug_trt_functions <- rbind(cluster1_aug_trt_functional, cluster2_aug_trt_functio
 write.csv(aug_trt_functions, "../output/Molecular/interactions/networks/aug_trt_clusters_functional.csv")
 ```
 
+Read in functional info if needed for plotting 
+```{r}
+aug_trt_functions <- read.csv("../output/Molecular/interactions/networks/aug_trt_clusters_functional.csv")
+```
+
 Plot with trajectory and GO enrichment plots for each cluster 
 ```{r}
 # ==========================================
@@ -3079,14 +3090,9 @@ n_clusters <- length(unique(cluster_stats$cluster))
 
 combined_plot <- wrap_plots(
   lapply(1:n_clusters, combine_cluster_plots),
-  ncol = 1) #+
-#   plot_annotation(
-#     title = "Seasonal miRNA-mRNA regulatory dynamics by cluster",
-#     theme = theme(
-#       plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-#       plot.subtitle = element_text(size = 12, hjust = 0.5)
-#     )
-#   )
+  ncol = 1) + 
+  plot_annotation(tag_levels = 'A') & 
+  theme(plot.tag = element_text(face = "bold", size = 20))
 
 print(combined_plot)
 
