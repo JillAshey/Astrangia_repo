@@ -2413,7 +2413,7 @@ trajectory_plots <- lapply(all_clusters, function(clust) {
                color = "red3", size = 3) +
     
     labs(
-      title = paste0("Cluster ", clust), 
+      title = paste0("June Cluster ", clust), 
       x = "Treatment (June)", 
       y = "Spearman correlation"
     ) +
@@ -2470,7 +2470,7 @@ go_plots <- lapply(all_clusters, function(clust) {
       x = expression(-log[10](italic(P))), 
       y = "", 
       size = "Gene Count",
-      title = paste("Cluster", clust, "Functions")
+      title = paste("June Cluster", clust, "Functions")
     ) +
     theme_bw(base_size = 12) +
     theme(
@@ -3006,7 +3006,7 @@ trajectory_plots <- lapply(all_clusters, function(clust) {
                color = "red3", size = 3) +
     
     labs(
-      title = paste0("Cluster ", clust), 
+      title = paste0("August Cluster ", clust), 
       x = "Treatment (August)", 
       y = "Spearman correlation"
     ) +
@@ -3063,7 +3063,7 @@ go_plots <- lapply(all_clusters, function(clust) {
       x = expression(-log[10](italic(P))), 
       y = "", 
       size = "Gene Count",
-      title = paste("Cluster", clust, "Functions")
+      title = paste("August Cluster", clust, "Functions")
     ) +
     theme_bw(base_size = 12) +
     theme(
