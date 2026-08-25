@@ -908,3 +908,50 @@ host_dot_sd <- ggplot(biomass_host_summary, aes(x = Month, y = mean_host, color 
 ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sd_noFeb.pdf", host_dot_sd, width = 22, height = 12)
 ggsave("../output/Physiology/AFDW/AFDW_Treatment_Timepoint_dotwhisker_sd_noFeb.png", host_dot_sd, width = 22, height = 12)
 ```
+
+## Field and ambient comparison
+
+Read in ash-free dry weight raw data, surface area, homogenate volume and metadata 
+```{r}
+AFDW <- read.csv("../data/Physiology/AFDW.csv", header = T, na.strings = "") %>% filter(!is.na(PlugID)) %>% dplyr::select(PlugID, Fraction, initial.mass.g, dry.pan.mass.g, burnt.pan.mass.g)
+
+# Load surface area, homogenate volume and master fragment sheet 
+surface_area <- read.csv("../data/Physiology/SurfaceArea.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, Area_cm)
+homogenate_vol <- read.csv("../data/Physiology/homogenate_volume.csv", header = T, na.strings = "") %>% dplyr::select(PlugID, vol_mL) 
+master <- read.csv("../data/MasterFragmentSheet.csv", header = T, na.strings = "") %>% filter(Metric == "P/R, molec") %>% dplyr::select(PlugID, Site, Treatment, Timepoint)
+
+metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "PlugID", type = "left")
+#metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
+
+# Keep field and ambient host samples 
+metadata_fld <- metadata %>%
+  filter(Treatment == c("Field", "Ambient"))
+```
+
+basically need to compare 
+
+
+
+
+
+
+Standardize for volume input
+```{r}
+sym <- 5
+host <- 4
+
+AFDW_df <- metadata_exp %>%
+  mutate(dry.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ dry.pan.mass.g/sym, Fraction=="Host" ~dry.pan.mass.g/host),
+         burnt.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ burnt.pan.mass.g/sym, Fraction=="Host" ~burnt.pan.mass.g/host))
+```
+
+Standardize and calculate tissue biomass
+```{r}
+AFDW_df <- AFDW_df %>%
+  mutate(dry.pan.mass.g.vol.corr = dry.pan.mass.g.ml*vol_mL, # Standardize dry pan mass to homogenate volume
+         burnt.pan.mass.g.vol.corr = burnt.pan.mass.g.ml*vol_mL, # Standardize burnt pan mass to homogenate volume
+        dry.bioimass.g = (dry.pan.mass.g.vol.corr - initial.mass.g), # Calculate dry biomass
+         DW.mg.cm2 = ((dry.bioimass.g)*1000) / Area_cm, # Calculate dry biomass standardized by surface area 
+        dry.bioimass.g = (dry.pan.mass.g.vol.corr - burnt.pan.mass.g.vol.corr),
+        AFDW.mg.cm2 = ((dry.bioimass.g)*1000) / Area_cm)
+```

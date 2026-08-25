@@ -22,6 +22,7 @@ library(RColorBrewer)
 library(ggalluvial)
 library(bipartite)
 library(parallel)
+library(tidytext)
 library(plotly)
 library(broom)
 library(topGO)
@@ -774,7 +775,7 @@ fit_pair_trajectory <- function(row) {
   df <- data.frame(time = c(0, 5, 7), cor = c(row$TP0, row$TP5, row$TP7))
   mod <- lm(cor ~ poly(time, 2), data = df)
   
-  tidy(mod) %>%        # Now broom::tidy() will work
+  tidy(mod) %>%        
     filter(term != "(Intercept)") %>%
     mutate(
       pair_id = row$pair_id,
@@ -807,14 +808,32 @@ k <- 5
 clusters <- kmeans(features_scaled, centers = k, nstart = 100)
 
 features$cluster <- as.factor(clusters$cluster)
+features$raw_cluster <- as.factor(clusters$cluster)
 
 # Join with pair trajectories df 
 pair_trajectories <- pair_trajectories %>%
-  left_join(features %>% select(pair_id, cluster), by = "pair_id")
+  left_join(features %>% select(pair_id, raw_cluster), by = "pair_id") %>%
+  # Explicitly remap k-means clusters to match the desired 1:5 trajectory shapes
+  mutate(
+    cluster = case_match(
+      raw_cluster,
+      "4" ~ "1",  # Peak in June
+      "5" ~ "2",  # Increasing
+      "2" ~ "3",  # Decreasing
+      "1" ~ "4",  # Dip in June
+      "3" ~ "5"   # Flat/No change
+    ),
+    cluster = factor(cluster, levels = c("1", "2", "3", "4", "5"))
+  )
 
 cluster_summary <- pair_trajectories %>%
   group_by(cluster) %>%
   summarise(unique_pairs = n_distinct(pair_id))
+```
+
+Save trajectory info
+```{r}
+write.csv(pair_trajectories, "../output/Molecular/interactions/networks/seasonal_cluster_trajectory.csv")
 ```
 
 Plot trajectories 
@@ -1338,6 +1357,11 @@ seasonal_functions <- rbind(cluster1_seasonal_functional, cluster2_seasonal_func
 write.csv(seasonal_functions, "../output/Molecular/interactions/networks/seasonal_clusters_functional.csv")
 ```
 
+Read in seasonal functional data for plotting 
+```{r}
+seasonal_functions <- read.csv("../output/Molecular/interactions/networks/seasonal_clusters_functional.csv")
+```
+
 Plot w/ trajectory plots 
 ```{r}
 # ==========================================
@@ -1345,11 +1369,6 @@ Plot w/ trajectory plots
 # Two columns: trajectory (left) + GO terms (right)
 # Rows = clusters
 # ==========================================
-
-library(tidyverse)
-library(patchwork)
-library(ggtext)
-library(tidytext)
 
 # ==========================================
 # STEP 1: Prepare trajectory data
@@ -1373,26 +1392,40 @@ cluster_stats <- trajectory_long %>%
   )
 
 # ==========================================
-# STEP 2: Prepare GO enrichment data
+# STEP 2: Prepare GO enrichment data (Fold Enrichment)
 # ==========================================
 
-# Get top N GO terms per cluster
 top_n_terms <- 10  # Adjust as needed
 
 go_data_plot <- seasonal_functions %>%
   filter(ontology == "Biological Processes") %>%
+  mutate(
+    Fisher        = as.numeric(Fisher),
+    Significant   = as.numeric(Significant),
+    Expected      = as.numeric(Expected),
+    # Prevent division by zero if Expected is 0
+    Expected_safe = ifelse(Expected == 0, 0.01, Expected),
+    # Calculate Fold Enrichment
+    Enrichment_raw = Significant / Expected_safe,
+    # Cap extreme single-gene outliers at 50 for balanced dot sizing
+    Enrichment    = pmin(Enrichment_raw, 50)
+  ) %>%
   group_by(cluster) %>%
   arrange(Fisher) %>%
   slice_head(n = top_n_terms) %>%
   ungroup() %>%
   mutate(
     # Shorten long term names
-    Term_short = str_trunc(Term, width = 50, side = "right"),
+    Term_short   = str_trunc(Term, width = 50, side = "right"),
     # -log10 p-value for plotting
-    neglog10p = -log10(Fisher),
-    # Order terms by p-value within cluster
-    Term_ordered = reorder_within(Term_short, Fisher, cluster)
+    neglog10p    = -log10(Fisher),
+    # Unique factor per cluster to keep terms ordered by significance
+    term_clust   = paste(Term_short, cluster, sep = "___"),
+    Term_ordered = reorder(term_clust, neglog10p)
   )
+
+# Set global scale limits so sizes are directly comparable across all clusters
+enrich_limits <- range(go_data_plot$Enrichment[is.finite(go_data_plot$Enrichment)], na.rm = TRUE)
 
 # ==========================================
 # STEP 3: Create trajectory plots for each cluster
@@ -1453,35 +1486,40 @@ trajectory_plots <- lapply(unique(cluster_stats$cluster), function(clust) {
 
 go_plots <- lapply(unique(go_data_plot$cluster), function(clust) {
   
-  # Filter data for this cluster
   go_data <- go_data_plot %>% filter(cluster == clust)
   
-  # Create plot
-  p <- ggplot(go_data, aes(x = neglog10p, 
-                           y = reorder(Term_short, neglog10p),
-                           size = Significant)) + 
-    geom_point(alpha = 0.8) +                     # Using points instead of bars
-    labs(
-      x = expression(-log[10](Fisher)),
-      y = "",
-      size = "Gene Count",
-      colour = "Ontology",
-      title = paste("Cluster", clust)
+  if (nrow(go_data) == 0) {
+    return(ggplot() + annotate("text", x = 0.5, y = 0.5, label = "No enrichment") + theme_void())
+  }
+  
+  ggplot(go_data, aes(x = neglog10p, 
+                      y = Term_ordered,
+                      size = Enrichment)) + 
+    geom_point(alpha = 0.8, color = "black") + 
+    # Clean up y-axis labels
+    scale_y_discrete(labels = function(x) gsub("___.*$", "", x)) +
+    # Unified size scale with pretty breaks
+    scale_size_continuous(
+      limits = enrich_limits,
+      range  = c(3, 8),
+      breaks = scales::pretty_breaks(n = 4)
     ) +
-    
-    # Optional: Adjust the range of point sizes to make them readable
-    scale_size_continuous(range = c(3, 10)) + 
-    
+    labs(
+      x = expression(-log[10](italic(P))),
+      y = "",
+      size = "Fold Enrichment",
+      title = paste("Cluster", clust, "Functions")
+    ) +
     theme_bw(base_size = 11) +
     theme(
-      plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
-      axis.text.y = element_text(size = 9),
-      panel.grid.minor = element_blank(),
-      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80") # Adds a guide line
+      plot.title         = element_text(face = "bold", size = 12, hjust = 0.5),
+      axis.text.y        = element_text(size = 9),
+      panel.grid.minor   = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80"),
+      legend.title       = element_text(face = "bold", size = 10)
     )
-  
-  return(p)
 })
+names(go_plots) <- unique(go_data_plot$cluster)
 
 # ==========================================
 # STEP 5: Combine plots using patchwork
@@ -2007,6 +2045,11 @@ cluster_summary <- june_trajectories %>%
             unique_mRNAs = n_distinct(mRNA))
 ```
 
+Save trajectory info
+```{r}
+write.csv(june_trajectories, "../output/Molecular/interactions/networks/june_trt_cluster_trajectory.csv")
+```
+
 Plot trajectories 
 ```{r}
 # Prepare long format data (same as before)
@@ -2350,6 +2393,20 @@ Read in functional info if needed for plotting
 june_trt_functions <- read.csv("../output/Molecular/interactions/networks/june_trt_clusters_functional.csv")
 ```
 
+Read in DEGs
+```{r}
+june_degs <- read_csv("../output/Molecular/mRNA/TP5_amb_v_TP5_heat_DEG.csv")
+june_degs <- june_degs %>%
+  rename("mRNA" = "...1") 
+```
+
+Check if any DEGs are in the clusters
+```{r}
+june_deg_list <- june_degs$mRNA
+june_trj_list <- june_trajectories$mRNA
+common_terms <- Reduce(intersect, list(june_deg_list, june_trj_list)) # 7
+```
+
 Plot with trajectory and GO enrichment plots for each cluster 
 ```{r}
 # ==========================================
@@ -2430,28 +2487,36 @@ trajectory_plots <- lapply(all_clusters, function(clust) {
 names(trajectory_plots) <- all_clusters
 
 # ==========================================
-# STEP 4: Create GO enrichment plots for each cluster
+# STEP 4: Create GO enrichment plots for each cluster (Sized by Fold Enrichment)
 # ==========================================
-# Get top N GO terms per cluster from your new June treatment results
 top_n_terms <- 10  
 
 go_data_plot <- june_trt_functions %>%
   # Filter for BP if you have other ontologies in the file
   filter(ontology == "Biological Processes") %>%
+  # Ensure numeric variables for calculation & sorting
+  mutate(
+    Fisher      = as.numeric(Fisher),
+    Significant = as.numeric(Significant),
+    Expected    = as.numeric(Expected),
+    # Calculate Fold Enrichment (Enrichment Magnitude)
+    Enrichment  = Significant / Expected
+  ) %>%
   group_by(cluster) %>%
-  # Ensure Fisher is numeric for sorting
-  mutate(Fisher = as.numeric(Fisher)) %>%
   arrange(Fisher) %>%
   slice_head(n = top_n_terms) %>%
   ungroup() %>%
   mutate(
     # Clean up term names for the y-axis
-    Term_short = str_trunc(Term, width = 50, side = "right"),
+    Term_short   = str_trunc(Term, width = 50, side = "right"),
     # Calculate -log10 p-value
-    neglog10p = -log10(Fisher),
+    neglog10p    = -log10(Fisher),
     # Ensure terms are ordered by significance within each cluster facet
     Term_ordered = reorder_within(Term_short, neglog10p, cluster)
   )
+
+# Calculate global enrichment range across all clusters for a unified size scale
+enrich_limits <- range(go_data_plot$Enrichment, na.rm = TRUE)
 
 go_plots <- lapply(all_clusters, function(clust) {
   
@@ -2461,23 +2526,28 @@ go_plots <- lapply(all_clusters, function(clust) {
     return(ggplot() + annotate("text", x=0.5, y=0.5, label="No enrichment") + theme_void())
   }
   
-  ggplot(go_data, aes(x = neglog10p, y = Term_ordered, size = Significant)) + 
+  ggplot(go_data, aes(x = neglog10p, y = Term_ordered, size = Enrichment)) + 
     geom_point(alpha = 0.8, color = "black") + 
     # Use tidytext's scale_y_reordered to handle the reorder_within
     scale_y_reordered() +
-    scale_size_continuous(range = c(3, 8)) +
+    scale_size_continuous(
+      limits = enrich_limits,
+      range  = c(3, 8),
+      breaks = scales::pretty_breaks(n = 4) # Automatically generates clean break numbers
+    ) +
     labs(
       x = expression(-log[10](italic(P))), 
       y = "", 
-      size = "Gene Count",
+      size = "Fold Enrichment",
       title = paste("June Cluster", clust, "Functions")
     ) +
     theme_bw(base_size = 12) +
     theme(
-      plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-      axis.text.y = element_text(size = 10),
-      panel.grid.minor = element_blank(),
-      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+      plot.title         = element_text(face = "bold", size = 14, hjust = 0.5),
+      axis.text.y        = element_text(size = 10),
+      panel.grid.minor   = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80"),
+      legend.title       = element_text(face = "bold", size = 11)
     )
 })
 names(go_plots) <- all_clusters
@@ -2598,6 +2668,11 @@ cluster_summary <- aug_trajectories %>%
   summarise(unique_pairs = n_distinct(pair_id),
             unique_miRNAs = n_distinct(miRNA),
             unique_mRNAs = n_distinct(mRNA))
+```
+
+Save trajectory info
+```{r}
+write.csv(aug_trajectories, "../output/Molecular/interactions/networks/aug_trt_cluster_trajectory.csv")
 ```
 
 Plot trajectories 
@@ -3023,28 +3098,36 @@ trajectory_plots <- lapply(all_clusters, function(clust) {
 names(trajectory_plots) <- all_clusters
 
 # ==========================================
-# STEP 4: Create GO enrichment plots for each cluster
+# STEP 4: Create GO enrichment plots with Inf/Floor handling
 # ==========================================
-# Get top N GO terms per cluster from your new June treatment results
 top_n_terms <- 10  
 
 go_data_plot <- aug_trt_functions %>%
-  # Filter for BP if you have other ontologies in the file
   filter(ontology == "Biological Processes") %>%
+  mutate(
+    Fisher      = as.numeric(Fisher),
+    Significant = as.numeric(Significant),
+    Expected    = as.numeric(Expected),
+    # Prevent division by zero by setting a small lower bound for Expected
+    Expected_safe = ifelse(Expected == 0, 0.01, Expected),
+    # Calculate Fold Enrichment with safe expected values
+    Enrichment_raw = Significant / Expected_safe,
+    # Cap extreme outliers at 50 so dot scales remain proportional
+    Enrichment  = pmin(Enrichment_raw, 50)
+  ) %>%
   group_by(cluster) %>%
-  # Ensure Fisher is numeric for sorting
-  mutate(Fisher = as.numeric(Fisher)) %>%
   arrange(Fisher) %>%
   slice_head(n = top_n_terms) %>%
   ungroup() %>%
   mutate(
-    # Clean up term names for the y-axis
-    Term_short = str_trunc(Term, width = 50, side = "right"),
-    # Calculate -log10 p-value
-    neglog10p = -log10(Fisher),
-    # Ensure terms are ordered by significance within each cluster facet
-    Term_ordered = reorder_within(Term_short, neglog10p, cluster)
+    Term_short   = str_trunc(Term, width = 50, side = "right"),
+    neglog10p    = -log10(Fisher),
+    term_clust   = paste(Term_short, cluster, sep = "___"),
+    Term_ordered = reorder(term_clust, neglog10p)
   )
+
+# Safely extract non-infinite range for global size scaling
+enrich_limits <- range(go_data_plot$Enrichment[is.finite(go_data_plot$Enrichment)], na.rm = TRUE)
 
 go_plots <- lapply(all_clusters, function(clust) {
   
@@ -3054,23 +3137,27 @@ go_plots <- lapply(all_clusters, function(clust) {
     return(ggplot() + annotate("text", x=0.5, y=0.5, label="No enrichment") + theme_void())
   }
   
-  ggplot(go_data, aes(x = neglog10p, y = Term_ordered, size = Significant)) + 
+  ggplot(go_data, aes(x = neglog10p, y = Term_ordered, size = Enrichment)) + 
     geom_point(alpha = 0.8, color = "black") + 
-    # Use tidytext's scale_y_reordered to handle the reorder_within
-    scale_y_reordered() +
-    scale_size_continuous(range = c(3, 8)) +
+    scale_y_discrete(labels = function(x) gsub("___.*$", "", x)) +
+    scale_size_continuous(
+      limits = enrich_limits,
+      range  = c(3, 8),
+      breaks = scales::pretty_breaks(n = 4)
+    ) +
     labs(
       x = expression(-log[10](italic(P))), 
       y = "", 
-      size = "Gene Count",
+      size = "Fold Enrichment",
       title = paste("August Cluster", clust, "Functions")
     ) +
     theme_bw(base_size = 12) +
     theme(
-      plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-      axis.text.y = element_text(size = 10),
-      panel.grid.minor = element_blank(),
-      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80")
+      plot.title         = element_text(face = "bold", size = 14, hjust = 0.5),
+      axis.text.y        = element_text(size = 10),
+      panel.grid.minor   = element_blank(),
+      panel.grid.major.y = element_line(linetype = "dotted", color = "gray80"),
+      legend.title       = element_text(face = "bold", size = 11)
     )
 })
 names(go_plots) <- all_clusters

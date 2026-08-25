@@ -810,13 +810,16 @@ Make upset plot with GO terms enriched
 ```{r}
 # ── 1. Load & prep data ────────────────────────────────────────────────────────
 feb_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_February_expressed_genes.csv") %>%
-  filter(ontology == "Biological Processes")
+  filter(ontology == "Biological Processes") %>%
+  mutate(Enrichment = Significant/Expected)
 
 june_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_June_expressed_genes.csv") %>%
-  filter(ontology == "Biological Processes")
+  filter(ontology == "Biological Processes") %>%
+  mutate(Enrichment = Significant/Expected)
 
 aug_genes <- read.csv("../output/Molecular/mRNA/enrichment/GO_en_sig_August_expressed_genes.csv") %>%
-  filter(ontology == "Biological Processes")
+  filter(ontology == "Biological Processes") %>%
+  mutate(Enrichment = Significant/Expected)
 
 feb_terms  <- unique(feb_genes$Term)
 june_terms <- unique(june_genes$Term)
@@ -855,17 +858,6 @@ bar_data <- bind_rows(singles, shareds) %>%
   mutate(group = factor(group, levels = rev(bar_order)))
 
 # ── 3. UpSet dot matrix data ───────────────────────────────────────────────────
-months_in_group <- function(g) {
-  list(
-    February = g %in% c("February Only", "February-June Shared",
-                         "February-Aug Shared", "All Three"),
-    June     = g %in% c("June Only", "February-June Shared",
-                         "June-August Shared", "All Three"),
-    August   = g %in% c("August Only", "February-Aug Shared",
-                         "June-August Shared", "All Three")
-  )
-}
-
 dot_data <- expand.grid(
   group = levels(bar_data$group),
   month = c("August", "June", "February"),
@@ -885,7 +877,6 @@ dot_data <- expand.grid(
 dot_data$group <- factor(dot_data$group, levels = levels(bar_data$group))
 dot_data$month <- factor(dot_data$month, levels = c("August", "June", "February"))
 
-# Draw connecting lines for active months within each group
 line_data <- dot_data %>%
   filter(active) %>%
   group_by(group) %>%
@@ -896,7 +887,7 @@ line_data <- dot_data %>%
     .groups = "drop"
   )
 
-# ── 4. Top 5 GO terms per group by p-value ────────────────────────────────────
+# ── 4. Top 5 GO terms per group by p-value (Retaining Enrichment) ────────────
 get_top5 <- function(term_list, group_name) {
   all_data <- bind_rows(
     feb_genes  %>% mutate(source = "February"),
@@ -906,12 +897,16 @@ get_top5 <- function(term_list, group_name) {
   all_data %>%
     filter(Term %in% term_list) %>%
     group_by(Term) %>%
-    summarise(min_pval = min(Fisher, na.rm = TRUE), .groups = "drop") %>%
+    summarise(
+      min_pval   = min(Fisher, na.rm = TRUE),
+      enrichment = max(Enrichment, na.rm = TRUE), # Retain Fold Enrichment
+      .groups    = "drop"
+    ) %>%
     arrange(min_pval) %>%
     slice_head(n = 5) %>%
     mutate(
-      group       = group_name,
-      neg_log_p   = -log10(min_pval)
+      group     = group_name,
+      neg_log_p = -log10(min_pval)
     )
 }
 
@@ -921,8 +916,9 @@ top_terms <- bind_rows(
 
 top_terms$group <- factor(top_terms$group, levels = levels(bar_data$group))
 
-# Shared x-axis limits
+# Shared x-axis limits & enrichment range across all panels
 x_lim <- c(0, max(top_terms$neg_log_p, na.rm = TRUE) * 1.05)
+enrich_limits <- range(top_terms$enrichment, na.rm = TRUE)
 
 # ── 5. Colour palette ──────────────────────────────────────────────────────────
 group_colors <- c(
@@ -952,8 +948,7 @@ p_bar <- ggplot(bar_data, aes(x = count, y = group, fill = group)) +
     plot.margin      = margin(5, 5, 0, 5)
   )
 
-# ── 7. Dot matrix — to the LEFT of the bars ───────────────────────────────────
-# Shown as a vertical panel with month labels, y-axis aligned with bars
+# ── 7. Dot matrix ──────────────────────────────────────────────────────────────
 p_dot <- ggplot() +
   geom_point(data = dot_data,
              aes(x = group, y = month, color = active, size = active)) +
@@ -969,7 +964,7 @@ p_dot <- ggplot() +
   theme_classic(base_size = 20) +
   theme(
     legend.position    = "none",
-    axis.text.y        = element_blank(),   # bar labels come from p_bar
+    axis.text.y        = element_blank(),
     axis.ticks.y       = element_blank(),
     axis.line.y        = element_blank(),
     axis.text.x        = element_text(size = 18, angle = 90, hjust = 1, vjust = 0.5),
@@ -977,9 +972,7 @@ p_dot <- ggplot() +
     panel.grid.major.x = element_line(color = "grey92")
   )
 
-# ── 8. GO term dot plots — ALL on the RIGHT, ordered top-to-bottom = bar order ─
-# Bar order (top → bottom): February Only, August Only, June Only, then shared by count
-# levels() gives bottom→top, so rev() gives top→bottom
+# ── 8. GO term dot plots (Size mapped to Fold Enrichment) ─────────────────────
 go_order <- rev(levels(bar_data$group))
 
 make_go_panel <- function(grp) {
@@ -989,17 +982,21 @@ make_go_panel <- function(grp) {
   if (nrow(d) == 0) return(NULL)
 
   ggplot(d, aes(x = neg_log_p,
-                y = reorder(Term_short, neg_log_p),
-                color = group)) +
+                y = reorder(Term_short, neg_log_p))) +
     geom_segment(aes(xend = 0, yend = reorder(Term_short, neg_log_p)),
                  color = "grey70", linewidth = 0.6) +
-    geom_point(size = 6) +
+    geom_point(aes(size = enrichment, color = group)) +
     scale_color_manual(values = group_colors) +
+    scale_size_continuous(
+      limits = enrich_limits,
+      range  = c(3, 8),
+      breaks = c(2, 5, 10, 25, 50)
+    ) +
     scale_x_continuous(limits = x_lim) +
-    labs(x = NULL, y = NULL, title = grp) +
+    labs(x = NULL, y = NULL, title = grp, size = "Fold Enrichment") +
+    guides(color = "none") + # Explicitly removes the 'group' color legend per panel
     theme_classic(base_size = 18) +
     theme(
-      legend.position  = "none",
       plot.title       = element_text(size = 18, face = "bold", color = group_colors[grp]),
       axis.text.y      = element_text(size = 16),
       axis.text.x      = element_text(size = 16),
@@ -1010,40 +1007,46 @@ make_go_panel <- function(grp) {
 go_panels <- lapply(go_order, make_go_panel)
 go_panels <- go_panels[!sapply(go_panels, is.null)]
 
-# Add x-axis label only to the bottom (last) GO panel
 n_panels <- length(go_panels)
 go_panels[[n_panels]] <- go_panels[[n_panels]] +
-  labs(x = expression(-log[10](Fisher))) +
+  labs(x = expression(-log[10]("P"))) +
   theme(axis.title.x = element_text(size = 18, face = "plain"))
 
-go_stack <- wrap_plots(go_panels, ncol = 1)
+# Wrap panels and collect only the size legend on the right
+go_stack <- wrap_plots(go_panels, ncol = 1) + 
+  plot_layout(guides = "collect") & 
+  theme(legend.position = "right",
+        legend.title    = element_text(size = 14, face = "bold"),
+        legend.text     = element_text(size = 12))
 
 # ── 9. Combine dot matrix (left) + bar plot (right) ───────────────────────────
 left_panel <- wrap_plots(p_dot, p_bar, ncol = 2, widths = c(1, 2.5))
 
 # ── 10. Final layout: [dot matrix | bars] | [all GO panels] ───────────────────
-final_plot <- wrap_plots(left_panel, go_stack, ncol = 2, widths = c(1.8, 2.2)) +
+final_plot <- wrap_plots(left_panel, go_stack, ncol = 2, widths = c(1.8, 2.5)) +
   plot_annotation(
     theme = theme(
       plot.title    = element_text(size = 22, face = "bold"),
       plot.subtitle = element_text(size = 18, color = "grey40"),
       plot.margin   = margin(t = 40, r = 10, b = 10, l = 10)))
+
 final_output <- ggdraw(final_plot) +
   draw_label("A", x = 0.02, y = 0.96, fontface = "bold", size = 40) +
-  draw_label("B", x = 0.46, y = 0.96, fontface = "bold", size = 40)
+  draw_label("B", x = 0.44, y = 0.96, fontface = "bold", size = 40)
 
 # ── 11. Save ──────────────────────────────────────────────────────────────────
 ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.png",
        final_output,
-       width  = 20,
+       width  = 22,
        height = 14,
        dpi    = 300,
        bg     = "white")
 ggsave("../output/Molecular/mRNA/enrichment/seasonal_upset_go_combined.pdf",
        final_output,
-       width  = 20,
+       width  = 22,
        height = 14,
        dpi    = 300,
        bg     = "white")
 ```
+
 
