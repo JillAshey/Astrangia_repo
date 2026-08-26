@@ -54,8 +54,8 @@ metadata <- join_all(list(AFDW, surface_area, homogenate_vol, master), by = "Plu
 #metadata$vol_mL <- gsub("NA", "", metadata$vol_mL)
 
 # Remove field samples for now 
-metadata_exp <- metadata %>%
-  filter(Treatment != "Field")
+#metadata_exp <- metadata %>%
+#  filter(Treatment != "Field")
 ```
 
 Standardize for volume input
@@ -63,7 +63,7 @@ Standardize for volume input
 sym <- 5
 host <- 4
 
-AFDW_df <- metadata_exp %>%
+AFDW_df <- metadata %>%
   mutate(dry.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ dry.pan.mass.g/sym, Fraction=="Host" ~dry.pan.mass.g/host),
          burnt.pan.mass.g.ml = case_when(Fraction=="Symbiont" ~ burnt.pan.mass.g/sym, Fraction=="Host" ~burnt.pan.mass.g/host))
 ```
@@ -92,6 +92,7 @@ biomass <- read.csv("../output/Physiology/AFDW/AFDW_biomass.csv")
 
 biomass_host <- biomass %>%
   #dplyr::mutate(Treatment = ifelse(Timepoint == "TP0", "Acclimation", as.character(Treatment))) %>%
+  filter(!Treatment == "Field") %>%
   dplyr::mutate(Treatment = as.factor(Treatment)) %>%
   dplyr::filter(Fraction == "Host") %>%
   na.omit()
